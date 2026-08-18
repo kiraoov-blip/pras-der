@@ -5,17 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>PRAS - DER 통합 시뮬레이터</title>
 
-<!-- 폰트: 에스코어드림 + Noto Sans KR -->
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/fonts-archive/S-CoreDream/subsets/S-CoreDream-dynamic-subset.css" />
-
-<!-- 아이콘: Tabler Icons -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
 
 <style>
-/* ── 리셋 & 기본 ── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
   --color-bg:        #f4f6f9;
@@ -29,24 +25,25 @@
   --color-accent:    #2f7de1;
   --color-accent-bg: #e8f1fd;
   --color-accent-bd: #b3d0f7;
-  --color-success:   #1d9e75;
-  --color-success-bg:#e1f5ee;
-  --color-danger:    #d85a30;
-  --color-danger-bg: #faece7;
-  --color-warn:      #ba7517;
   --font-title: "S-Core Dream", "Noto Sans KR", sans-serif;
   --font-body:  "Noto Sans KR", sans-serif;
   --radius: 6px;
 }
 
 html, body {
-  min-height: 100vh;
+  height: 100%;
   background: var(--color-bg);
   color: var(--color-text);
   font-family: var(--font-body);
   font-size: 13px;
   word-break: keep-all;
-  line-height: 1.5;
+}
+
+/* ── 전체 레이아웃: 헤더 고정, 아래 iframe이 나머지 채움 ── */
+.shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
 }
 
 /* ── 헤더 ── */
@@ -54,9 +51,7 @@ html, body {
   background: var(--color-surface);
   border-bottom: 1px solid var(--color-border);
   padding: 16px 28px 0 28px;
-  position: sticky;
-  top: 0;
-  z-index: 100;
+  flex-shrink: 0;
 }
 .topbar-row {
   display: flex;
@@ -101,10 +96,7 @@ html, body {
 }
 
 /* ── 탭 ── */
-.tabs {
-  display: flex;
-  gap: 0;
-}
+.tabs { display: flex; }
 .tab {
   font-family: var(--font-title);
   padding: 11px 22px;
@@ -126,1071 +118,207 @@ html, body {
 .tab.active { color: var(--color-accent); border-bottom-color: var(--color-accent); }
 .tab i { font-size: 16px; }
 
-/* ── 탭 패널 ── */
-.tab-panel { display: none; flex-direction: column; }
-.tab-panel.active { display: flex; }
-
-/* ── 분석조건 바 ── */
-.cond-bar {
-  background: var(--color-surface-2);
-  border-bottom: 1px solid var(--color-border);
-  padding: 14px 28px 15px;
-}
-.cond-title {
-  font-family: var(--font-title);
-  font-size: 10px;
-  font-weight: 500;
-  color: var(--color-text-3);
-  letter-spacing: .1em;
-  text-transform: uppercase;
-  margin-bottom: 11px;
-}
-.cond-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 9px 16px;
-  align-items: flex-end;
-}
-.cond-item {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.cond-label {
-  font-family: var(--font-body);
-  font-size: 11px;
-  color: var(--color-text-2);
-}
-.cond-sep {
-  width: 1px;
-  background: var(--color-border);
-  align-self: stretch;
-  margin: 0 4px;
-}
-select, input[type="number"] {
-  font-family: var(--font-body);
-  font-size: 12px;
-  height: 30px;
-  padding: 0 8px;
-  border-radius: var(--radius);
-  border: 1px solid var(--color-border);
-  background: var(--color-surface);
-  color: var(--color-text);
-  cursor: pointer;
-}
-select:focus, input:focus { outline: 2px solid var(--color-accent-bg); border-color: var(--color-accent); }
-.range-wrap { display: flex; align-items: center; gap: 6px; }
-.range-wrap input[type="range"] { flex: 1; cursor: pointer; }
-.range-val {
-  font-family: var(--font-body);
-  font-size: 11.5px;
-  color: var(--color-accent);
-  font-weight: 500;
-  min-width: 33px;
-  text-align: right;
-}
-.toggle-item { display: flex; align-items: center; gap: 7px; }
-.toggle {
-  width: 32px;
-  height: 18px;
-  background: var(--color-border-md);
-  border-radius: 9px;
-  position: relative;
-  cursor: pointer;
-  transition: background .2s;
-  flex-shrink: 0;
-}
-.toggle.on { background: var(--color-accent); }
-.toggle::after {
-  content: '';
-  position: absolute;
-  top: 2px; left: 2px;
-  width: 14px; height: 14px;
-  border-radius: 7px;
-  background: #fff;
-  transition: left .2s;
-  box-shadow: 0 1px 3px rgba(0,0,0,.15);
-}
-.toggle.on::after { left: 16px; }
-.btn-run {
-  font-family: var(--font-title);
-  padding: 0 20px;
-  height: 30px;
-  background: var(--color-accent);
-  color: #fff;
-  border: none;
-  border-radius: var(--radius);
-  font-size: 12.5px;
-  font-weight: 500;
-  cursor: pointer;
-  white-space: nowrap;
-  flex-shrink: 0;
-  letter-spacing: -0.01em;
-  transition: opacity .15s;
-}
-.btn-run:hover { opacity: .88; }
-
-/* ── 결과 영역 ── */
-.result-area {
-  padding: 20px 28px 32px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-/* ── KPI 카드 ── */
-.kpi-row {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
-}
-.kpi {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  padding: 14px 16px;
-}
-.kpi-label {
-  font-family: var(--font-body);
-  font-size: 10.5px;
-  color: var(--color-text-3);
-  margin-bottom: 6px;
-}
-.kpi-val {
-  font-family: var(--font-title);
-  font-size: 20px;
-  font-weight: 500;
-  letter-spacing: -0.02em;
-  color: var(--color-text);
-}
-.kpi-sub {
-  font-family: var(--font-body);
-  font-size: 10.5px;
-  color: var(--color-text-2);
-  margin-top: 4px;
-}
-.kpi.success .kpi-val { color: var(--color-success); }
-.kpi.danger  .kpi-val { color: var(--color-danger);  }
-.kpi.accent  .kpi-val { color: var(--color-accent);  }
-
-/* ── 카드 ── */
-.card {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 10px;
-  padding: 16px 18px;
-}
-.card-hd {
-  display: flex;
+/* ── iframe 툴바 ── */
+.frame-bar {
+  display: none;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 13px;
-}
-.card-title {
-  font-family: var(--font-title);
-  font-size: 13px;
-  font-weight: 500;
-  letter-spacing: -0.01em;
-  color: var(--color-text);
-}
-.card-sub {
-  font-family: var(--font-body);
-  font-size: 11px;
-  color: var(--color-text-3);
-}
-.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-
-/* ── 효과 분해 바 ── */
-.decomp-wrap { display: flex; flex-direction: column; margin-top: 6px; }
-.decomp-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 6px 0;
-  border-bottom: 1px solid var(--color-border);
-  font-size: 12px;
-}
-.decomp-row:last-child { border: none; }
-.d-label {
-  font-family: var(--font-body);
-  min-width: 92px;
-  color: var(--color-text-2);
-}
-.d-label.bold { font-weight: 500; color: var(--color-text); }
-.d-bar-wrap {
-  flex: 1;
-  height: 5px;
+  padding: 7px 20px;
   background: var(--color-surface-2);
-  border-radius: 3px;
-  overflow: hidden;
-}
-.d-bar { height: 100%; border-radius: 3px; }
-.d-val {
-  font-family: var(--font-title);
-  min-width: 66px;
-  text-align: right;
-  font-weight: 500;
-  font-size: 12.5px;
-  letter-spacing: -0.01em;
-}
-
-/* ── 표 ── */
-.tbl { width: 100%; font-size: 12px; border-collapse: collapse; }
-.tbl th {
-  font-family: var(--font-body);
-  text-align: left;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 11.5px;
   color: var(--color-text-3);
-  font-weight: 400;
-  padding: 5px 0;
-  border-bottom: 1px solid var(--color-border);
-  font-size: 10.5px;
-}
-.tbl td {
   font-family: var(--font-body);
-  padding: 6px 0;
-  border-bottom: 1px solid var(--color-border);
-  color: var(--color-text);
+  flex-shrink: 0;
 }
-.tbl td.r {
-  font-family: var(--font-title);
-  text-align: right;
+.frame-bar.active { display: flex; }
+.frame-bar .src { display: flex; align-items: center; gap: 6px; }
+.frame-bar .dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: #2fa84f;
+  flex-shrink: 0;
+}
+.frame-bar a {
+  font-family: var(--font-body);
+  color: var(--color-accent);
+  text-decoration: none;
   font-weight: 500;
-  letter-spacing: -0.01em;
+  font-size: 11.5px;
 }
-.tbl tr:last-child td { border: none; }
-.badge {
-  font-family: var(--font-body);
-  font-size: 10.5px;
-  padding: 2px 7px;
-  border-radius: var(--radius);
-  font-weight: 500;
-}
-.badge.g { background: var(--color-success-bg); color: var(--color-success); }
-.badge.r { background: var(--color-danger-bg);  color: var(--color-danger);  }
-.badge.b { background: var(--color-accent-bg);  color: var(--color-accent);  }
-.csv-btn {
-  font-family: var(--font-body);
-  font-size: 11px;
-  padding: 3px 10px;
-  border-radius: var(--radius);
-  border: 1px solid var(--color-border);
-  background: none;
-  cursor: pointer;
-  color: var(--color-text-2);
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  transition: background .15s;
-}
-.csv-btn:hover { background: var(--color-surface-2); }
+.frame-bar a:hover { text-decoration: underline; }
 
-/* ── 24h 막대 차트 ── */
-.bar-chart {
-  height: 120px;
-  background: var(--color-surface-2);
-  border-radius: var(--radius);
-  display: flex;
-  align-items: flex-end;
-  padding: 8px 8px 0;
-  gap: 2px;
-  overflow: hidden;
+/* ── iframe 래퍼 ── */
+.frames { flex: 1; min-height: 0; position: relative; }
+.frame-wrap {
+  display: none;
+  position: absolute;
+  inset: 0;
 }
-.bc-col {
+.frame-wrap.active { display: block; }
+iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: block;
+  background: #fff;
+}
+
+/* ── 로딩 오버레이 ── */
+.loading {
+  position: absolute;
+  inset: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  flex: 1;
-  min-width: 0;
-  gap: 1px;
-  height: 100%;
-  justify-content: flex-end;
-}
-.bar { width: 100%; border-radius: 2px 2px 0 0; }
-.bar.ref  { background: var(--color-border-md); }
-.bar.scen { background: var(--color-accent); opacity: .8; }
-.bar.off  { background: var(--color-success-bg); }
-.hour-labels { display: flex; padding: 3px 8px 0; gap: 2px; }
-.h-lbl {
-  font-family: var(--font-body);
-  flex: 1;
-  font-size: 8px;
-  color: var(--color-text-3);
-  text-align: center;
-  min-width: 0;
-}
-.legend-row {
-  display: flex;
-  gap: 12px;
-  margin-top: 8px;
-  font-size: 10.5px;
-  color: var(--color-text-3);
-  font-family: var(--font-body);
-}
-.ldot {
-  width: 9px; height: 9px;
-  border-radius: 2px;
-  display: inline-block;
-  margin-right: 4px;
-  vertical-align: middle;
-}
-
-/* ── 전력 흐름 ── */
-.flow-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 4px 0;
-}
-.flow-card {
-  flex: 1;
+  justify-content: center;
   background: var(--color-surface-2);
-  border-radius: var(--radius);
-  padding: 10px 8px;
-  text-align: center;
-  border: 1px solid var(--color-border);
+  gap: 14px;
+  z-index: 10;
+  transition: opacity .3s;
 }
-.flow-label { font-family: var(--font-body); font-size: 10px; color: var(--color-text-3); margin-bottom: 4px; }
-.flow-val   { font-family: var(--font-title); font-size: 13.5px; font-weight: 500; letter-spacing: -0.02em; }
-.arr { color: var(--color-text-3); font-size: 15px; flex-shrink: 0; }
-.flow-stats {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-  margin-top: 12px;
+.loading.hidden { opacity: 0; pointer-events: none; }
+.spinner {
+  width: 32px; height: 32px;
+  border: 3px solid var(--color-border);
+  border-top-color: var(--color-accent);
+  border-radius: 50%;
+  animation: spin .8s linear infinite;
 }
-.flow-stat {
-  background: var(--color-surface-2);
-  border-radius: var(--radius);
-  padding: 8px 10px;
-  border: 1px solid var(--color-border);
-}
-.flow-stat .lbl { font-family: var(--font-body); font-size: 10px; color: var(--color-text-3); }
-.flow-stat .val { font-family: var(--font-title); font-size: 12.5px; font-weight: 500; letter-spacing: -0.01em; margin-top: 3px; }
-
-/* ── 요금제 비교 그리드 ── */
-.rate-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
-  margin-top: 4px;
-}
-.rate-item { text-align: center; }
-.rate-bars  { height: 80px; display: flex; align-items: flex-end; justify-content: center; gap: 5px; }
-.rate-name  { font-family: var(--font-body); font-size: 10px; color: var(--color-text-3); margin-top: 5px; }
-.rate-diff  { font-family: var(--font-title); font-size: 11px; font-weight: 500; color: var(--color-success); }
-
-/* ── 목표 역산 ── */
-.calc-row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
-.btn-calc {
-  font-family: var(--font-title);
-  padding: 0 16px;
-  height: 30px;
-  border-radius: var(--radius);
-  border: 1px solid var(--color-accent-bd);
-  background: var(--color-accent-bg);
-  color: var(--color-accent);
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-text {
+  font-family: var(--font-body);
   font-size: 12px;
-  cursor: pointer;
-  font-weight: 500;
-  letter-spacing: -0.01em;
-  transition: background .15s;
+  color: var(--color-text-3);
 }
-.btn-calc:hover { background: #d4e9fc; }
 
-/* ── 반응형 ── */
-@media (max-width: 900px) {
-  .kpi-row { grid-template-columns: repeat(2, 1fr); }
-  .two-col { grid-template-columns: 1fr; }
-  .rate-grid { grid-template-columns: repeat(2, 1fr); }
-}
 @media (max-width: 600px) {
-  .topbar, .cond-bar, .result-area { padding-left: 14px; padding-right: 14px; }
-  .kpi-row { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .topbar { padding: 12px 14px 0; }
+  .brand-title { font-size: 13.5px; }
   .tab { padding: 10px 12px; font-size: 12px; }
-  .flow-stats { grid-template-columns: 1fr 1fr; }
+  .tab span.label { display: none; }
 }
 </style>
 </head>
 <body>
 
-<!-- ══════════ 헤더 ══════════ -->
-<div class="topbar">
-  <div class="topbar-row">
-    <div>
-      <div class="brand-title">
-        분산 에너지 자원 요금·편익 분석 시뮬레이터
-        <span class="en">(Pricing and Revenue Analysis Simulator - DER)</span>
+<div class="shell">
+
+  <!-- ── 헤더 ── -->
+  <div class="topbar">
+    <div class="topbar-row">
+      <div>
+        <div class="brand-title">
+          분산 에너지 자원 요금·편익 분석 시뮬레이터
+          <span class="en">(Pricing and Revenue Analysis Simulator - DER)</span>
+        </div>
+        <div class="brand-sub">분산 에너지 자원 요금 설계 및 경제성 분석</div>
       </div>
-      <div class="brand-sub">분산 에너지 자원 요금 설계 및 경제성 분석</div>
+      <span class="year-badge">2026년 현행 요금표</span>
     </div>
-    <span class="year-badge">2026년 현행 요금표</span>
-  </div>
-  <div class="tabs">
-    <button class="tab active" onclick="switchTab('pv', this)">
-      <i class="ti ti-solar-panel" aria-hidden="true"></i>태양광·ESS
-    </button>
-    <button class="tab" onclick="switchTab('ev', this)">
-      <i class="ti ti-car" aria-hidden="true"></i>전기차 충전
-    </button>
-    <button class="tab" onclick="switchTab('hp', this)">
-      <i class="ti ti-home-bolt" aria-hidden="true"></i>히트펌프
-    </button>
-  </div>
-</div>
-
-
-<!-- ══════════ 태양광·ESS ══════════ -->
-<div class="tab-panel active" id="panel-pv">
-  <div class="cond-bar">
-    <div class="cond-title">분석 조건</div>
-    <div class="cond-grid">
-      <div class="cond-item" style="min-width:90px">
-        <div class="cond-label">설비용량 (kW)</div>
-        <input type="number" value="3" style="width:80px">
-      </div>
-      <div class="cond-item" style="min-width:150px">
-        <div class="cond-label">발전 이용률 (%)</div>
-        <div class="range-wrap">
-          <input type="range" min="5" max="30" value="15" style="width:85px"
-            oninput="this.nextElementSibling.textContent=this.value+'%'">
-          <span class="range-val">15%</span>
-        </div>
-      </div>
-      <div class="cond-sep"></div>
-      <div class="cond-item" style="min-width:150px">
-        <div class="cond-label">ESS 보유비율 (%)</div>
-        <div class="range-wrap">
-          <input type="range" min="0" max="100" value="50" style="width:80px"
-            oninput="this.nextElementSibling.textContent=this.value+'%'">
-          <span class="range-val">50%</span>
-        </div>
-      </div>
-      <div class="cond-item" style="min-width:90px">
-        <div class="cond-label">정격용량 (kWh)</div>
-        <input type="number" value="5" style="width:70px">
-      </div>
-      <div class="cond-item" style="min-width:130px">
-        <div class="cond-label">왕복효율 (%)</div>
-        <div class="range-wrap">
-          <input type="range" min="60" max="100" value="90" style="width:80px"
-            oninput="this.nextElementSibling.textContent=this.value+'%'">
-          <span class="range-val">90%</span>
-        </div>
-      </div>
-      <div class="toggle-item">
-        <div class="toggle" onclick="this.classList.toggle('on')"></div>
-        <span class="cond-label">계통 충전</span>
-      </div>
-      <div class="toggle-item">
-        <div class="toggle on" onclick="this.classList.toggle('on')"></div>
-        <span class="cond-label">ESS 역송</span>
-      </div>
-      <div class="cond-sep"></div>
-      <div class="cond-item" style="min-width:135px">
-        <div class="cond-label">SMP 기준연도</div>
-        <select style="width:135px">
-          <option>2025</option>
-          <option>2024</option>
-          <option>2022~2025 평균</option>
-        </select>
-      </div>
-      <div class="cond-item" style="min-width:130px">
-        <div class="cond-label">참여율 (%)</div>
-        <div class="range-wrap">
-          <input type="range" min="0" max="100" value="70" style="width:80px"
-            oninput="this.nextElementSibling.textContent=this.value+'%'">
-          <span class="range-val">70%</span>
-        </div>
-      </div>
-      <button class="btn-run">분석 실행</button>
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('pv', this)">
+        <i class="ti ti-solar-panel" aria-hidden="true"></i>
+        <span class="label">태양광·ESS</span>
+      </button>
+      <button class="tab" onclick="switchTab('ev', this)">
+        <i class="ti ti-car" aria-hidden="true"></i>
+        <span class="label">전기차 충전</span>
+      </button>
+      <button class="tab" onclick="switchTab('hp', this)">
+        <i class="ti ti-home-bolt" aria-hidden="true"></i>
+        <span class="label">히트펌프</span>
+      </button>
     </div>
   </div>
 
-  <div class="result-area">
-    <div class="kpi-row">
-      <div class="kpi danger">
-        <div class="kpi-label">순 전력량요금 수입 변화</div>
-        <div class="kpi-val">−1.6억원</div>
-        <div class="kpi-sub">역송 보상 포함</div>
+  <!-- ── 툴바 (탭별) ── -->
+  <div class="frame-bar active" id="bar-pv">
+    <span class="src">
+      <span class="dot"></span>
+      pras-pv-ess · 태양광·ESS 수전·역송 요금 재무영향 시뮬레이터
+    </span>
+    <a href="https://kiraoov-blip.github.io/pras-pv-ess/" target="_blank" rel="noopener">
+      새 창에서 열기 <i class="ti ti-external-link" style="font-size:12px;vertical-align:-1px"></i>
+    </a>
+  </div>
+  <div class="frame-bar" id="bar-ev">
+    <span class="src">
+      <span class="dot"></span>
+      pras-ev · 전기차 요금설계 및 매출영향 분석 시뮬레이터
+    </span>
+    <a href="https://kiraoov-blip.github.io/pras-ev/" target="_blank" rel="noopener">
+      새 창에서 열기 <i class="ti ti-external-link" style="font-size:12px;vertical-align:-1px"></i>
+    </a>
+  </div>
+  <div class="frame-bar" id="bar-hp">
+    <span class="src">
+      <span class="dot"></span>
+      pras-heatpump · 히트펌프 요금분석 시뮬레이터
+    </span>
+    <a href="https://kiraoov-blip.github.io/pras-heatpump/" target="_blank" rel="noopener">
+      새 창에서 열기 <i class="ti ti-external-link" style="font-size:12px;vertical-align:-1px"></i>
+    </a>
+  </div>
+
+  <!-- ── iframe 영역 ── -->
+  <div class="frames">
+
+    <div class="frame-wrap active" id="wrap-pv">
+      <div class="loading" id="load-pv">
+        <div class="spinner"></div>
+        <div class="loading-text">태양광·ESS 시뮬레이터 불러오는 중…</div>
       </div>
-      <div class="kpi accent">
-        <div class="kpi-label">참여고객 연간 순요금</div>
-        <div class="kpi-val">84,300원</div>
-        <div class="kpi-sub">수전−역송 보상</div>
-      </div>
-      <div class="kpi success">
-        <div class="kpi-label">SMP 구입비 절감</div>
-        <div class="kpi-val">−0.9억원</div>
-        <div class="kpi-sub">계통 조달 감소</div>
-      </div>
-      <div class="kpi">
-        <div class="kpi-label">자가소비율</div>
-        <div class="kpi-val">72%</div>
-        <div class="kpi-sub">PV 발전량 기준</div>
-      </div>
+      <iframe
+        src="https://kiraoov-blip.github.io/pras-pv-ess/"
+        title="태양광·ESS 수전·역송 요금 재무영향 시뮬레이터"
+        onload="hideLoading('load-pv')"
+      ></iframe>
     </div>
 
-    <div class="two-col">
-      <div class="card">
-        <div class="card-hd">
-          <span class="card-title">대표일 전력 흐름</span>
-          <span class="card-sub">고객 1호 기준</span>
-        </div>
-        <div class="flow-row">
-          <div class="flow-card">
-            <div class="flow-label">PV 발전</div>
-            <div class="flow-val" style="color:var(--color-warn)">10.8 kWh</div>
-          </div>
-          <i class="ti ti-arrow-right arr" aria-hidden="true"></i>
-          <div class="flow-card">
-            <div class="flow-label">ESS 충전</div>
-            <div class="flow-val" style="color:var(--color-accent)">4.2 kWh</div>
-          </div>
-          <i class="ti ti-arrow-right arr" aria-hidden="true"></i>
-          <div class="flow-card">
-            <div class="flow-label">자가소비</div>
-            <div class="flow-val" style="color:var(--color-success)">7.8 kWh</div>
-          </div>
-          <i class="ti ti-arrow-right arr" aria-hidden="true"></i>
-          <div class="flow-card">
-            <div class="flow-label">한전 수전</div>
-            <div class="flow-val">5.8 kWh</div>
-          </div>
-        </div>
-        <div class="flow-stats">
-          <div class="flow-stat">
-            <div class="lbl">순 계통조달 감소</div>
-            <div class="val" style="color:var(--color-success)">−3.7 kWh/일</div>
-          </div>
-          <div class="flow-stat">
-            <div class="lbl">SMP 구입비 절감</div>
-            <div class="val" style="color:var(--color-success)">−247원/일</div>
-          </div>
-          <div class="flow-stat">
-            <div class="lbl">배터리 SOC (종말)</div>
-            <div class="val">38%</div>
-          </div>
-        </div>
+    <div class="frame-wrap" id="wrap-ev">
+      <div class="loading" id="load-ev">
+        <div class="spinner"></div>
+        <div class="loading-text">전기차 충전 시뮬레이터 불러오는 중…</div>
       </div>
-
-      <div class="card">
-        <div class="card-hd"><span class="card-title">재무영향 분해</span></div>
-        <div class="decomp-wrap">
-          <div class="decomp-row">
-            <span class="d-label">판매수익 변화</span>
-            <div class="d-bar-wrap"><div class="d-bar" style="width:56%;background:var(--color-danger)"></div></div>
-            <span class="d-val" style="color:var(--color-danger)">−0.9억원</span>
-          </div>
-          <div class="decomp-row">
-            <span class="d-label">역송 지급액</span>
-            <div class="d-bar-wrap"><div class="d-bar" style="width:43%;background:var(--color-danger)"></div></div>
-            <span class="d-val" style="color:var(--color-danger)">−0.7억원</span>
-          </div>
-          <div class="decomp-row">
-            <span class="d-label bold">순수입 변화</span>
-            <div class="d-bar-wrap"><div class="d-bar" style="width:98%;background:var(--color-border-md)"></div></div>
-            <span class="d-val">−1.6억원</span>
-          </div>
-        </div>
-      </div>
+      <iframe
+        src="https://kiraoov-blip.github.io/pras-ev/"
+        title="전기차 요금설계 및 매출영향 분석 시뮬레이터"
+        onload="hideLoading('load-ev')"
+      ></iframe>
     </div>
 
-    <div class="card">
-      <div class="card-hd">
-        <span class="card-title">부하시간대별 수전·요금 변화</span>
-        <button class="csv-btn"><i class="ti ti-download"></i> CSV</button>
+    <div class="frame-wrap" id="wrap-hp">
+      <div class="loading" id="load-hp">
+        <div class="spinner"></div>
+        <div class="loading-text">히트펌프 시뮬레이터 불러오는 중…</div>
       </div>
-      <table class="tbl">
-        <thead>
-          <tr>
-            <th>시간대</th>
-            <th>기준 수전량 (kWh)</th>
-            <th>신규 수전량 (kWh)</th>
-            <th>변화량</th>
-            <th>변화율</th>
-            <th style="text-align:right">요금 변화 (원)</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>경부하 (22~08)</td><td>4.2</td><td>2.8</td><td>−1.4</td>
-            <td><span class="badge r">−33%</span></td>
-            <td class="r" style="color:var(--color-success)">−890</td>
-          </tr>
-          <tr>
-            <td>중간부하 (08~16)</td><td>0.9</td><td>0.6</td><td>−0.3</td>
-            <td><span class="badge r">−33%</span></td>
-            <td class="r" style="color:var(--color-success)">−260</td>
-          </tr>
-          <tr>
-            <td>최대부하 (16~22)</td><td>0.7</td><td>2.4</td><td>+1.7</td>
-            <td><span class="badge g">+243%</span></td>
-            <td class="r" style="color:var(--color-danger)">+1,050</td>
-          </tr>
-          <tr>
-            <td style="font-weight:500">합계</td><td>5.8</td><td>5.8</td><td>0.0</td>
-            <td>—</td>
-            <td class="r" style="color:var(--color-success)">−100</td>
-          </tr>
-        </tbody>
-      </table>
+      <iframe
+        src="https://kiraoov-blip.github.io/pras-heatpump/"
+        title="히트펌프 요금분석 시뮬레이터"
+        onload="hideLoading('load-hp')"
+      ></iframe>
     </div>
 
-    <div class="card">
-      <div class="card-hd"><span class="card-title">목표 순수입 역산 — 단가 탐색</span></div>
-      <div class="calc-row">
-        <div class="cond-item" style="min-width:160px">
-          <div class="cond-label">목표 기준</div>
-          <select>
-            <option>기준 대비 순수입 변화</option>
-            <option>신규안 순수입 총액</option>
-          </select>
-        </div>
-        <div class="cond-item" style="min-width:110px">
-          <div class="cond-label">목표 금액 (억원)</div>
-          <input type="number" value="-1.2">
-        </div>
-        <div class="cond-item" style="min-width:155px">
-          <div class="cond-label">조정 대상</div>
-          <select>
-            <option>수전단가 전체</option>
-            <option>역송단가 전체</option>
-            <option>경부하 수전단가</option>
-          </select>
-        </div>
-        <button class="btn-calc">계산</button>
-      </div>
-    </div>
   </div>
 </div>
-
-
-<!-- ══════════ 전기차 충전 ══════════ -->
-<div class="tab-panel" id="panel-ev">
-  <div class="cond-bar">
-    <div class="cond-title">분석 조건</div>
-    <div class="cond-grid">
-      <div class="cond-item" style="min-width:145px">
-        <div class="cond-label">분석 대상</div>
-        <select style="width:145px">
-          <option>전체</option>
-          <option>완속 (50kW 미만)</option>
-          <option>급속 (50kW 이상)</option>
-        </select>
-      </div>
-      <div class="cond-sep"></div>
-      <div class="cond-item" style="min-width:165px">
-        <div class="cond-label">현행요금 조정 방식</div>
-        <select style="width:165px">
-          <option>조정 없음</option>
-          <option>일괄 조정률(%)</option>
-          <option>연평균 단가 직접 입력</option>
-        </select>
-      </div>
-      <div class="cond-item" style="min-width:130px">
-        <div class="cond-label">조정률 (%)</div>
-        <div class="range-wrap">
-          <input type="range" min="-30" max="30" value="0" style="width:80px"
-            oninput="this.nextElementSibling.textContent=this.value+'%'">
-          <span class="range-val">0%</span>
-        </div>
-      </div>
-      <div class="cond-sep"></div>
-      <div class="cond-item" style="min-width:120px">
-        <div class="cond-label">신규 할인 방식</div>
-        <select style="width:120px">
-          <option>정률 할인</option>
-          <option>고정 단가</option>
-        </select>
-      </div>
-      <div class="cond-item" style="min-width:120px">
-        <div class="cond-label">할인율 (%)</div>
-        <div class="range-wrap">
-          <input type="range" min="0" max="80" value="40" style="width:80px"
-            oninput="this.nextElementSibling.textContent=this.value+'%'">
-          <span class="range-val">40%</span>
-        </div>
-      </div>
-      <div class="cond-item" style="min-width:120px">
-        <div class="cond-label">참여율 (%)</div>
-        <div class="range-wrap">
-          <input type="range" min="0" max="100" value="50" style="width:75px"
-            oninput="this.nextElementSibling.textContent=this.value+'%'">
-          <span class="range-val">50%</span>
-        </div>
-      </div>
-      <div class="cond-sep"></div>
-      <div class="cond-item" style="min-width:120px">
-        <div class="cond-label">완속 이전율 (%)</div>
-        <div class="range-wrap">
-          <input type="range" min="0" max="100" value="30" style="width:75px"
-            oninput="this.nextElementSibling.textContent=this.value+'%'">
-          <span class="range-val">30%</span>
-        </div>
-      </div>
-      <div class="cond-item" style="min-width:120px">
-        <div class="cond-label">급속 이전율 (%)</div>
-        <div class="range-wrap">
-          <input type="range" min="0" max="100" value="15" style="width:75px"
-            oninput="this.nextElementSibling.textContent=this.value+'%'">
-          <span class="range-val">15%</span>
-        </div>
-      </div>
-      <button class="btn-run">분석 실행</button>
-    </div>
-  </div>
-
-  <div class="result-area">
-    <div class="kpi-row">
-      <div class="kpi danger">
-        <div class="kpi-label">전력량요금 매출 변화</div>
-        <div class="kpi-val">−3.8억원</div>
-        <div class="kpi-sub">연간 기준</div>
-      </div>
-      <div class="kpi accent">
-        <div class="kpi-label">매출중립 할인단가</div>
-        <div class="kpi-val">68.4원/kWh</div>
-        <div class="kpi-sub">참여율 50% 기준</div>
-      </div>
-      <div class="kpi success">
-        <div class="kpi-label">SMP 구입비 절감</div>
-        <div class="kpi-val">−1.2억원</div>
-        <div class="kpi-sub">부하이전 효과</div>
-      </div>
-      <div class="kpi">
-        <div class="kpi-label">피크 이전량</div>
-        <div class="kpi-val">142 MWh</div>
-        <div class="kpi-sub">연간 합계</div>
-      </div>
-    </div>
-
-    <div class="two-col">
-      <div class="card">
-        <div class="card-hd">
-          <span class="card-title">24시간 평균 충전부하</span>
-          <span class="card-sub">현행 vs 신규 · 경부하 강조</span>
-        </div>
-        <div class="bar-chart" id="ev-chart"></div>
-        <div class="hour-labels" id="ev-labels"></div>
-        <div class="legend-row">
-          <span><span class="ldot" style="background:var(--color-border-md)"></span>현행</span>
-          <span><span class="ldot" style="background:var(--color-accent)"></span>신규 (경부하↑)</span>
-        </div>
-      </div>
-      <div class="card">
-        <div class="card-hd"><span class="card-title">매출변동 요인분해</span></div>
-        <div class="decomp-wrap">
-          <div class="decomp-row">
-            <span class="d-label">단가효과</span>
-            <div class="d-bar-wrap"><div class="d-bar" style="width:70%;background:var(--color-danger)"></div></div>
-            <span class="d-val" style="color:var(--color-danger)">−4.5억원</span>
-          </div>
-          <div class="decomp-row">
-            <span class="d-label">부하이전 효과</span>
-            <div class="d-bar-wrap"><div class="d-bar" style="width:22%;background:var(--color-success)"></div></div>
-            <span class="d-val" style="color:var(--color-success)">+0.7억원</span>
-          </div>
-          <div class="decomp-row">
-            <span class="d-label bold">순 매출 변화</span>
-            <div class="d-bar-wrap"><div class="d-bar" style="width:84%;background:var(--color-border-md)"></div></div>
-            <span class="d-val">−3.8억원</span>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="card-hd">
-        <span class="card-title">부하시간대별 사용량 변화</span>
-        <button class="csv-btn"><i class="ti ti-download"></i> CSV</button>
-      </div>
-      <table class="tbl">
-        <thead>
-          <tr>
-            <th>시간대</th>
-            <th>기준 사용량</th>
-            <th>신규 사용량</th>
-            <th>변화량</th>
-            <th>변화율</th>
-            <th style="text-align:right">요금 변화</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>경부하 (22~08)</td><td>1,840 MWh</td><td>2,120 MWh</td><td>+280 MWh</td>
-            <td><span class="badge g">+15.2%</span></td>
-            <td class="r" style="color:var(--color-success)">−0.8억원</td>
-          </tr>
-          <tr>
-            <td>중간부하 (08~16)</td><td>2,310 MWh</td><td>2,180 MWh</td><td>−130 MWh</td>
-            <td><span class="badge r">−5.6%</span></td>
-            <td class="r" style="color:var(--color-danger)">+0.2억원</td>
-          </tr>
-          <tr>
-            <td>최대부하 (16~22)</td><td>1,950 MWh</td><td>1,800 MWh</td><td>−150 MWh</td>
-            <td><span class="badge r">−7.7%</span></td>
-            <td class="r" style="color:var(--color-danger)">+0.3억원</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-</div>
-
-
-<!-- ══════════ 히트펌프 ══════════ -->
-<div class="tab-panel" id="panel-hp">
-  <div class="cond-bar">
-    <div class="cond-title">분석 조건</div>
-    <div class="cond-grid">
-      <div class="cond-item" style="min-width:100px">
-        <div class="cond-label">분석연도</div>
-        <select style="width:100px">
-          <option>전체</option><option>2025</option><option>2024</option>
-        </select>
-      </div>
-      <div class="cond-item" style="min-width:120px">
-        <div class="cond-label">고객</div>
-        <select style="width:120px">
-          <option>전체 고객</option><option>고객 01</option><option>고객 02</option>
-        </select>
-      </div>
-      <div class="cond-item" style="min-width:110px">
-        <div class="cond-label">계절</div>
-        <select style="width:110px">
-          <option>전체</option><option>여름</option><option>겨울</option><option>봄·가을</option>
-        </select>
-      </div>
-      <div class="cond-item" style="min-width:100px">
-        <div class="cond-label">요일</div>
-        <select style="width:100px">
-          <option>전체</option><option>평일</option><option>주말</option>
-        </select>
-      </div>
-      <div class="cond-sep"></div>
-      <div class="cond-item" style="min-width:145px">
-        <div class="cond-label">기준 요금제</div>
-        <select style="width:145px">
-          <option>주택용 누진제</option><option>주택용 TOU</option><option>일반용(저압)</option>
-        </select>
-      </div>
-      <div class="cond-item" style="min-width:160px">
-        <div class="cond-label">시나리오 요금제</div>
-        <select style="width:160px">
-          <option>히트펌프 전용(Cosy)</option><option>주택용 TOU</option><option>일반용(저압)</option>
-        </select>
-      </div>
-      <div class="cond-sep"></div>
-      <div class="toggle-item">
-        <div class="toggle on" onclick="this.classList.toggle('on')"></div>
-        <span class="cond-label">부하이전 적용</span>
-      </div>
-      <div class="cond-item" style="min-width:120px">
-        <div class="cond-label">이전율 (%)</div>
-        <div class="range-wrap">
-          <input type="range" min="0" max="100" value="30" style="width:75px"
-            oninput="this.nextElementSibling.textContent=this.value+'%'">
-          <span class="range-val">30%</span>
-        </div>
-      </div>
-      <div class="cond-sep"></div>
-      <div class="cond-item" style="min-width:120px">
-        <div class="cond-label">목표 보급 가구수</div>
-        <input type="number" value="5000" style="width:100px">
-      </div>
-      <div class="cond-item" style="min-width:115px">
-        <div class="cond-label">가입률 (%)</div>
-        <div class="range-wrap">
-          <input type="range" min="0" max="100" value="60" style="width:75px"
-            oninput="this.nextElementSibling.textContent=this.value+'%'">
-          <span class="range-val">60%</span>
-        </div>
-      </div>
-      <button class="btn-run">분석 실행</button>
-    </div>
-  </div>
-
-  <div class="result-area">
-    <div class="kpi-row">
-      <div class="kpi success">
-        <div class="kpi-label">가구당 연간 요금 절감</div>
-        <div class="kpi-val">−47,200원</div>
-        <div class="kpi-sub">기준 대비 −18.3%</div>
-      </div>
-      <div class="kpi accent">
-        <div class="kpi-label">피크 절감량</div>
-        <div class="kpi-val">0.42 kW</div>
-        <div class="kpi-sub">동시피크 기준</div>
-      </div>
-      <div class="kpi">
-        <div class="kpi-label">예상 가입가구</div>
-        <div class="kpi-val">3,000가구</div>
-        <div class="kpi-sub">목표 5,000 × 60%</div>
-      </div>
-      <div class="kpi danger">
-        <div class="kpi-label">SMP 구입비 영향</div>
-        <div class="kpi-val">−2.1억원</div>
-        <div class="kpi-sub">연간 가입자 합계</div>
-      </div>
-    </div>
-
-    <div class="two-col">
-      <div class="card">
-        <div class="card-hd">
-          <span class="card-title">요금제별 전력량요금 비교</span>
-          <span class="card-sub">기준 vs 시나리오</span>
-        </div>
-        <div class="rate-grid">
-          <div class="rate-item">
-            <div class="rate-bars">
-              <div class="bar ref" style="width:24px;height:72%"></div>
-              <div class="bar scen" style="width:24px;height:54%"></div>
-            </div>
-            <div class="rate-name">주택용 누진제</div>
-            <div class="rate-diff">−25%</div>
-          </div>
-          <div class="rate-item">
-            <div class="rate-bars">
-              <div class="bar ref" style="width:24px;height:80%"></div>
-              <div class="bar scen" style="width:24px;height:62%"></div>
-            </div>
-            <div class="rate-name">주택용 TOU</div>
-            <div class="rate-diff">−22%</div>
-          </div>
-          <div class="rate-item">
-            <div class="rate-bars">
-              <div class="bar ref" style="width:24px;height:68%"></div>
-              <div class="bar scen" style="width:24px;height:58%"></div>
-            </div>
-            <div class="rate-name">일반용(저압)</div>
-            <div class="rate-diff">−15%</div>
-          </div>
-          <div class="rate-item">
-            <div class="rate-bars">
-              <div class="bar ref" style="width:24px;height:76%"></div>
-              <div class="bar scen" style="width:24px;height:52%"></div>
-            </div>
-            <div class="rate-name">HP 전용(Cosy)</div>
-            <div class="rate-diff">−32%</div>
-          </div>
-        </div>
-        <div class="legend-row">
-          <span><span class="ldot" style="background:var(--color-border-md)"></span>기준안</span>
-          <span><span class="ldot" style="background:var(--color-accent);opacity:.8"></span>시나리오</span>
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="card-hd"><span class="card-title">요금 변화 효과 분해</span></div>
-        <div class="decomp-wrap">
-          <div class="decomp-row">
-            <span class="d-label">단가효과</span>
-            <div class="d-bar-wrap"><div class="d-bar" style="width:66%;background:var(--color-accent)"></div></div>
-            <span class="d-val" style="color:var(--color-accent)">−31,100원</span>
-          </div>
-          <div class="decomp-row">
-            <span class="d-label">수요이전 효과</span>
-            <div class="d-bar-wrap"><div class="d-bar" style="width:34%;background:var(--color-success)"></div></div>
-            <span class="d-val" style="color:var(--color-success)">−16,100원</span>
-          </div>
-          <div class="decomp-row">
-            <span class="d-label bold">총 요금변화</span>
-            <div class="d-bar-wrap"><div class="d-bar" style="width:98%;background:var(--color-border-md)"></div></div>
-            <span class="d-val">−47,200원</span>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="card-hd">
-        <span class="card-title">고객별 기준안·시나리오 비교</span>
-        <button class="csv-btn"><i class="ti ti-download"></i> CSV</button>
-      </div>
-      <table class="tbl">
-        <thead>
-          <tr>
-            <th>고객ID</th>
-            <th>사용량 (kWh)</th>
-            <th>기준요금 (원)</th>
-            <th>시나리오 (원)</th>
-            <th>증감액 (원)</th>
-            <th style="text-align:right">증감률</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>C01</td><td>1,240</td><td>258,000</td><td>210,800</td>
-            <td style="color:var(--color-success)">−47,200</td>
-            <td class="r"><span class="badge g">−18.3%</span></td>
-          </tr>
-          <tr>
-            <td>C02</td><td>980</td><td>204,000</td><td>171,400</td>
-            <td style="color:var(--color-success)">−32,600</td>
-            <td class="r"><span class="badge g">−16.0%</span></td>
-          </tr>
-          <tr>
-            <td>C03</td><td>1,580</td><td>329,000</td><td>261,100</td>
-            <td style="color:var(--color-success)">−67,900</td>
-            <td class="r"><span class="badge g">−20.6%</span></td>
-          </tr>
-          <tr>
-            <td>C04</td><td>820</td><td>171,000</td><td>159,300</td>
-            <td style="color:var(--color-success)">−11,700</td>
-            <td class="r"><span class="badge g">−6.8%</span></td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-</div>
-
 
 <script>
-/* ── 탭 전환 ── */
+const TABS = ['pv', 'ev', 'hp'];
+
 function switchTab(name, btn) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   btn.classList.add('active');
-  ['pv', 'ev', 'hp'].forEach(n => {
-    document.getElementById('panel-' + n).classList.toggle('active', n === name);
+  TABS.forEach(n => {
+    document.getElementById('wrap-' + n).classList.toggle('active', n === name);
+    document.getElementById('bar-'  + n).classList.toggle('active', n === name);
   });
 }
 
-/* ── EV 24시간 차트 ── */
-(function buildEVChart() {
-  const refH  = [38,32,28,25,22,21,24,30, 55,62,70,68,65,60,58,62, 80,88,82,75,68,60,52,44];
-  const scnH  = [72,68,60,55,50,48,55,65, 48,42,45,42,40,38,40,42, 65,70,67,60,55,48,44,50];
-  const hours = [22,23,0,1,2,3,4,5, 6,7,8,9,10,11,12,13, 14,15,16,17,18,19,20,21];
-  const chart = document.getElementById('ev-chart');
-  const lbls  = document.getElementById('ev-labels');
-  const mx    = Math.max(...refH, ...scnH);
-
-  hours.forEach((h, i) => {
-    const isOff = (h >= 22 || h < 8);
-
-    const col = document.createElement('div');
-    col.className = 'bc-col';
-
-    const r = document.createElement('div');
-    r.className = 'bar ref';
-    r.style.height = Math.round(refH[i] / mx * 95) + '%';
-    if (isOff) r.style.background = 'var(--color-border-md)';
-
-    const s = document.createElement('div');
-    s.className = 'bar scen';
-    s.style.height = Math.round(scnH[i] / mx * 95) + '%';
-    if (isOff) { s.style.background = 'var(--color-success-bg)'; s.style.opacity = '1'; }
-
-    col.appendChild(r);
-    col.appendChild(s);
-    chart.appendChild(col);
-
-    const lbl = document.createElement('div');
-    lbl.className = 'h-lbl';
-    lbl.textContent = (i % 6 === 0) ? String(h).padStart(2, '0') : '';
-    lbls.appendChild(lbl);
-  });
-})();
+function hideLoading(id) {
+  const el = document.getElementById(id);
+  if (el) el.classList.add('hidden');
+}
 </script>
 
 </body>
