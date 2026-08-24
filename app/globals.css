@@ -121,3 +121,19 @@ body>main>.workspace{flex:1 0 auto}
 
 /* 랜딩 카드 태그 — 영문 표기 */
 .landing-card-tag{letter-spacing:.01em}
+
+/* 안내 문구는 한 줄로 — 62ch 제한(약 448px)에 걸려 두 줄로 접히던 것을 푼다.
+   좁은 화면에서는 자연스럽게 줄바꿈되도록 max-width 만 해제한다. */
+.landing-intro span{max-width:none}
+
+/* ── 헤더 높이 통일 ────────────────────────────────────────────────
+   측정값이 104~136px 로 제각각이었다(세로 패딩 34/22·18/24/20px + 부제 줄높이 차이).
+   h1 은 이미 clamp(23px,2.5vw,33px) 로 동일하므로 패딩과 부제 줄높이만 고정한다.
+   기준: 세로 패딩 24px, 부제 line-height 1.45 → 헤더 높이 118px */
+.hero{padding:24px 0}
+.hero p{line-height:1.45}
+@media(max-width:640px){.hero{padding:16px 0}}
+
+/* 제목↔부제 간격 6px 로 통일 (탐라는 grid gap 8px 이었다) */
+.hero-title>div{gap:6px}
+@media(max-width:640px){.hero-title>div{gap:6px}}
