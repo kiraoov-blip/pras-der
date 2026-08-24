@@ -90,9 +90,15 @@ Node.js 22.13 이상이 필요합니다.
 
 ```bash
 npm ci
-npx playwright install chromium   # 골든 테스트용
+npm install --no-save playwright@1.56.0   # 골든 테스트용
+npx playwright install chromium
 npm run dev
 ```
+
+> `npm run dev`(Vite)는 `.openai/hosting.json`을 참조합니다. 이 파일은 저장소에 포함되지 않는
+> 로컬 전용 설정이라, 없으면 개발 서버가 뜨지 않습니다. GitHub Pages 빌드(`next build`)는
+> 이 파일을 쓰지 않으므로 **배포에는 영향이 없습니다.** 개발 서버가 필요하면
+> `{"d1":null,"r2":null}` 내용으로 `.openai/hosting.json`을 만들어 두면 됩니다.
 
 검증 명령:
 
