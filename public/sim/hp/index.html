@@ -560,7 +560,7 @@ footer{margin-top:18px;color:#64748b;font-size:11px;line-height:1.6}
 </div>
 </div>
 </div></aside><main class="results-pane"><div class="pane-heading results-heading">시나리오 설정</div><div class="panel settings-card cosy-settings">
-<div class="statusline"><h2 style="margin:0">히트펌프 전용(Cosy형) 시나리오</h2><div class="cosy-head-actions"><span class="badge scenario" id="cosyUseBadge">시나리오 적용 중</span><button id="resetScenario">Cosy 기본 설정으로 초기화</button></div></div>
+<div class="statusline"><h2 style="margin:0">히트펌프 전용(Octopus형) 시나리오</h2><div class="cosy-head-actions"><span class="badge scenario" id="cosyUseBadge">시나리오 적용 중</span><button id="resetScenario">Octopus 기본 설정으로 초기화</button></div></div>
 <div class="grid controls" style="grid-template-columns:repeat(3,minmax(150px,1fr))">
 <div class="field"><label>요금 설정 방식</label><select id="cosyPriceMode"><option selected="" value="pct">비율 조정 (기본)</option><option value="fixed">직접 단가 입력 (원/kWh)</option></select></div>
 <div class="field"><label>할인시간</label><input disabled="" id="discountHours"/></div>
@@ -597,7 +597,7 @@ footer{margin-top:18px;color:#64748b;font-size:11px;line-height:1.6}
 <div class="note">복수 규칙을 동시에 적용할 수 있음. 각 규칙의 이전율은 <b>해당 원천시간대의 기존 사용량</b>을 기준으로 적용하며, 동일 원천시간이 여러 규칙에 중복되면 합계 100%를 초과하지 않도록 자동 제한함.</div>
 </div>
 <div id="shiftRules" class="shift-rule-list"></div>
-<div class="note" style="margin-top:10px">원천·목적 시간대는 <b>계시별(경/중/최)</b> 또는 현재 Cosy 시나리오의 <b>할인/일반/인상</b> 구분에서 선택함. 각 규칙은 고객별·날짜별 같은 날 안에서 적용하며, 이전된 부하는 다른 규칙의 원천부하로 다시 이동시키지 않음.</div>
+<div class="note" style="margin-top:10px">원천·목적 시간대는 <b>계시별(경/중/최)</b> 또는 현재 Octopus 시나리오의 <b>할인/일반/인상</b> 구분에서 선택함. 각 규칙은 고객별·날짜별 같은 날 안에서 적용하며, 이전된 부하는 다른 규칙의 원천부하로 다시 이동시키지 않음.</div>
 <div class="shift-summary">
 <div class="shift-stat"><div class="sl">분석기간 총 이전량</div><div class="sv" id="shiftMovedKwh">0 kWh</div></div>
 <div class="shift-stat"><div class="sl">원천 감소량</div><div class="sv" id="shiftSourceDecreaseKwh">0 kWh</div></div>
@@ -658,7 +658,7 @@ footer{margin-top:18px;color:#64748b;font-size:11px;line-height:1.6}
 <div class="note" id="deploymentNote" style="margin-top:10px">현재 부하이전은 에너지를 절감하지 않고 시간대만 이동하므로 연간 전력절감량과 고정 배출계수 기준 CO₂ 절감량은 0이 원칙임.</div>
 </div>
 <div class="panel" id="hourlyChangePanel"><h2>시간별 전력사용량 및 변화 요약</h2>
-<div class="note" style="margin-bottom:8px">요약 기준을 선택하여 <b>계시별 경·중·최</b> 또는 <b>Cosy 시나리오의 할인·일반·인상 시간대</b> 기준으로 사용량과 요금 변화를 확인함.</div>
+<div class="note" style="margin-bottom:8px">요약 기준을 선택하여 <b>계시별 경·중·최</b> 또는 <b>Octopus 시나리오의 할인·일반·인상 시간대</b> 기준으로 사용량과 요금 변화를 확인함.</div>
 <div class="summary-tabs" role="group" aria-label="시간대 요약 기준"><button type="button" class="summary-tab active" data-summary-mode="tou">계시별 시간대</button><button type="button" class="summary-tab" data-summary-mode="cosy">시나리오 시간대</button></div>
 <h3 id="loadBandSummaryTitle" style="margin:0 0 7px;font-size:14px">계시별 시간대 요약</h3>
 <div class="load-band-split">
