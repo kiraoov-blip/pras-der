@@ -1,0 +1,1362 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PRAS - PV/ESS</title><style>
+@import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css");
+/* PRAS Design System v1 — 공용 토큰 (TAMRA 기준) */
+:root{
+  --bg:#f3f6fa;--panel:#ffffff;--text:#101c31;--muted:#667085;--line:#d5deea;--brand:#2168df;--brand2:#2168df;
+  --good:#087f68;--bad:#bf2d1c;--warn:#d99614;--soft:#eaf2ff;--shadow:0 3px 12px rgba(24,45,72,.025);
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-width:0;background:var(--bg);overflow-x:hidden}
+body{color:var(--text);font-family:"Pretendard","Noto Sans KR","Apple SD Gothic Neo",Arial,sans-serif;letter-spacing:-.02em;-webkit-font-smoothing:antialiased;font-size:14px}
+button,input,select,table{font-family:inherit}
+#appRoot{width:100%;min-width:0}
+header{background:radial-gradient(circle at 78% 15%,rgba(56,168,198,.19),transparent 29%),linear-gradient(118deg,#0b223d 0%,#12385f 62%,#124d69 100%);color:#fff;padding:20px 28px}
+.header-inner{max-width:1480px;margin:auto;display:flex;gap:24px;align-items:center}
+h1{font-size:clamp(23px,2.5vw,33px);margin:0 0 6px;font-weight:750;letter-spacing:-.04em;line-height:1.28}.subtitle{color:#bfd6e6;font-size:14px;font-weight:500;letter-spacing:-.01em}
+main{max-width:1480px;margin:14px auto 28px;padding:0 18px}
+.layout{display:grid;grid-template-columns:330px minmax(0,1fr);gap:14px;align-items:start}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);min-width:0}
+.panel h2{font-size:16px;margin:0;padding:13px 16px;border-bottom:1px solid var(--line)}
+.controls{position:sticky;top:10px;overflow:visible}.control-section{padding:12px 15px;border-bottom:1px solid var(--line)}.control-section:last-child{border-bottom:0}.section-title{font-weight:700;font-size:13px;margin-bottom:8px;color:#344054}
+.field{display:grid;grid-template-columns:1fr 112px;align-items:center;gap:10px;margin:7px 0}.field label{color:#475467;line-height:1.2}.field input,.field select{width:100%;border:1px solid #d0d5dd;border-radius:7px;padding:6px 8px;background:#fff;color:#101828;text-align:right;font-size:13px}.field select{text-align:left}
+.toggle{display:flex;align-items:center;justify-content:space-between;margin:8px 0;color:#475467}.switch{position:relative;width:38px;height:22px}.switch input{opacity:0;width:0;height:0}.slider{position:absolute;inset:0;background:#d0d5dd;border-radius:20px;cursor:pointer}.slider:before{content:"";position:absolute;width:16px;height:16px;left:3px;top:3px;background:white;border-radius:50%;transition:.15s}.switch input:checked+.slider{background:var(--brand2)}.switch input:checked+.slider:before{transform:translateX(16px)}
+
+.pv-calc{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:8px 0;padding:7px 9px;border-radius:7px;background:#f8fafc;border:1px solid #eaecf0;color:#475467;font-size:11.5px}.pv-calc b{font-size:12px;color:#101828;font-variant-numeric:tabular-nums}
+.kpi-help{font-size:10.5px;color:#98a2b3;line-height:1.35;margin-top:6px;padding-top:6px;border-top:1px solid #f2f4f7}
+.heat-legend{display:flex;align-items:center;gap:6px;margin-top:6px;font-size:10px;color:#667085}.heat-legend i{display:block;width:120px;height:8px;border-radius:999px;background:linear-gradient(90deg,#f2f4f7 0%,#fef0c7 50%,#fecdca 100%);border:1px solid #eaecf0}.heat-legend em{font-style:normal;color:#98a2b3;margin-left:2px}
+.btn{border:1px solid #cbd5e1;background:#fff;border-radius:7px;padding:6px 9px;cursor:pointer;color:#344054;font-weight:600;font-size:12px}.btn:hover{background:#f8fafc}.btn.primary{background:var(--brand);border-color:var(--brand);color:#fff}.btn-row{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}.hint{font-size:11.5px;color:var(--muted);line-height:1.4;margin-top:6px}.warning{background:#fffaeb;border:1px solid #fedf89;color:#7a2e0e;padding:8px 9px;border-radius:8px;font-size:11.5px;line-height:1.4;margin-top:8px}
+.content{display:flex;flex-direction:column;gap:12px;min-width:0}.kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px}.kpi{background:#fff;border:1px solid var(--line);border-radius:11px;padding:12px 14px;min-width:0}.kpi .label{font-size:12px;color:var(--muted);margin-bottom:6px}.kpi .value{font-size:19px;font-weight:760;letter-spacing:-.3px}.kpi .sub{font-size:11.5px;color:var(--muted);margin-top:4px}.positive{color:var(--good)!important}.negative{color:var(--bad)!important}
+.grid2{display:grid;grid-template-columns:1.2fr 1fr;gap:12px;min-width:0}.grid3{display:grid;grid-template-columns:1.15fr 1fr .95fr;gap:12px;min-width:0}.chart-wrap{padding:10px 12px 12px;min-width:0}.chart-title{display:flex;align-items:center;justify-content:space-between;font-weight:700;font-size:13px;margin-bottom:6px}.chart-sub{font-size:11px;color:var(--muted);font-weight:400}.chart{width:100%;height:250px;border-top:1px solid #f2f4f7}.legend-row{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:25px}.legend{display:flex;gap:6px 9px;flex-wrap:wrap;font-size:11px;color:#475467;margin:5px 0}.legend span::before,.legend-item::before{content:"";display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px;background:var(--c)}.legend-item{appearance:none;border:0;background:transparent;padding:2px 3px;margin:0;cursor:pointer;font:500 11px/1.2 inherit;color:#475467;border-radius:4px}.legend-item:hover{background:#f2f4f7}.legend-item.off{color:#98a2b3;text-decoration:line-through;opacity:.55}.legend-item.off::before{background:#d0d5dd}.legend-help{font-size:9.5px;color:#98a2b3;white-space:nowrap}.chart-empty{height:100%;display:flex;align-items:center;justify-content:center;color:#98a2b3;font-size:11.5px}
+.tariff-panel{overflow:hidden}.tariff-head{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:11px 14px;border-bottom:1px solid var(--line)}.tariff-head h2{padding:0;border:0}.table-scroll{width:100%;overflow:visible}
+.tariff-table,.detail-table{border-collapse:collapse;width:100%;min-width:0;table-layout:fixed;color:#344054;font-size:11px}
+.tariff-table th,.tariff-table td,.detail-table th,.detail-table td{border-right:1px solid #eaecf0;border-bottom:1px solid #eaecf0;text-align:right;white-space:nowrap;font-family:inherit;font-size:11px;color:#344054;font-weight:500;line-height:1.15}
+.tariff-table th,.tariff-table td{padding:3px 2px;height:34px}.detail-table th,.detail-table td{padding:2px 5px;height:20px}.tariff-table th,.detail-table th{background:#f9fafb;font-weight:600;text-align:center}.tariff-table th:first-child,.tariff-table td:first-child,.detail-table th:first-child,.detail-table td:first-child{background:#fff;text-align:left;font-weight:650;color:#344054}.tariff-table th:first-child,.detail-table th:first-child{background:#f9fafb}.tariff-table th:first-child,.tariff-table td:first-child{width:118px;padding-left:8px}.detail-table th:first-child,.detail-table td:first-child{width:64px;padding-left:8px}
+.tariff-table input{display:block;width:100%;min-width:0;border:1px solid transparent;background:transparent;text-align:right;padding:2px 3px;border-radius:4px;font-family:inherit;font-size:11px;color:#344054;font-weight:500;line-height:1.15;font-variant-numeric:tabular-nums}.tariff-table input:focus{border-color:#84adff;background:#fff;outline:none}.tariff-table input[type=number]{-moz-appearance:textfield}.tariff-table input[type=number]::-webkit-inner-spin-button,.tariff-table input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}.detail-table td{font-variant-numeric:tabular-nums}
+
+.tariff-cell{display:flex;flex-direction:column;align-items:stretch;gap:1px;min-width:0}
+.period-tag{display:block;text-align:center;font-size:8px;line-height:1;color:#98a2b3;font-weight:700;letter-spacing:0;margin-top:1px;user-select:none}
+.period-tag.low{color:#667085}.period-tag.mid{color:#b54708}.period-tag.peak{color:#b42318}
+
+.tariff-responsive,.detail-responsive{display:none}
+.decomp{padding:9px 14px 12px}.bar-row{display:grid;grid-template-columns:135px 1fr 105px;align-items:center;gap:10px;margin:8px 0}.bar-label{font-size:12px;color:#475467}.bar-track{height:11px;background:#f2f4f7;border-radius:8px;position:relative;overflow:hidden}.bar-fill{height:100%;border-radius:8px;position:absolute}.bar-value{text-align:right;font-size:12px;font-weight:650}.data-note{padding:11px 14px;display:grid;grid-template-columns:repeat(3,1fr);gap:9px}.note-card{border:1px solid var(--line);border-radius:8px;padding:8px 9px}.note-card b{font-size:12px}.note-card p{font-size:11.5px;color:var(--muted);line-height:1.4;margin:5px 0 0}
+
+.behavior-panel{overflow:hidden}.behavior-head{padding:11px 14px 8px;border-bottom:1px solid var(--line)}.behavior-head h2{padding:0;border:0}.behavior-summary{margin:10px 14px 0;padding:9px 11px;border-radius:8px;background:#eef4ff;border:1px solid #c7d7fe;color:#1849a9;font-size:12px;font-weight:650;line-height:1.45}.behavior-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;padding:10px 14px}.behavior-card{border:1px solid var(--line);border-radius:8px;padding:9px 10px;background:#fff;min-width:0}.behavior-card b{font-size:11.5px;color:#344054}.behavior-card p{font-size:11px;color:#667085;line-height:1.45;margin:5px 0 0}.behavior-foot{padding:0 14px 11px;color:#98a2b3;font-size:10.5px;line-height:1.4}
+.tabs{display:flex;gap:2px;padding:0 12px;border-bottom:1px solid var(--line)}.tab{padding:9px 11px;border:0;background:none;color:#667085;cursor:pointer;font-weight:650;font-size:12px}.tab.active{color:var(--brand);border-bottom:2px solid var(--brand)}.tab-content{display:none}.tab-content.active{display:block}
+
+/* 반폭 데스크톱/태블릿: 축소가 아니라 실제 재배치 */
+@media(max-width:1180px){
+  header{padding:15px 20px} h1{font-size:21px}.subtitle{font-size:12px}
+  main{max-width:none;margin:10px auto 20px;padding:0 12px}
+  .layout{grid-template-columns:1fr;gap:10px}
+  .controls{position:static;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}
+  .controls>h2{grid-column:1/-1}
+  .control-section{border-bottom:1px solid var(--line);border-right:1px solid var(--line);height:100%}
+  .control-section:nth-of-type(even){border-right:0}
+  .field{grid-template-columns:minmax(0,1fr) 118px;margin:6px 0}
+  .content{gap:10px}
+  .kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.kpi{padding:10px 12px}.kpi .value{font-size:18px}.kpi-help{font-size:10px}.heat-legend i{width:90px}
+  .grid2{grid-template-columns:1fr 1fr;gap:10px}.grid3{grid-template-columns:1fr;gap:10px}
+  .chart{height:220px}
+  .tariff-head{align-items:flex-start}.warning{margin:8px 12px 0!important}
+  .tariff-desktop{display:none}.tariff-responsive{display:block;padding:8px 10px 11px}
+  .tariff-card{border:1px solid var(--line);border-radius:8px;margin-top:7px;overflow:hidden}.tariff-card:first-child{margin-top:0}.tariff-card-title{padding:6px 8px;background:#f9fafb;font-size:11.5px;font-weight:700;color:#344054;border-bottom:1px solid var(--line)}
+  .tariff-hour-grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:0}.tariff-hour{min-width:0;border-right:1px solid #eaecf0;border-bottom:1px solid #eaecf0;padding:3px 3px 4px;text-align:center}.tariff-hour:nth-child(12n){border-right:0}.tariff-hour:nth-last-child(-n+12){border-bottom:0}.tariff-hour label{display:block;font-size:9px;color:#667085;line-height:1.1;margin-bottom:2px}.tariff-hour input{width:100%;min-width:0;border:1px solid #d0d5dd;border-radius:4px;background:#fff;text-align:center;padding:3px 1px;font:500 10.5px/1.1 inherit;color:#344054;font-variant-numeric:tabular-nums}.tariff-hour input:focus{outline:none;border-color:#84adff}.tariff-hour .period-tag{font-size:8px;margin-top:2px}.tariff-hour input[type=number]{-moz-appearance:textfield}.tariff-hour input[type=number]::-webkit-inner-spin-button,.tariff-hour input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+  .detail-desktop{display:none}.detail-responsive{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:8px}
+  .detail-mini{border-collapse:collapse;width:100%;table-layout:fixed;font-size:10px;color:#344054}.detail-mini th,.detail-mini td{border:1px solid #eaecf0;padding:2px 3px;height:19px;white-space:nowrap;text-align:right;font:500 10px/1.1 inherit;color:#344054;font-variant-numeric:tabular-nums}.detail-mini th{background:#f9fafb;text-align:center;font-weight:650}.detail-mini th:first-child,.detail-mini td:first-child{text-align:left;width:42px;font-weight:650}.detail-mini caption{text-align:left;font-size:10.5px;font-weight:700;color:#344054;padding:0 0 4px}
+  .data-note{grid-template-columns:repeat(2,1fr)}
+  .behavior-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+
+@media(max-width:820px){
+  .controls{grid-template-columns:1fr}.controls>h2{grid-column:auto}.control-section{border-right:0}
+  .grid2{grid-template-columns:1fr}.grid3{grid-template-columns:1fr}.grid3{grid-template-columns:1fr}.chart{height:210px}
+  .tariff-hour-grid{grid-template-columns:repeat(6,minmax(0,1fr))}.tariff-hour:nth-child(12n){border-right:1px solid #eaecf0}.tariff-hour:nth-child(6n){border-right:0}.tariff-hour:nth-last-child(-n+12){border-bottom:1px solid #eaecf0}.tariff-hour:nth-last-child(-n+6){border-bottom:0}
+  .detail-responsive{grid-template-columns:1fr}.detail-mini th,.detail-mini td{height:18px}
+  .data-note{grid-template-columns:1fr 1fr}
+  .behavior-grid{grid-template-columns:1fr 1fr}
+}
+@media(max-width:560px){
+  header{padding:13px 14px}h1{font-size:18px}.subtitle{font-size:11px}
+  main{padding:0 8px}.kpis{grid-template-columns:1fr}.field{grid-template-columns:1fr 105px}
+  .tariff-head{display:block}.tariff-head .btn-row{margin-top:7px}.heat-legend{flex-wrap:wrap}.heat-legend em{width:100%;margin-left:0}.data-note{grid-template-columns:1fr}.bar-row{grid-template-columns:105px 1fr 85px;gap:6px}
+  .behavior-grid{grid-template-columns:1fr}.legend-row{align-items:flex-start}.legend-help{display:none}
+}
+
+/* v0.8: compact detail table, period summary, unit labels */
+.detail-unit-note{padding:7px 10px;background:#f9fafb;border-bottom:1px solid var(--line);font-size:10.5px;color:#667085;line-height:1.35}
+.detail-scrollbox{max-height:360px;overflow-y:auto;overflow-x:hidden;scrollbar-gutter:stable}
+.detail-scrollbox .detail-table thead th{position:sticky;top:0;z-index:2;background:#f9fafb}
+.detail-table th small{display:block;margin-top:1px;font-size:8px;line-height:1;color:#98a2b3;font-weight:500}
+.period-panel{overflow:hidden}.period-head{padding:11px 14px;border-bottom:1px solid var(--line)}.period-head h2{padding:0;border:0}
+.period-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;padding:11px 14px 14px}
+.period-card{border:1px solid var(--line);border-radius:9px;overflow:hidden;background:#fff;min-width:0}
+.period-card-head{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 9px;background:#f9fafb;border-bottom:1px solid var(--line)}
+.period-card-head b{font-size:12px;color:#344054}.period-card-head span{font-size:9.5px;color:#667085;text-align:right}
+.period-card.low{border-top:3px solid #98a2b3}.period-card.mid{border-top:3px solid #fdb022}.period-card.peak{border-top:3px solid #f04438}
+.period-metric{padding:7px 9px;border-bottom:1px solid #f2f4f7}.period-metric:last-child{border-bottom:0}
+.period-metric>span{display:block;font-size:9.5px;color:#667085;margin-bottom:2px}.period-metric strong{display:block;font-size:11px;color:#344054;font-weight:650;white-space:nowrap}.period-metric em{display:block;margin-top:2px;font-size:10px;font-style:normal;font-weight:650}
+@media(max-width:1180px){.period-summary{grid-template-columns:1fr}.detail-scrollbox{max-height:330px}}
+@media(max-width:760px){.detail-scrollbox{max-height:300px}.period-summary{padding:8px 10px 11px}.period-card-head span{font-size:9px}}
+
+/* v0.9: readability enhancement outside the dense tariff-setting interface */
+body{font-size:14.5px}
+h1{font-size:clamp(23px,2.5vw,33px);line-height:1.28;letter-spacing:-.04em;font-weight:750;margin-bottom:6px}
+.subtitle{color:#bfd6e6;font-size:14px;font-weight:500;letter-spacing:-.01em;line-height:1.35}
+.panel h2{font-size:17px}
+.section-title{font-size:13.5px}
+.field label,.toggle>span{font-size:13.5px}
+.field input,.field select{font-size:13.5px}
+.hint{font-size:12.5px}
+.warning{font-size:12.5px}
+.btn{font-size:12.5px}
+
+.kpi .label{font-size:13px}
+.kpi .value{font-size:21px}
+.kpi .sub{font-size:12.5px;line-height:1.35}
+.kpi-help{font-size:11.5px;line-height:1.45}
+
+.chart-title{font-size:14px}
+.chart-sub{font-size:12px}
+.legend{font-size:12px}
+.legend-item{font-size:12px}
+.legend-help{font-size:10.5px}
+
+.decomp{padding:11px 15px 14px}
+.bar-row{grid-template-columns:145px 1fr 115px;margin:10px 0}
+.bar-label{font-size:13.5px}
+.bar-value{font-size:13.5px}
+.bar-track{height:13px}
+
+.data-note{padding:13px 15px;gap:10px}
+.note-card{padding:10px 11px}
+.note-card b{font-size:13.5px}
+.note-card p{font-size:12.5px;line-height:1.5}
+
+.period-head{padding:13px 15px}
+.period-summary{gap:11px;padding:13px 15px 16px}
+.period-card-head{padding:9px 11px}
+.period-card-head b{font-size:13.5px}
+.period-card-head span{font-size:10.5px}
+.period-metric{padding:9px 11px}
+.period-metric>span{font-size:10.5px;margin-bottom:3px}
+.period-metric strong{font-size:12.5px}
+.period-metric em{font-size:11.5px;margin-top:3px}
+
+.behavior-head{padding:13px 15px 9px}
+.behavior-summary{margin:11px 15px 0;padding:11px 12px;font-size:13px;line-height:1.5}
+.behavior-grid{gap:10px;padding:12px 15px}
+.behavior-card{padding:11px 12px}
+.behavior-card b{font-size:12.5px}
+.behavior-card p{font-size:12px;line-height:1.5}
+.behavior-foot{padding:0 15px 13px;font-size:11.5px;line-height:1.45}
+
+.detail-unit-note{font-size:11.5px;padding:8px 11px}
+.tabs .tab{font-size:13px}
+
+/* Keep the dense tariff editor compact by design. */
+.tariff-table,.tariff-table th,.tariff-table td,.tariff-table input{font-size:11px}
+.tariff-hour label{font-size:9px}
+.tariff-hour input{font-size:10.5px}
+.tariff-hour .period-tag,.period-tag{font-size:8px}
+
+@media(max-width:1180px){
+  h1{font-size:22px}.subtitle{font-size:13px}
+  .panel h2{font-size:16.5px}
+  .kpi .label{font-size:12.5px}.kpi .value{font-size:20px}.kpi .sub{font-size:12px}
+  .bar-label,.bar-value{font-size:13px}
+  .note-card b{font-size:13px}.note-card p{font-size:12px}
+  .period-card-head b{font-size:13px}.period-metric strong{font-size:12px}
+}
+@media(max-width:560px){
+  h1{font-size:19px}.subtitle{font-size:12px}
+  .bar-row{grid-template-columns:112px 1fr 90px}
+}
+
+/* v1.0: TOU-style top analysis bar + larger result typography */
+main{max-width:1480px;margin:16px auto 30px;padding:0 20px}
+.layout{display:flex;flex-direction:column;gap:14px;align-items:stretch}
+.controls{position:static;overflow:hidden}
+.controls-head{display:flex;align-items:center;justify-content:space-between;gap:16px;border-bottom:1px solid var(--line);padding-right:16px}
+.controls-head h2{border-bottom:0;padding:14px 18px;font-size:18px}
+.controls-head .btn{flex:0 0 auto;min-width:164px;padding:8px 14px;font-size:13.5px}
+.controls-body{display:grid;grid-template-columns:1.05fr 1.05fr 2.25fr;align-items:stretch}
+.control-section{padding:13px 15px 14px;border-bottom:0;border-right:1px solid var(--line);height:auto}
+.control-section:last-child{border-right:0}
+.section-title{font-size:14px;margin-bottom:9px}
+.section-fields{display:grid;gap:8px 10px}
+.target-fields,.pv-fields{grid-template-columns:repeat(2,minmax(0,1fr))}
+.ess-fields{grid-template-columns:repeat(4,minmax(0,1fr))}
+.controls .field{display:block;margin:0;min-width:0}
+.controls .field label{display:block;margin:0 0 4px;font-size:12.5px;line-height:1.25;color:#475467;white-space:nowrap}
+.controls .field input,.controls .field select{height:34px;padding:6px 8px;font-size:13.5px;text-align:right}
+.controls .field select{text-align:left}
+.controls .pv-calc{margin:9px 0 7px;padding:7px 9px;font-size:12px}
+.controls .pv-calc b{font-size:13px}
+.controls .btn-row{margin-top:7px;gap:6px}
+.controls .btn-row .btn{font-size:11.5px;padding:6px 8px}
+.controls .hint{font-size:11.5px;line-height:1.4;margin-top:7px}
+.ess-toggles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:9px}
+.controls .toggle{margin:0;padding:7px 9px;border:1px solid #eaecf0;border-radius:8px;background:#f9fafb;font-size:12px}
+.controls .toggle>span{font-size:12px}
+
+/* Full-width result canvas allows noticeably larger, more readable typography. */
+body{font-size:15.5px}
+.content{gap:14px}
+.panel h2{font-size:18.5px;padding:15px 18px}
+.kpis{gap:12px}
+.kpi{padding:16px 18px;border-radius:12px}
+.kpi .label{font-size:14px;margin-bottom:7px}
+.kpi .value{font-size:25px;line-height:1.15}
+.kpi .sub{font-size:13.5px;margin-top:6px}
+.kpi-help{font-size:12.5px;line-height:1.5;margin-top:8px;padding-top:8px}
+.grid2{grid-template-columns:1fr 1fr;gap:14px}.grid3{grid-template-columns:1.15fr 1fr .95fr;gap:14px}
+.chart-wrap{padding:13px 15px 15px}
+.chart-title{font-size:15.5px;margin-bottom:7px}
+.chart-sub{font-size:13px}
+.legend,.legend-item{font-size:13px}
+.legend-help{font-size:11px}
+.chart{height:280px}
+.decomp{padding:14px 18px 17px}
+.bar-row{grid-template-columns:165px 1fr 130px;gap:13px;margin:13px 0}
+.bar-label,.bar-value{font-size:14.5px}
+.bar-track{height:14px}
+.data-note{padding:15px 18px 18px;gap:12px}
+.note-card{padding:12px 13px;border-radius:9px}
+.note-card b{font-size:14.5px}
+.note-card p{font-size:13.5px;line-height:1.55;margin-top:6px}
+.period-head{padding:15px 18px}
+.period-head .hint{font-size:13px}
+.period-summary{gap:13px;padding:15px 18px 18px}
+.period-interpret-note{margin:0 18px 2px;padding:9px 11px;border:1px solid #e4e7ec;border-radius:8px;background:#f9fafb;color:#475467;font-size:12.5px;line-height:1.5}
+.period-card-head{padding:11px 13px}
+.period-card-head b{font-size:14.5px}
+.period-card-head span{font-size:11.5px}
+.period-metric{padding:11px 13px}
+.period-metric>span{font-size:11.5px;margin-bottom:4px}
+.period-metric strong{font-size:14px}
+.period-metric em{font-size:12.5px;margin-top:4px}
+.behavior-head{padding:15px 18px 10px}
+.behavior-head .hint{font-size:13px}
+.behavior-summary{margin:13px 18px 0;padding:12px 14px;font-size:14px;line-height:1.55}.behavior-summary ul{margin:0;padding-left:19px}.behavior-summary li{margin:6px 0;font-weight:500}.behavior-summary li::marker{color:#2168df}.behavior-summary b{font-weight:750;color:#1849a9}.behavior-summary .behavior-lead{margin:0 0 8px;font-weight:750}.behavior-summary .behavior-link{margin-top:9px;padding-top:8px;border-top:1px solid #c7d7fe;font-size:13px;font-weight:600}
+.behavior-grid{gap:12px;padding:14px 18px}
+.behavior-card{padding:13px 14px}
+.behavior-card b{font-size:13.5px}
+.behavior-card p{font-size:13px;line-height:1.55;margin-top:6px}
+.behavior-foot{padding:0 18px 15px;font-size:12px;line-height:1.5}
+.tabs .tab{font-size:13.5px;padding:11px 13px}
+.detail-unit-note{font-size:12px;padding:9px 12px}
+.warning{font-size:13px;line-height:1.45}
+
+/* Keep the 24-hour tariff editor dense; this is the one area intentionally not enlarged. */
+.tariff-panel h2{font-size:18px}
+.tariff-head .hint{font-size:12px}
+.tariff-table,.tariff-table th,.tariff-table td,.tariff-table input{font-size:11px}
+.tariff-hour label{font-size:9px}.tariff-hour input{font-size:10.5px}.tariff-hour .period-tag,.period-tag{font-size:8px}
+
+@media(max-width:1280px){
+  main{max-width:none;padding:0 14px}
+  .controls-body{grid-template-columns:1fr 1fr}
+  .control-ess{grid-column:1/-1;border-right:0;border-top:1px solid var(--line)}
+  .control-pv{border-right:0}
+  .ess-fields{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .kpi .value{font-size:23px}
+  .kpi-help{font-size:12px}
+  .grid3{grid-template-columns:1fr}
+}
+@media(max-width:1180px){
+  .controls{display:block}
+  .controls>h2{grid-column:auto}
+  .controls-head h2{font-size:17px}
+  .controls-body{grid-template-columns:1fr 1fr}
+  .control-section{border-bottom:0;height:auto}
+  .control-target{border-right:1px solid var(--line)}
+  .control-pv{border-right:0}
+  .control-ess{grid-column:1/-1;border-top:1px solid var(--line)}
+  .field{grid-template-columns:none}
+  .kpi{padding:14px 16px}.kpi .label{font-size:13.5px}.kpi .value{font-size:22px}.kpi .sub{font-size:13px}.kpi-help{font-size:11.8px}
+  .panel h2{font-size:17.5px}
+  .chart{height:250px}
+  .bar-label,.bar-value{font-size:14px}
+  .note-card b{font-size:14px}.note-card p{font-size:13px}
+  .period-summary{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .behavior-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:820px){
+  .controls-body{grid-template-columns:1fr}
+  .control-target,.control-pv,.control-ess{grid-column:auto;border-right:0;border-top:1px solid var(--line)}
+  .control-target{border-top:0}
+  .target-fields,.pv-fields{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .ess-fields{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .period-summary{grid-template-columns:1fr}
+  .grid2{grid-template-columns:1fr}
+  .chart{height:235px}
+}
+@media(max-width:560px){
+  .controls-head{align-items:flex-start;padding-right:10px}
+  .controls-head .btn{min-width:0;margin-top:8px;font-size:11.5px;padding:7px 9px}
+  .target-fields,.pv-fields,.ess-fields,.ess-toggles{grid-template-columns:1fr}
+  .kpi .value{font-size:21px}
+  .behavior-grid{grid-template-columns:1fr}
+}
+
+/* v1.1: time-of-day customer choice / sale-switch threshold */
+.hourly-choice-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;padding:4px 18px 0}
+.hourly-choice-head h3{margin:0;font-size:15px;color:#344054}
+.hourly-choice-head .hint{font-size:12.5px;margin-top:4px}
+.hourly-choice-note{margin:9px 18px 10px;padding:9px 11px;border:1px solid #e4e7ec;border-radius:8px;background:#f9fafb;color:#667085;font-size:11.5px;line-height:1.45}
+.hourly-choice-scroll{margin:0 18px 14px;max-height:380px;overflow:auto;border:1px solid #e4e7ec;border-radius:9px;scrollbar-gutter:stable}
+.hourly-choice-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:13px;color:#344054;line-height:1.4}
+.hourly-choice-table th,.hourly-choice-table td{padding:10px 13px;border-bottom:1px solid #eaecf0;border-right:1px solid #f2f4f7;font-variant-numeric:tabular-nums;vertical-align:middle}
+.hourly-choice-table th{position:sticky;top:0;z-index:2;background:#f9fafb;color:#475467;font-size:12.5px;font-weight:700;text-align:center;line-height:1.35;padding-top:11px;padding-bottom:11px}
+.hourly-choice-table th:nth-child(1),.hourly-choice-table td:nth-child(1){width:7%;text-align:center;white-space:nowrap}
+.hourly-choice-table th:nth-child(2),.hourly-choice-table td:nth-child(2){width:10%;text-align:center;white-space:nowrap}
+.hourly-choice-table th:nth-child(3),.hourly-choice-table td:nth-child(3){width:10%;text-align:center;white-space:nowrap}
+.hourly-choice-table th:nth-child(4),.hourly-choice-table td:nth-child(4){width:17%;text-align:left;padding-left:14px;padding-right:14px}
+.hourly-choice-table th:nth-child(5),.hourly-choice-table td:nth-child(5){width:24%;text-align:left;padding-left:14px;padding-right:14px}
+.hourly-choice-table th:nth-child(6),.hourly-choice-table td:nth-child(6){width:18%;text-align:center;padding-left:12px;padding-right:12px}
+.hourly-choice-table th:nth-child(7),.hourly-choice-table td:nth-child(7){width:14%;text-align:center;white-space:nowrap;border-right:0}
+.supply-choice{display:flex;align-items:flex-start;gap:8px;min-width:0}
+.supply-chip{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;min-width:76px;padding:4px 7px;border-radius:999px;font-size:11.5px;font-weight:700;line-height:1.2;border:1px solid #d0d5dd;background:#f9fafb;color:#344054}
+.supply-chip.grid{background:#eff4ff;border-color:#c7d7fe;color:#2d5bd1}
+.supply-chip.pv{background:#fffaeb;border-color:#fedf89;color:#946200}
+.supply-chip.ess{background:#ecfdf3;border-color:#abefc6;color:#067647}
+.supply-chip.mix{background:#f4f3ff;border-color:#d9d6fe;color:#5925dc}
+.supply-detail{display:block;color:#667085;font-size:11.5px;line-height:1.35;white-space:normal}
+.supply-detail b{color:#344054;font-weight:600}
+.hourly-choice-table tbody tr:nth-child(even){background:#fcfcfd}
+.hourly-choice-table tbody tr:hover{background:#f8fafc}
+.hourly-choice-table tr:last-child td{border-bottom:0}
+.choice-chip{display:inline-flex;align-items:center;justify-content:center;min-width:92px;padding:4px 8px;border-radius:999px;font-size:11.5px;font-weight:700;white-space:nowrap}
+.choice-chip.self{background:#eef4ff;color:#1849a9}
+.choice-chip.sell{background:#ecfdf3;color:#087a55}
+.choice-chip.charge{background:#fffaeb;color:#b54708}
+.choice-chip.wait{background:#f2f4f7;color:#667085}
+.choice-chip.direct{background:#f4f3ff;color:#5925dc}
+.threshold-up{color:#b54708;font-weight:700}.threshold-met{color:#087a55;font-weight:700}.threshold-na{color:#98a2b3}
+@media(max-width:820px){
+  .hourly-choice-scroll{margin:0 12px 12px;max-height:330px}
+  .hourly-choice-head{padding:3px 12px 0}.hourly-choice-note{margin:8px 12px 9px}
+  .hourly-choice-table{min-width:1080px;font-size:12.5px}
+  .hourly-choice-table th,.hourly-choice-table td{padding:9px 11px}
+}
+
+/* v1.3: clarify grid import and representative-day energy balance */
+.chart-footnote{margin-top:6px;color:#667085;font-size:12px;line-height:1.45}
+.flow-head{padding:15px 18px 5px}
+.flow-head h2{padding:0;margin:0 0 5px;font-size:18.5px}
+.flow-head .hint{font-size:13px;line-height:1.5}
+.flow-summary{margin:9px 18px 2px;padding:13px 15px;border:1px solid #d0d5dd;border-radius:10px;background:#f9fafb;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.flow-summary .flow-status{font-size:15px;font-weight:700;color:#344054}
+.flow-summary .flow-status strong{font-size:20px;margin-left:7px}
+.flow-summary .flow-explain{font-size:13px;color:#667085;line-height:1.5;text-align:right}
+.flow-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;padding:12px 18px 18px}
+.flow-card{border:1px solid #e4e7ec;border-radius:9px;padding:11px 12px;background:#fff;min-width:0}
+.flow-card b{display:block;font-size:13px;color:#475467;margin-bottom:6px}
+.flow-card strong{display:block;font-size:19px;line-height:1.2;color:#101828;font-variant-numeric:tabular-nums}
+.flow-card span{display:block;margin-top:5px;color:#667085;font-size:11.5px;line-height:1.4}
+.flow-card.grid-main{border-color:#b2ddff;background:#f5fbff}
+.flow-card.grid-ess{border-color:#fedf89;background:#fffcf5}
+.flow-card.grid-load{border-color:#abefc6;background:#f6fef9}
+.flow-card.warn{border-color:#fecdca;background:#fffafa}
+@media(max-width:1280px){.flow-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:820px){.flow-summary{display:block}.flow-summary .flow-explain{text-align:left;margin-top:7px}.flow-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:520px){.flow-grid{grid-template-columns:1fr}.flow-summary .flow-status strong{display:block;margin:4px 0 0}}
+
+
+/* v1.4: target net-revenue inverse pricing */
+.inverse-panel{overflow:hidden}
+.inverse-head{padding:15px 18px 10px;border-bottom:1px solid var(--line)}
+.inverse-head h2{padding:0;border:0}
+.inverse-head .hint{font-size:13px}
+.inverse-controls{display:grid;grid-template-columns:1.15fr 1fr 1.45fr 1fr 1fr auto;gap:10px 12px;align-items:end;padding:14px 18px 8px}
+.inverse-field{min-width:0}
+.inverse-field label{display:block;margin:0 0 5px;color:#475467;font-size:12.5px;font-weight:600;line-height:1.25}
+.inverse-field input,.inverse-field select{width:100%;height:38px;border:1px solid #d0d5dd;border-radius:7px;padding:7px 9px;background:#fff;color:#101828;font:500 13.5px/1.2 inherit}
+.inverse-field input{text-align:right;font-variant-numeric:tabular-nums}
+.inverse-target-field select{text-align:left}
+.inverse-custom-range{display:none;grid-column:1/4;grid-template-columns:1fr 1fr;gap:10px 12px;padding-top:2px}
+.inverse-custom-range.show{display:grid}
+.inverse-actions{display:flex;gap:7px;align-items:center;justify-content:flex-end;white-space:nowrap}
+.inverse-actions .btn{height:38px;padding:7px 12px;font-size:12.5px}
+.inverse-actions .btn:disabled{opacity:.45;cursor:not-allowed}
+.inverse-method-note{margin:0 18px 10px;padding:8px 10px;border:1px solid #e4e7ec;border-radius:8px;background:#f9fafb;color:#667085;font-size:12px;line-height:1.45}
+.inverse-result{margin:0 18px 16px}
+.inverse-placeholder{padding:13px 14px;border:1px dashed #d0d5dd;border-radius:9px;color:#667085;background:#fcfcfd;font-size:13px}
+.inverse-summary{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+.inverse-card{border:1px solid #e4e7ec;border-radius:9px;padding:11px 12px;background:#fff;min-width:0}
+.inverse-card b{display:block;color:#475467;font-size:11.5px;margin-bottom:5px}
+.inverse-card strong{display:block;color:#101828;font-size:17px;line-height:1.25;font-variant-numeric:tabular-nums}
+.inverse-card span{display:block;margin-top:5px;color:#667085;font-size:11.5px;line-height:1.4}
+.inverse-card.primary{border-color:#b2ccff;background:#f5f8ff}.inverse-card.primary strong{color:#1849a9}
+.inverse-card.success{border-color:#abefc6;background:#f6fef9}.inverse-card.success strong{color:#067647}
+.inverse-card.warning{border-color:#fedf89;background:#fffcf5}.inverse-card.warning strong{color:#b54708}
+.inverse-result-note{margin-top:9px;color:#667085;font-size:12px;line-height:1.5}
+@media(max-width:1280px){.inverse-controls{grid-template-columns:repeat(3,minmax(0,1fr)) auto}.inverse-summary{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:820px){.inverse-controls{grid-template-columns:repeat(2,minmax(0,1fr));padding:12px}.inverse-actions{grid-column:1/-1;justify-content:flex-start}.inverse-custom-range{grid-column:1/-1}.inverse-method-note,.inverse-result{margin-left:12px;margin-right:12px}.inverse-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.inverse-controls{grid-template-columns:1fr}.inverse-custom-range{grid-template-columns:1fr}.inverse-summary{grid-template-columns:1fr}.inverse-actions{flex-wrap:wrap}}
+
+/* v2.6: SMP-based wholesale procurement cost impact */
+.smp-impact-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 18px 2px}
+.smp-impact-head h2{padding-left:0;padding-right:0}
+.smp-impact-head .hint{font-size:13px;line-height:1.5;color:#667085;margin-top:-8px;margin-bottom:10px}
+.smp-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;padding:4px 18px 12px}
+.smp-summary-card{border:1px solid #e4e7ec;border-radius:9px;background:#f9fafb;padding:11px 13px;min-width:0}
+.smp-summary-card .smp-label{font-size:12.5px;color:#667085;margin-bottom:5px}
+.smp-summary-card .smp-value{font-size:18px;font-weight:750;color:#101828;font-variant-numeric:tabular-nums}
+.smp-summary-card .smp-sub{font-size:11.5px;color:#667085;margin-top:4px;line-height:1.4}
+.smp-table{width:calc(100% - 36px);margin:0 18px 12px;border-collapse:collapse;table-layout:fixed;font-size:13px}
+.smp-table th,.smp-table td{padding:9px 10px;border:1px solid #eaecf0;font-variant-numeric:tabular-nums;vertical-align:middle}
+.smp-table th{background:#f9fafb;color:#475467;font-weight:700}
+.smp-table th:nth-child(1),.smp-table td:nth-child(1){width:20%;text-align:left}
+.smp-table th:nth-child(2),.smp-table td:nth-child(2){width:18%;text-align:right}
+.smp-table th:nth-child(3),.smp-table td:nth-child(3){width:22%;text-align:right}
+.smp-table th:nth-child(4),.smp-table td:nth-child(4){width:40%;text-align:left}
+.smp-note{margin:0 18px 15px;padding:9px 11px;border-radius:8px;background:#f9fafb;border:1px solid #e4e7ec;color:#667085;font-size:12px;line-height:1.5}
+@media(max-width:820px){.smp-summary{grid-template-columns:1fr}.smp-table{font-size:11.5px}.smp-table th,.smp-table td{padding:7px 6px}}
+
+</style></head><body>
+<div id="appRoot"><header><div class="header-inner"><div><h1>태양광·ESS 수전·역송 요금 재무영향 시뮬레이터(PRAS - PV/ESS)</h1><div class="subtitle">Pricing and Revenue Analysis Simulator - PV/ESS</div></div></div></header>
+<main><div class="layout">
+<aside class="panel controls top-controls">
+  <div class="controls-head"><h2>분석 조건</h2><button class="btn primary" id="recalc">시뮬레이션 다시 계산</button></div>
+  <div class="controls-body">
+    <div class="control-section control-target"><div class="section-title">1. 분석 대상</div>
+      <div class="section-fields target-fields">
+        <div class="field"><label>부하 기준연도</label><select id="loadYear"><option value="2025">2025</option></select></div>
+        <div class="field"><label>분석 고객수(호)</label><input id="customerCount" type="text" inputmode="numeric" value="1,200" autocomplete="off"></div>
+        <div class="field"><label>신규 요금 참여율(%)</label><input id="participationPct" type="number" value="100" min="0" max="100" step="1"></div>
+        <div class="field"><label>부하 배율(%)</label><input id="loadScalePct" type="number" value="100" min="0" step="5"></div>
+        <div class="field"><label>SMP 기준연도</label><select id="smpYear"><option value="2025" selected>2025</option><option value="2024">2024</option><option value="2023">2023</option><option value="2022">2022</option><option value="avg">2022~2025 평균</option></select></div>
+      </div>
+    </div>
+    <div class="control-section control-pv"><div class="section-title">2. 태양광</div>
+      <div class="section-fields pv-fields">
+        <div class="field"><label>태양광 설비용량(kW)</label><input id="pvCapacityKW" type="number" value="3.0" min="0" step="0.1"></div>
+        <div class="field"><label>태양광 발전 이용률(%)</label><input id="pvUtilizationPct" type="number" value="15.0" min="0" max="100" step="0.1"></div>
+      </div>
+      <div class="pv-calc"><span>대표일 발전량</span><b id="pvDailyCalculated">10.8 kWh/일</b></div>
+      <div class="btn-row"><button class="btn" id="applyObservedPv">실측 4.7kWh/일 환산</button><button class="btn" id="applyFluxPv">기본 이용률 15.0% 적용</button></div>
+      <div class="hint">대표일 발전량 = 설비용량(kW) × 24시간 × 발전 이용률. 시간대 발전형태는 2025년 주택용 상계거래 89호 발전량에서 추출함.</div>
+    </div>
+    <div class="control-section control-ess"><div class="section-title">3. ESS</div>
+      <div class="section-fields ess-fields">
+        <div class="field"><label>ESS 보유비율(%)</label><input id="essAdoptionPct" type="number" value="100" min="0" max="100" step="5"></div>
+        <div class="field"><label>정격용량(kWh)</label><input id="essCapacityKWh" type="number" value="8" min="0" step="0.5"></div>
+        <div class="field"><label>충·방전 출력(kW)</label><input id="essPowerKW" type="number" value="3" min="0" step="0.5"></div>
+        <div class="field"><label>왕복효율(%)</label><input id="roundTripEfficiencyPct" type="number" value="90" min="50" max="100" step="1"></div>
+        <div class="field"><label>최소 SOC(%)</label><input id="minSocPct" type="number" value="10" min="0" max="100" step="5"></div>
+        <div class="field"><label>최대 SOC(%)</label><input id="maxSocPct" type="number" value="90" min="0" max="100" step="5"></div>
+        <div class="field"><label>초기 SOC(%)</label><input id="initialSocPct" type="number" value="10" min="0" max="100" step="5"></div>
+      </div>
+      <div class="ess-toggles">
+        <div class="toggle"><span>계통전력 충전 허용</span><label class="switch"><input id="allowGridCharge" type="checkbox" checked><span class="slider"></span></label></div>
+        <div class="toggle"><span>신규요금 ESS 역송 허용</span><label class="switch"><input id="allowBatteryExport" type="checkbox" checked><span class="slider"></span></label></div>
+      </div>
+      <div class="hint">일별 종말 SOC를 초기 SOC와 동일하게 강제하여 대표일 반복에 따른 에너지 생성·소진 왜곡을 방지함.</div>
+    </div>
+  </div>
+</aside>
+<section class="content">
+  <div class="kpis">
+    <div class="kpi"><div class="label">순 전력량요금 수입 변화</div><div class="value" id="kpiNet">-</div><div class="sub" id="kpiNetSub">-</div><div class="kpi-help">한전 판매수익 − 고객전력 매입지급액의 증감. (+)는 한전 순수입 증가</div></div>
+    <div class="kpi"><div class="label">전력판매수익 변화</div><div class="value" id="kpiSales">-</div><div class="sub" id="kpiSalesSub">-</div><div class="kpi-help">고객의 한전 수전량 × 수전단가로 산정한 한전 판매수익의 증감</div></div>
+    <div class="kpi"><div class="label">고객전력 매입지급액 변화</div><div class="value" id="kpiPayout">-</div><div class="sub" id="kpiPayoutSub">-</div><div class="kpi-help">신규요금에서 고객 역송전력에 대해 새로 발생하는 한전 지급액. 기준안은 역송 보상 없음</div></div>
+    <div class="kpi"><div class="label">SMP 기반 구입비 영향</div><div class="value" id="kpiSmp">-</div><div class="sub" id="kpiSmpSub">-</div><div class="kpi-help">한전 순계통조달량(수전−역송) 변화 × 제주 SMP. (-)는 시장 구입비 절감</div></div>
+    <div class="kpi"><div class="label">참여고객당 신규안 연간 순 전력량 요금</div><div class="value" id="kpiPerCust">-</div><div class="sub" id="kpiPerCustSub">-</div><div class="kpi-help">신규 요금제 적용 후 고객 1호가 부담하는 연간 순 전력량요금. 한전 수전요금에서 신규 역송 보상액을 차감하며, 기준안 대비 증감은 아래에 함께 표시</div></div>
+  </div>
+
+  <div class="grid3">
+    <div class="panel"><div class="chart-wrap"><div class="chart-title"><span>대표일 전력 흐름</span><span class="chart-sub">고객 1호·ESS 보유비율 가중</span></div><div class="legend-row"><div class="legend interactive" id="energyLegend"></div><div class="legend-help">범례 클릭: 표시/숨김</div></div><div id="energyChart" class="chart"></div><div class="chart-footnote">신규 총수전은 한전→부하 직접수전과 한전→ESS 충전의 합계임.</div></div></div>
+    <div class="panel"><div class="chart-wrap"><div class="chart-title"><span>수전·역송단가</span><span class="chart-sub">원/kWh</span></div><div class="legend-row"><div class="legend interactive" id="priceLegend"></div><div class="legend-help">범례 클릭: 표시/숨김</div></div><div id="priceChart" class="chart"></div></div></div>
+    <div class="panel"><div class="chart-wrap"><div class="chart-title"><span>배터리 SOC 상태</span><span class="chart-sub">SOC(%) · 시간 종료 시점</span></div><div id="socLegend" class="legend soc-legend"></div><div id="socChart" class="chart"></div><div id="socSummary" class="chart-footnote"></div></div></div>
+  </div>
+
+  <div class="panel flow-panel">
+    <div class="flow-head"><div><h2>대표일 에너지 수지·한전 수전 구조</h2><div class="hint">ESS는 전력을 새로 만드는 설비가 아니라 시간대를 이동시키는 설비임. 한전 총수전이 고객부하로 직접 공급된 양과 ESS 충전에 사용된 양을 분리해 표시함.</div></div></div>
+    <div id="gridDependenceSummary" class="flow-summary"></div>
+    <div id="energyBalanceCards" class="flow-grid"></div>
+  </div>
+
+  <div class="panel tariff-panel">
+    <div class="tariff-head"><div><h2>시간대별 요금 설정</h2><div class="hint">셀 직접 수정 가능 · 입력칸 하단의 경/중/최로 부하시간대 구분 · 수전단가는 값의 크기에 따라 색상 구분</div><div class="heat-legend"><span>낮음</span><i></i><span>높음</span><em>회색 → 노랑 → 빨강</em></div></div><div class="btn-row"><button class="btn" id="resetTariff">초기 설정값</button></div></div>
+    <div class="warning" style="margin:12px 16px 0">기준안은 ESS 계통 역송을 허용하지 않으며 역송 보상단가는 적용하지 않음. 신규안에서만 ESS 역송을 허용하고 `260812_Flux 요금제 시뮬레이션_v6.xlsx`의 신규 역송단가를 적용함.</div>
+    <div class="table-scroll tariff-desktop"><table class="tariff-table" id="tariffTable"></table></div><div id="tariffResponsive" class="tariff-responsive"></div>
+  </div>
+
+  <div class="panel inverse-panel">
+    <div class="inverse-head">
+      <div><h2>목표 순수입 역산</h2><div class="hint">원하는 한전 순 전력량요금 수입을 먼저 정한 뒤 조정 대상을 선택하면, 고객의 ESS 충·방전 행동을 매번 다시 최적화하면서 목표에 가장 가까운 신규 단가를 탐색함.</div></div>
+    </div>
+    <div class="inverse-controls">
+      <div class="inverse-field"><label>목표 기준</label><select id="inverseGoalBasis"><option value="change">기준 대비 순수입 변화</option><option value="newTotal">신규안 순수입 총액</option></select></div>
+      <div class="inverse-field"><label>목표 금액(억원)</label><input id="inverseGoalValue" type="number" value="0.0" step="0.1"></div>
+      <div class="inverse-field inverse-target-field"><label>조정 대상</label><select id="inverseTarget">
+        <optgroup label="수전단가"><option value="buy_low">경부하 수전단가</option><option value="buy_mid">중간부하 수전단가</option><option value="buy_peak">최대부하 수전단가</option><option value="buy_all">수전단가 전체</option><option value="buy_custom">특정 시간대 수전단가</option></optgroup>
+        <optgroup label="역송단가"><option value="sell_low">경부하 역송단가</option><option value="sell_mid">중간부하 역송단가</option><option value="sell_peak" selected>최대부하 역송단가</option><option value="sell_all">역송단가 전체</option><option value="sell_custom">특정 시간대 역송단가</option></optgroup>
+      </select></div>
+      <div class="inverse-field"><label id="inverseMinLabel">탐색 최소단가(원/kWh)</label><input id="inverseMin" type="number" value="0" step="5"></div>
+      <div class="inverse-field"><label id="inverseMaxLabel">탐색 최대단가(원/kWh)</label><input id="inverseMax" type="number" value="500" step="5"></div>
+      <div class="inverse-custom-range" id="inverseCustomRange">
+        <div class="inverse-field"><label>시작시간</label><select id="inverseStart"></select></div>
+        <div class="inverse-field"><label>종료시간</label><select id="inverseEnd"></select></div>
+      </div>
+      <div class="inverse-actions"><button class="btn primary" id="inverseSolve">목표단가 계산</button><button class="btn" id="inverseApply" disabled>계산값 적용</button></div>
+    </div>
+    <div class="inverse-method-note" id="inverseMethodNote"></div>
+    <div class="inverse-result" id="inverseResult"><div class="inverse-placeholder">목표 금액과 조정 대상을 선택한 뒤 <b>목표단가 계산</b>을 누르세요.</div></div>
+  </div>
+
+  <div class="grid2">
+    <div class="panel"><h2>재무영향 분해</h2><div class="decomp" id="decomp"></div></div>
+    <div class="panel"><h2>주요 에너지 지표</h2><div class="data-note" id="energyKpis"></div></div>
+  </div>
+
+  <div class="panel smp-impact-panel">
+    <div class="smp-impact-head"><div><h2>SMP 기반 구입비 영향</h2><div class="hint">기존 제주 SMP 자료를 이용해 한전 수전 변화와 고객 역송 변화가 전력시장 구입비에 미치는 영향을 분리해 산정함.</div></div></div>
+    <div class="smp-summary" id="smpSummary"></div>
+    <div class="table-scroll"><table class="smp-table"><thead><tr><th>구분</th><th>전력량 변화</th><th>SMP 기반 구입비 영향</th><th>해석</th></tr></thead><tbody id="smpImpactBody"></tbody></table></div>
+    <div class="smp-note" id="smpNote"></div>
+  </div>
+
+  <div class="panel period-panel">
+    <div class="period-head"><div><h2>부하시간대별 사용량·요금 변화</h2><div class="hint">신규 요금제의 경·중·최 시간구분을 기준안에도 동일하게 적용 · 여기서 사용량은 고객 총부하가 아니라 한전 수전량이며, 요금은 수전요금에서 역송대금을 차감한 순 전력량요금</div></div></div>
+    <div class="period-interpret-note">※ 한전 수전량이 0.0인 경우에도 고객 부하가 0이라는 뜻은 아님. 해당 시간대 부하가 태양광·ESS로 모두 충당되어 한전에서 직접 수전한 전력이 0에 가까운 상태를 의미함.</div>
+    <div id="periodSummary" class="period-summary"></div>
+  </div>
+
+  <div class="panel behavior-panel">
+    <div class="behavior-head"><div><h2>현재 요금신호에 따른 합리적 고객 행동</h2><div class="hint">신규 수전·역송단가와 ESS 최적운전 결과를 함께 해석함. 요금 설정을 바꾸면 아래 내용도 자동 갱신됨.</div></div></div>
+    <div id="behaviorSummary" class="behavior-summary"></div>
+    <div id="behaviorCards" class="behavior-grid"></div>
+    <div class="hourly-choice-head"><div><h3>시간대별 행동 유불리</h3><div class="hint">PV·ESS의 운전 선택과 함께, 실제 고객 부하를 계통·PV·ESS 중 어떤 자원으로 공급하는 것이 선택되었는지 별도로 표시함.</div></div></div>
+    <div class="hourly-choice-note">`PV·ESS 운전 선택`은 충전·방전·역송 의사결정, `부하 공급 선택`은 실제 최적화 결과에서 고객 부하를 계통수전·PV·ESS 중 무엇으로 충당하는지를 의미함. 역송전환 관찰단가는 해당 시간의 역송단가만 변경해 ESS 계통 역송이 의미 있게 나타나는 최소 수준을 탐색한 값임.</div>
+    <div class="hourly-choice-scroll"><table class="hourly-choice-table" id="hourlyChoiceTable"></table></div>
+    <div class="behavior-foot">※ 고객의 원래 부하곡선은 고정됨. `부하 공급 선택`은 수요 자체를 이동했다는 뜻이 아니라, 주어진 부하를 계통수전·PV·ESS 중 어떤 전원으로 충당했는지를 최적운전 결과에 따라 표시한 것임.</div>
+  </div>
+
+  <div class="panel">
+    <div class="tabs"><button class="tab active" data-tab="detail">시간대 상세</button><button class="tab" data-tab="assumption">데이터·가정</button></div>
+    <div id="detail" class="tab-content active"><div class="detail-unit-note">단위: 부하·PV·수전·역송·ESS 충방전 = kWh/호·1시간 · SOC = kWh/호(시간 종료 시점) · 신규 총수전 = 한전→부하 + 한전→ESS</div><div class="table-scroll detail-desktop detail-scrollbox"><table class="detail-table" id="detailTable"></table></div><div id="detailResponsive" class="detail-responsive detail-scrollbox"></div></div>
+    <div id="assumption" class="tab-content"><div class="data-note" id="assumptionCards"></div></div>
+  </div>
+</section></div></main>
+</div><script>
+(function(root){
+  const load2025 = [
+    0.7798150442394501,0.6808829004512382,0.6191593167819262,0.5818831218662617,
+    0.5664742089926152,0.57328958320583,0.6388779341064973,0.7575259421235865,
+    0.7601025838460789,0.7437126116308435,0.7285352472540193,0.7286908141108908,
+    0.73380905094155,0.7273331090953145,0.7246303284581636,0.7377245055500177,
+    0.7939116599427231,0.9032014848208554,1.0359957904230208,1.0944618476260843,
+    1.1090725015820149,1.0901774965792115,1.0306892723085712,0.9099805327530184
+  ];
+
+  // 2025년 태양광 89호의 시간대 발전량을 정규화한 발전 shape.
+  // Flux 프로토타입과 동일한 shape이며 합계는 1.0.
+  const pvShape2025 = [
+    0,0,0,0,0,0.000002268692693686163,0.0005136610852685833,0.007636315570285847,
+    0.03443801538293935,0.08179380226070519,0.1312713402276712,0.15970853066059404,
+    0.16768809095432038,0.15866924417553777,0.1290481262815835,0.08325574175552353,
+    0.03654619553539002,0.008514433434664449,0.0006617918260967059,0.00007252919614415228,
+    0.00008303648028874124,0.000096876480292821,0,0
+  ];
+
+  // 260812_Flux 요금제 시뮬레이션_v6.xlsx 기준 24시간 단가
+  const baseBuy = [
+    125.8,125.8,125.8,125.8,125.8,125.8,125.8,125.8,
+    153.8,153.8,153.8,153.8,153.8,153.8,153.8,153.8,
+    172.4,172.4,172.4,172.4,172.4,172.4,125.8,125.8
+  ];
+  const newBuy = [
+    153.8,153.8,92.3,92.3,92.3,153.8,153.8,153.8,
+    153.8,153.8,153.8,153.8,153.8,153.8,153.8,153.8,
+    215.3,215.3,215.3,153.8,153.8,153.8,153.8,153.8
+  ];
+  // 기준안: ESS 계통 역송 미허용 및 역송 보상단가 없음
+  const baseSell = Array(24).fill(0);
+  const newSell = [
+    59.2,59.2,31.6,31.6,31.6,59.2,59.2,59.2,
+    59.2,59.2,59.2,59.2,59.2,59.2,59.2,59.2,
+    172.7,172.7,172.7,59.2,59.2,59.2,59.2,59.2
+  ];
+
+  root.PRAS_DATA = {
+    loadProfiles: {"2025": load2025},
+    pvShape2025,
+    tariffs: {
+      baseBuy: baseBuy.slice(),
+      newBuy: newBuy.slice(),
+      baseSell: baseSell.slice(),
+      newSell: newSell.slice()
+    },
+    metadata: {
+      loadSource: "제주TOU_2025.xlsx / Flux 프로토타입의 2025년 제주 TOU 약 1,200호 일평균 시간대별 사용량",
+      pvSource: "태양광 발전량_2025.xlsx / 주택용 상계거래 89호 실제 태양광 발전량",
+      pvCompleteCustomers: 63,
+      pvCustomers: 89,
+      pvObservedAvgDailyKWh: 4.704555658921213,
+      pvObservedAnnualKWh: 1717.1628155062426,
+      defaultPvDailyKWh: 10.8,
+      defaultPvCapacityKW: 3.0,
+      defaultPvUtilizationPct: 15.0,
+      tariffSource: "260812_Flux 요금제 시뮬레이션_v6.xlsx / 기존·신규 수전단가 및 신규 역송단가 (기준안 역송 보상 없음)",
+      note: "현 버전은 2025년 대표일(24시간 평균) 기반 연간화 모델. 2021~2024 및 8,760시간 직접 계산은 후속 버전 확장 대상."
+    }
+  };
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script><script>
+(function(root,factory){
+  const api=factory();
+  if(typeof module==='object' && module.exports) module.exports=api;
+  root.PRASEngine=api;
+})(typeof window!=='undefined'?window:globalThis,function(){
+  const EPS=1e-9;
+  const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
+  const sum=a=>a.reduce((s,x)=>s+x,0);
+
+  function noBatteryDay(load,pv,buy,sell){
+    const n=24, out={cost:0,salesRevenue:0,purchasePayout:0,importEnergy:0,exportEnergy:0,
+      import:Array(n).fill(0),export:Array(n).fill(0),soc:Array(n+1).fill(0),charge:Array(n).fill(0),
+      discharge:Array(n).fill(0),gridCharge:Array(n).fill(0),pvCharge:Array(n).fill(0),pvDirect:Array(n).fill(0),pvExport:Array(n).fill(0)};
+    for(let h=0;h<n;h++){
+      const net=load[h]-pv[h];
+      const imp=Math.max(net,0), exp=Math.max(-net,0);
+      out.import[h]=imp; out.export[h]=exp;
+      out.pvDirect[h]=Math.min(load[h],pv[h]); out.pvExport[h]=exp;
+      out.salesRevenue += imp*buy[h]; out.purchasePayout += exp*sell[h];
+      out.importEnergy += imp; out.exportEnergy += exp;
+    }
+    out.cost=out.salesRevenue-out.purchasePayout;
+    out.pvSelfUse=sum(out.pvDirect); out.pvGeneration=sum(pv);
+    out.pvUtilizationRate=out.pvGeneration>EPS?out.pvSelfUse/out.pvGeneration:0;
+    return out;
+  }
+
+  function optimizeDay(load,pv,buy,sell,p){
+    const cap=Math.max(0,+p.capacityKWh||0);
+    if(cap<EPS) return noBatteryDay(load,pv,buy,sell);
+    const minSoc=cap*clamp((+p.minSocPct||0)/100,0,1);
+    const maxSoc=cap*clamp((+p.maxSocPct||100)/100,0,1);
+    if(maxSoc-minSoc<EPS) return noBatteryDay(load,pv,buy,sell);
+    const initTarget=cap*clamp((+p.initialSocPct||50)/100,0,1);
+    const power=Math.max(0,+p.powerKW||0);
+    const rte=clamp((+p.roundTripEfficiencyPct||90)/100,0.01,1);
+    const etaC=Math.sqrt(rte), etaD=Math.sqrt(rte);
+    const allowGridCharge=!!p.allowGridCharge;
+    const allowBatteryExport=!!p.allowBatteryExport;
+    const requestedStep=Math.max(0.05,+p.socStepKWh||0.2);
+    const span=maxSoc-minSoc;
+    const steps=Math.max(1,Math.round(span/requestedStep));
+    const step=span/steps;
+    const states=Array.from({length:steps+1},(_,i)=>minSoc+i*step);
+    const nearestIndex=x=>{
+      let i=Math.round((clamp(x,minSoc,maxSoc)-minSoc)/step);
+      return clamp(i,0,steps);
+    };
+    const initIdx=nearestIndex(initTarget);
+    const INF=1e100;
+    let dp=Array(states.length).fill(INF); dp[initIdx]=0;
+    const prev=Array.from({length:24},()=>Array(states.length).fill(-1));
+    const prevGrid=Array.from({length:24},()=>Array(states.length).fill(null));
+
+    for(let h=0;h<24;h++){
+      const ndp=Array(states.length).fill(INF);
+      const net0=load[h]-pv[h];
+      for(let si=0;si<states.length;si++){
+        if(dp[si]>=INF/2) continue;
+        const soc=states[si];
+        for(let ni=0;ni<states.length;ni++){
+          const nsoc=states[ni], delta=nsoc-soc;
+          let gridNet=net0;
+          if(delta>EPS){
+            const chargeInput=delta/etaC;
+            if(chargeInput-power>1e-8) continue;
+            if(!allowGridCharge){
+              const pvSurplus=Math.max(-net0,0);
+              if(chargeInput-pvSurplus>1e-8) continue;
+            }
+            gridNet += chargeInput;
+          } else if(delta<-EPS){
+            const dischargeOut=(-delta)*etaD;
+            if(dischargeOut-power>1e-8) continue;
+            if(!allowBatteryExport && dischargeOut-Math.max(net0,0)>1e-8) continue;
+            gridNet -= dischargeOut;
+          }
+          const imp=Math.max(gridNet,0), exp=Math.max(-gridNet,0);
+          const c=imp*buy[h]-exp*sell[h];
+          const cand=dp[si]+c;
+          if(cand<ndp[ni]-1e-10){
+            ndp[ni]=cand; prev[h][ni]=si; prevGrid[h][ni]=gridNet;
+          }
+        }
+      }
+      dp=ndp;
+    }
+    // 대표일 연간화에서 일간 SOC 에너지 차익을 인위적으로 만들지 않도록 종말 SOC=초기 SOC 강제
+    let endIdx=initIdx;
+    if(dp[endIdx]>=INF/2){
+      endIdx=dp.reduce((best,v,i)=>v<dp[best]?i:best,0);
+    }
+    const socIdx=Array(25).fill(initIdx); socIdx[24]=endIdx;
+    const gridNet=Array(24).fill(0);
+    for(let h=23;h>=0;h--){
+      const ei=socIdx[h+1];
+      const pi=prev[h][ei];
+      if(pi<0){ socIdx[h]=ei; gridNet[h]=load[h]-pv[h]; }
+      else { socIdx[h]=pi; gridNet[h]=prevGrid[h][ei]; }
+    }
+
+    const out={cost:0,salesRevenue:0,purchasePayout:0,importEnergy:0,exportEnergy:0,
+      import:Array(24).fill(0),export:Array(24).fill(0),soc:socIdx.map(i=>states[i]),charge:Array(24).fill(0),
+      discharge:Array(24).fill(0),gridCharge:Array(24).fill(0),pvCharge:Array(24).fill(0),pvDirect:Array(24).fill(0),pvExport:Array(24).fill(0)};
+    for(let h=0;h<24;h++){
+      const delta=out.soc[h+1]-out.soc[h];
+      const net0=load[h]-pv[h];
+      let chargeInput=0, dischargeOut=0;
+      if(delta>EPS) chargeInput=delta/etaC;
+      if(delta<-EPS) dischargeOut=(-delta)*etaD;
+      const pvSurplus=Math.max(pv[h]-load[h],0);
+      const pvCharge=Math.min(chargeInput,pvSurplus);
+      const gridCharge=Math.max(chargeInput-pvCharge,0);
+      const imp=Math.max(gridNet[h],0), exp=Math.max(-gridNet[h],0);
+      const battExport=Math.max(dischargeOut-Math.max(net0,0),0);
+      const pvExport=Math.max(exp-battExport,0);
+      out.charge[h]=chargeInput; out.discharge[h]=dischargeOut; out.gridCharge[h]=gridCharge; out.pvCharge[h]=pvCharge;
+      out.import[h]=imp; out.export[h]=exp; out.pvDirect[h]=Math.min(load[h],pv[h]); out.pvExport[h]=pvExport;
+      out.salesRevenue+=imp*buy[h]; out.purchasePayout+=exp*sell[h]; out.importEnergy+=imp; out.exportEnergy+=exp;
+    }
+    out.cost=out.salesRevenue-out.purchasePayout;
+    out.pvGeneration=sum(pv);
+    out.pvSelfUse=sum(out.pvDirect)+sum(out.pvCharge);
+    out.pvUtilizationRate=out.pvGeneration>EPS?out.pvSelfUse/out.pvGeneration:0;
+    out.batteryChargeEnergy=sum(out.charge); out.batteryDischargeEnergy=sum(out.discharge);
+    out.gridChargeEnergy=sum(out.gridCharge);
+    return out;
+  }
+
+  function blend(a,b,r){
+    r=clamp(r,0,1);
+    const o={};
+    for(const k of Object.keys(a)){
+      if(Array.isArray(a[k])) o[k]=a[k].map((x,i)=>x*(1-r)+(b[k][i]??0)*r);
+      else if(typeof a[k]==='number') o[k]=a[k]*(1-r)+(b[k]??0)*r;
+    }
+    return o;
+  }
+
+  function simulate(cfg,data){
+    const load=data.loadProfiles[cfg.loadYear||'2025'].map(x=>x*(cfg.loadScalePct/100));
+    const shape=data.pvShape2025;
+    const shapeSum=sum(shape)||1;
+    const pvDailyKWh=(Number.isFinite(+cfg.pvCapacityKW) && Number.isFinite(+cfg.pvUtilizationPct))
+      ? Math.max(0,+cfg.pvCapacityKW)*24*Math.max(0,+cfg.pvUtilizationPct)/100
+      : Math.max(0,+cfg.pvDailyKWh||0)*Math.max(0,+cfg.pvScalePct||100)/100;
+    const pv=shape.map(x=>x/shapeSum*pvDailyKWh);
+    const t=cfg.tariffs;
+    const baseBattParams={capacityKWh:cfg.essCapacityKWh,powerKW:cfg.essPowerKW,minSocPct:cfg.minSocPct,maxSocPct:cfg.maxSocPct,
+      initialSocPct:cfg.initialSocPct,roundTripEfficiencyPct:cfg.roundTripEfficiencyPct,socStepKWh:cfg.socStepKWh,
+      allowGridCharge:cfg.allowGridCharge,allowBatteryExport:false};
+    const newBattParams={capacityKWh:cfg.essCapacityKWh,powerKW:cfg.essPowerKW,minSocPct:cfg.minSocPct,maxSocPct:cfg.maxSocPct,
+      initialSocPct:cfg.initialSocPct,roundTripEfficiencyPct:cfg.roundTripEfficiencyPct,socStepKWh:cfg.socStepKWh,
+      allowGridCharge:cfg.allowGridCharge,allowBatteryExport:cfg.allowBatteryExport};
+
+    const baseNo=noBatteryDay(load,pv,t.baseBuy,t.baseSell);
+    const newNo=noBatteryDay(load,pv,t.newBuy,t.newSell);
+    const baseEss=optimizeDay(load,pv,t.baseBuy,t.baseSell,baseBattParams);
+    const newEss=optimizeDay(load,pv,t.newBuy,t.newSell,newBattParams);
+    const er=clamp(cfg.essAdoptionPct/100,0,1);
+    const base=blend(baseNo,baseEss,er), newer=blend(newNo,newEss,er);
+
+    const days=365;
+    const N=Math.max(0,+cfg.customerCount||0), pr=clamp(cfg.participationPct/100,0,1);
+    const participants=N*pr;
+    const annual=(x)=>x*days;
+    const total=(x)=>annual(x)*participants;
+    const allBase=(x)=>annual(x)*N;
+    const allScenario=(baseVal,newVal)=>annual(baseVal)*(N-participants)+annual(newVal)*participants;
+
+    // 가격효과: 기준 물량을 신규 단가로 재평가 (기준안 역송 보상은 0원)
+    let buyPriceEffectDay=0,sellPriceEffectDay=0,cfRevenueDay=0;
+    for(let h=0;h<24;h++){
+      buyPriceEffectDay += base.import[h]*(t.newBuy[h]-t.baseBuy[h]);
+      sellPriceEffectDay += -base.export[h]*(t.newSell[h]-t.baseSell[h]);
+      cfRevenueDay += base.import[h]*t.newBuy[h]-base.export[h]*t.newSell[h];
+    }
+    const behaviorEffectDay=newer.cost-cfRevenueDay;
+
+    return {
+      load,pv,base,new:newer,baseNo,newNo,baseEss,newEss,
+      perCustomer:{
+        baseNetRevenue:annual(base.cost),newNetRevenue:annual(newer.cost),changeNetRevenue:annual(newer.cost-base.cost),
+        baseSalesRevenue:annual(base.salesRevenue),newSalesRevenue:annual(newer.salesRevenue),
+        basePurchasePayout:annual(base.purchasePayout),newPurchasePayout:annual(newer.purchasePayout),
+        baseImport:annual(base.importEnergy),newImport:annual(newer.importEnergy),baseExport:annual(base.exportEnergy),newExport:annual(newer.exportEnergy),
+        basePvUtilization:base.pvUtilizationRate,newPvUtilization:newer.pvUtilizationRate,
+        newGridCharge:annual(newer.gridChargeEnergy||0),newBatteryDischarge:annual(newer.batteryDischargeEnergy||0)
+      },
+      total:{
+        baseNetRevenue:allBase(base.cost),newNetRevenue:allScenario(base.cost,newer.cost),changeNetRevenue:total(newer.cost-base.cost),
+        baseSalesRevenue:allBase(base.salesRevenue),newSalesRevenue:allScenario(base.salesRevenue,newer.salesRevenue),
+        changeSalesRevenue:total(newer.salesRevenue-base.salesRevenue),
+        basePurchasePayout:allBase(base.purchasePayout),newPurchasePayout:allScenario(base.purchasePayout,newer.purchasePayout),
+        changePurchasePayout:total(newer.purchasePayout-base.purchasePayout),
+        baseImport:allBase(base.importEnergy),newImport:allScenario(base.importEnergy,newer.importEnergy),
+        baseExport:allBase(base.exportEnergy),newExport:allScenario(base.exportEnergy,newer.exportEnergy),
+        participants
+      },
+      decomposition:{
+        buyPriceEffect:total(buyPriceEffectDay),sellPriceEffect:total(sellPriceEffectDay),behaviorEffect:total(behaviorEffectDay),
+        totalEffect:total(newer.cost-base.cost)
+      }
+    };
+  }
+  return {simulate,optimizeDay,noBatteryDay,blend,clamp,sum};
+});
+
+</script><script>
+(function(){
+  const D=window.PRAS_DATA,E=window.PRASEngine;
+  const $=id=>document.getElementById(id);
+  const SMP_HOURLY_AVG_BY_YEAR={"2022":[246.69611,234.266986,222.732466,216.183973,218.422603,225.311863,229.745808,238.729534,238.909671,234.811562,225.044986,216.567178,208.916904,218.28526,221.18874,236.892849,261.432192,276.468329,291.436685,306.925808,298.546849,288.38863,283.298548,267.312822],"2023":[167.299562,151.016849,141.820959,136.802877,138.040932,145.801644,156.511699,166.743863,179.763342,180.996247,179.790548,177.392575,167.846932,172.574986,176.024932,178.268411,183.73189,191.257726,202.758384,204.379288,193.152219,188.091589,182.511425,178.011342],"2024":[123.523415,108.903497,103.861557,100.176913,100.738443,105.629781,114.204508,126.475656,137.642486,142.999809,139.74276,135.172951,127.173607,133.239098,137.043005,140.369536,141.907842,145.321913,153.415219,151.068306,146.707923,139.560027,137.14235,133.057158],"2025":[105.993315,93.695753,90.227014,87.469041,88.495589,93.337644,100.436,110.666521,117.244466,122.176411,120.976959,108.590164,96.336411,103.405753,114.207452,120.671562,120.537205,123.462932,126.188521,126.398027,123.988795,119.324712,116.139233,112.104658],"avg":[160.852533,146.944716,139.635996,135.134257,136.399966,142.494983,150.199849,160.6305,168.368946,170.227358,166.370575,159.414114,150.052793,156.860096,162.098871,169.030958,176.87833,184.101164,193.4223,197.161287,190.568905,183.810931,179.74371,172.594415]};
+  const SMP_YEAR_LABEL={'2022':'2022년','2023':'2023년','2024':'2024년','2025':'2025년','avg':'2022~2025 평균'};
+  const ids=['loadYear','smpYear','customerCount','participationPct','loadScalePct','pvCapacityKW','pvUtilizationPct','essAdoptionPct','essCapacityKWh','essPowerKW','minSocPct','maxSocPct','initialSocPct','roundTripEfficiencyPct'];
+  let tariffs=JSON.parse(JSON.stringify(D.tariffs));
+  const colors={load:'#344054',pv:'#f59e0b',baseImp:'#98a2b3',newImp:'#2168df',gridLoad:'#0f766e',gridEss:'#d97706',baseExp:'#a855f7',newExp:'#087a55',soc:'#b54708',baseBuy:'#667085',newBuy:'#2168df',baseSell:'#9e77ed',newSell:'#087a55'};
+  const hiddenEnergySeries=new Set();
+  let currentEnergySeries=[];
+  const hiddenPriceSeries=new Set();
+  let currentPriceSeries=[];
+  const fmt0=x=>Math.round(x).toLocaleString('ko-KR');
+  const fmt1=x=>(Math.round(x*10)/10).toLocaleString('ko-KR',{minimumFractionDigits:1,maximumFractionDigits:1});
+  const fmtMax1=x=>(Math.round(x*10)/10).toLocaleString('ko-KR',{maximumFractionDigits:1});
+  const parseInputNumber=v=>Number(String(v??'').replace(/,/g,'').trim())||0;
+  function formatCustomerCount(){const el=$('customerCount');const n=Math.max(0,Math.round(parseInputNumber(el.value)));el.value=n.toLocaleString('ko-KR');}
+  function money(x){const a=Math.abs(x);if(a>=1e8)return `${fmt1(x/1e8)}억 원`;if(a>=1e4)return `${fmt1(x/1e4)}만 원`;return `${fmt1(x)}원`;}
+  function signedMoney(x){return `${x>0?'+':''}${money(x)}`}
+  function setSign(el,x){el.classList.remove('positive','negative'); if(x>0)el.classList.add('positive'); if(x<0)el.classList.add('negative');}
+  function pvDailyKWh(){return Math.max(0,+$('pvCapacityKW').value||0)*24*Math.max(0,+$('pvUtilizationPct').value||0)/100;}
+  function updatePvCalculated(){if($('pvDailyCalculated')) $('pvDailyCalculated').textContent=`${fmt1(pvDailyKWh())} kWh/일`;}
+  function mixRgb(a,b,t){return a.map((v,i)=>Math.round(v+(b[i]-v)*t));}
+  function buyHeatColor(v){
+    const all=[...tariffs.baseBuy,...tariffs.newBuy].filter(Number.isFinite);
+    const lo=Math.min(...all),hi=Math.max(...all);
+    const t=hi>lo?Math.max(0,Math.min(1,(v-lo)/(hi-lo))):0;
+    const grey=[242,244,247],yellow=[254,240,199],red=[254,205,202];
+    const rgb=t<=0.5?mixRgb(grey,yellow,t*2):mixRgb(yellow,red,(t-0.5)*2);
+    return `rgb(${rgb.join(',')})`;
+  }
+  function cfg(){return {
+    loadYear:$('loadYear').value,smpYear:$('smpYear').value,customerCount:parseInputNumber($('customerCount').value),participationPct:+$('participationPct').value,loadScalePct:+$('loadScalePct').value,
+    pvCapacityKW:+$('pvCapacityKW').value,pvUtilizationPct:+$('pvUtilizationPct').value,essAdoptionPct:+$('essAdoptionPct').value,essCapacityKWh:+$('essCapacityKWh').value,
+    essPowerKW:+$('essPowerKW').value,minSocPct:+$('minSocPct').value,maxSocPct:+$('maxSocPct').value,initialSocPct:+$('initialSocPct').value,
+    roundTripEfficiencyPct:+$('roundTripEfficiencyPct').value,socStepKWh:0.2,allowGridCharge:$('allowGridCharge').checked,
+    allowBatteryExport:$('allowBatteryExport').checked,tariffs
+  }}
+  const basePeriods=['경','경','경','경','경','경','경','경','중','중','중','중','중','중','중','중','최','최','최','최','최','최','경','경'];
+  const newPeriods=['중','중','경','경','경','중','중','중','중','중','중','중','중','중','중','중','최','최','최','중','중','중','중','중'];
+  function periodFor(row,i){return ((row==='baseBuy'||row==='baseSell')?basePeriods:newPeriods)[i]}
+  function periodClass(period){return period==='경'?'low':period==='중'?'mid':'peak'}
+  const hourStart=i=>String(i).padStart(2,'0');
+  const hourEnd=i=>String(i+1).padStart(2,'0');
+  function hourInterval(i){return `${hourStart(i)}~${hourEnd(i)}시`}
+  function buildTariff(){
+    const rows=[['baseBuy','기준 수전단가'],['newBuy','신규 수전단가'],['newSell','신규 역송단가']];
+    let h='<thead><tr><th>구분</th>'+Array.from({length:24},(_,i)=>`<th title="${hourInterval(i)}">${hourStart(i)}</th>`).join('')+'</tr></thead><tbody>';
+    rows.forEach(([k,n])=>{h+=`<tr><td>${n}</td>`+tariffs[k].map((v,i)=>{const heat=(k==='baseBuy'||k==='newBuy')?` style="background:${buyHeatColor(v)}"`:'';const period=periodFor(k,i);return `<td><div class="tariff-cell"><input type="number" step="0.1" data-tariff="${k}" data-h="${i}" value="${v.toFixed(1)}"${heat}><span class="period-tag ${periodClass(period)}">${period}</span></div></td>`}).join('')+'</tr>'});
+    $('tariffTable').innerHTML=h+'</tbody>';
+
+    $('tariffResponsive').innerHTML=rows.map(([k,n])=>`<div class="tariff-card"><div class="tariff-card-title">${n}</div><div class="tariff-hour-grid">${tariffs[k].map((v,i)=>{const heat=(k==='baseBuy'||k==='newBuy')?` style="background:${buyHeatColor(v)}"`:'';const period=periodFor(k,i);return `<div class="tariff-hour"><label title="${hourInterval(i)}">${hourStart(i)}</label><input type="number" step="0.1" data-tariff="${k}" data-h="${i}" value="${v.toFixed(1)}"${heat}><span class="period-tag ${periodClass(period)}">${period}</span></div>`}).join('')}</div></div>`).join('');
+
+    document.querySelectorAll('[data-tariff][data-h]').forEach(inp=>inp.addEventListener('change',()=>{
+      tariffs[inp.dataset.tariff][+inp.dataset.h]=+inp.value;
+      buildTariff();
+      run();
+    }));
+  }
+  function svgLineChart(target,series,opts={}){
+    const el=$(target),W=Math.max(el.clientWidth||650,500),H=280,m={l:46,r:16,t:16,b:34};
+    const vals=series.flatMap(s=>s.data).filter(Number.isFinite); let ymin=opts.ymin??Math.min(0,...vals),ymax=opts.ymax??Math.max(...vals);
+    if(Math.abs(ymax-ymin)<1e-9)ymax=ymin+1; const plotW=W-m.l-m.r,x=i=>m.l+(i+0.5)*plotW/24,xt=h=>m.l+h*plotW/24,y=v=>m.t+(ymax-v)*(H-m.t-m.b)/(ymax-ymin);
+    let s=`<svg viewBox="0 0 ${W} ${H}" width="100%" height="100%">`;
+    for(let j=0;j<=4;j++){const v=ymin+(ymax-ymin)*j/4,yy=y(v);s+=`<line x1="${m.l}" y1="${yy}" x2="${W-m.r}" y2="${yy}" stroke="#eaecf0"/><text x="${m.l-7}" y="${yy+4}" text-anchor="end" font-size="10" fill="#667085">${opts.formatY?opts.formatY(v):v.toFixed(1)}</text>`}
+    [0,4,8,12,16,20,24].forEach(h=>s+=`<text x="${xt(h)}" y="${H-10}" text-anchor="${h===0?'start':h===24?'end':'middle'}" font-size="10" fill="#667085">${String(h).padStart(2,'0')}</text>`);
+    series.forEach(sr=>{const pts=sr.data.map((v,i)=>`${x(i)},${y(v)}`).join(' ');s+=`<polyline points="${pts}" fill="none" stroke="${sr.color}" stroke-width="${sr.width||2}" stroke-dasharray="${sr.dash||''}" stroke-linejoin="round" stroke-linecap="round"/>`});
+    el.innerHTML=s+'</svg>';
+  }
+  function legend(el,items){$(el).innerHTML=items.map(i=>`<span style="--c:${i.color}">${i.name}</span>`).join('')}
+  function renderEnergyChart(){
+    const visible=currentEnergySeries.filter(s=>!hiddenEnergySeries.has(s.name));
+    if(!visible.length){
+      $('energyChart').innerHTML='<div class="chart-empty">표시할 계열이 없습니다. 위 범례를 클릭해 다시 표시하세요.</div>';
+      return;
+    }
+    svgLineChart('energyChart',visible,{formatY:v=>v.toFixed(1)});
+  }
+  function energyLegend(items){
+    currentEnergySeries=items;
+    $('energyLegend').innerHTML=items.map(i=>`<button type="button" class="legend-item${hiddenEnergySeries.has(i.name)?' off':''}" data-energy-series="${i.name}" style="--c:${i.color}" title="클릭하여 표시/숨김">${i.name}</button>`).join('');
+    $('energyLegend').querySelectorAll('[data-energy-series]').forEach(btn=>btn.addEventListener('click',()=>{
+      const name=btn.dataset.energySeries;
+      if(hiddenEnergySeries.has(name)) hiddenEnergySeries.delete(name); else hiddenEnergySeries.add(name);
+      energyLegend(currentEnergySeries);
+      renderEnergyChart();
+    }));
+  }
+  function renderPriceChart(){
+    const visible=currentPriceSeries.filter(s=>!hiddenPriceSeries.has(s.name));
+    if(!visible.length){
+      $('priceChart').innerHTML='<div class="chart-empty">표시할 계열이 없습니다. 위 범례를 클릭해 다시 표시하세요.</div>';
+      return;
+    }
+    svgLineChart('priceChart',visible,{ymin:0,formatY:v=>fmt1(v)});
+  }
+  function renderSocChart(r,c){
+    const chart=$('socChart'), legend=$('socLegend'), summary=$('socSummary');
+    if(!chart||!legend||!summary) return;
+    const adoption=Math.max(0,+c.essAdoptionPct||0);
+    const cap=Math.max(0,+c.essCapacityKWh||0);
+    if(adoption<=0 || cap<=0){
+      legend.innerHTML='';
+      chart.innerHTML='<div class="chart-empty">ESS 미적용 상태입니다. ESS 보유비율과 용량을 입력하면 시간대별 SOC를 표시합니다.</div>';
+      summary.textContent='';
+      return;
+    }
+    const raw=((r.new&&r.new.soc)||[]).slice(1,25);
+    const data=raw.map(v=>cap>0? v/cap*100 : 0);
+    const minPct=Math.max(0,+c.minSocPct||0);
+    const maxPct=Math.max(0,+c.maxSocPct||0);
+    const initPct=Math.max(0,+c.initialSocPct||0);
+    const obsMin=data.length?Math.min(...data):0, obsMax=data.length?Math.max(...data):0;
+    legend.innerHTML=`<span style="--c:${colors.soc}">신규안 SOC</span><span style="--c:#98a2b3">운전가능 범위</span><span style="--c:#d0d5dd">초기 SOC</span>`;
+    const W=Math.max(chart.clientWidth||650,500),H=280,m={l:46,r:16,t:16,b:34};
+    const ymin=0, ymax=100;
+    const plotW=W-m.l-m.r;
+    const x=i=>m.l+(i+0.5)*plotW/24, xt=h=>m.l+h*plotW/24, y=v=>m.t+(ymax-v)*(H-m.t-m.b)/(ymax-ymin);
+    let s=`<svg viewBox="0 0 ${W} ${H}" width="100%" height="100%">`;
+    const bandTop=y(maxPct), bandBottom=y(minPct);
+    s+=`<rect x="${m.l}" y="${bandTop}" width="${plotW}" height="${Math.max(0,bandBottom-bandTop)}" fill="rgba(152,162,179,0.12)" stroke="none"/>`;
+    for(let j=0;j<=4;j++){const v=ymin+(ymax-ymin)*j/4,yy=y(v);s+=`<line x1="${m.l}" y1="${yy}" x2="${W-m.r}" y2="${yy}" stroke="#eaecf0"/><text x="${m.l-7}" y="${yy+4}" text-anchor="end" font-size="10" fill="#667085">${fmt1(v)}</text>`}
+    [0,4,8,12,16,20,24].forEach(h=>s+=`<text x="${xt(h)}" y="${H-10}" text-anchor="${h===0?'start':h===24?'end':'middle'}" font-size="10" fill="#667085">${String(h).padStart(2,'0')}</text>`);
+    const refLines=[{v:minPct,label:'최소 SOC',dash:'4 4',color:'#98a2b3'},{v:maxPct,label:'최대 SOC',dash:'4 4',color:'#98a2b3'},{v:initPct,label:'초기 SOC',dash:'2 4',color:'#d0d5dd'}];
+    refLines.forEach((ref,idx)=>{const yy=y(ref.v);s+=`<line x1="${m.l}" y1="${yy}" x2="${W-m.r}" y2="${yy}" stroke="${ref.color}" stroke-dasharray="${ref.dash}"/>`; if(idx<2) s+=`<text x="${W-m.r-2}" y="${yy-4}" text-anchor="end" font-size="10" fill="#667085">${ref.label}</text>`;});
+    const pts=data.map((v,i)=>`${x(i)},${y(v)}`).join(' ');
+    s+=`<polyline points="${pts}" fill="none" stroke="${colors.soc}" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>`;
+    data.forEach((v,i)=>{s+=`<circle cx="${x(i)}" cy="${y(v)}" r="2.4" fill="${colors.soc}"/>`;});
+    s+='</svg>';
+    chart.innerHTML=s;
+    summary.textContent=`정격용량 ${fmt1(cap)}kWh/호 · 운전가능 SOC 범위 ${fmt1(minPct)}~${fmt1(maxPct)}% · 초기 SOC ${fmt1(initPct)}% · 대표일 실제 SOC 범위 ${fmt1(obsMin)}~${fmt1(obsMax)}%`;
+  }
+  function priceLegend(items){
+    currentPriceSeries=items;
+    $('priceLegend').innerHTML=items.map(i=>`<button type="button" class="legend-item${hiddenPriceSeries.has(i.name)?' off':''}" data-price-series="${i.name}" style="--c:${i.color}" title="클릭하여 표시/숨김">${i.name}</button>`).join('');
+    $('priceLegend').querySelectorAll('[data-price-series]').forEach(btn=>btn.addEventListener('click',()=>{
+      const name=btn.dataset.priceSeries;
+      if(hiddenPriceSeries.has(name)) hiddenPriceSeries.delete(name); else hiddenPriceSeries.add(name);
+      priceLegend(currentPriceSeries);
+      renderPriceChart();
+    }));
+  }
+  function hourRanges(hours){
+    if(!hours.length)return '없음';
+    const sorted=[...new Set(hours)].sort((a,b)=>a-b),groups=[];let st=sorted[0],pr=sorted[0];
+    for(let j=1;j<sorted.length;j++){const h=sorted[j];if(h===pr+1){pr=h;continue}groups.push([st,pr]);st=pr=h}groups.push([st,pr]);
+    return groups.map(([a,b])=>`${hourStart(a)}~${hourEnd(b)}시`).join(', ');
+  }
+  function selectedHours(arr,threshold=0.05){return arr.map((v,i)=>v>threshold?i:-1).filter(i=>i>=0)}
+  function avgAt(arr,hours){return hours.length?hours.reduce((s,h)=>s+(arr[h]||0),0)/hours.length:0}
+  function gridFlowSplit(out){
+    const total=(out.import||[]).map(v=>Math.max(0,v||0));
+    const toEss=total.map((v,i)=>Math.min(v,Math.max(0,out.gridCharge?.[i]||0)));
+    const toLoad=total.map((v,i)=>Math.max(0,v-toEss[i]));
+    return {total,toEss,toLoad,totalEnergy:total.reduce((a,b)=>a+b,0),toEssEnergy:toEss.reduce((a,b)=>a+b,0),toLoadEnergy:toLoad.reduce((a,b)=>a+b,0)};
+  }
+  function energyBalance(r){
+    const n=gridFlowSplit(r.new);
+    const load=r.load.reduce((a,b)=>a+b,0),pv=r.pv.reduce((a,b)=>a+b,0),exp=(r.new.export||[]).reduce((a,b)=>a+b,0);
+    const pvDirect=(r.new.pvDirect||[]).reduce((a,b)=>a+b,0),pvCharge=(r.new.pvCharge||[]).reduce((a,b)=>a+b,0),discharge=(r.new.discharge||[]).reduce((a,b)=>a+b,0);
+    const dependence=load>1e-9?n.totalEnergy/load*100:0;
+    return {load,pv,exp,pvDirect,pvCharge,discharge,grid:n,dependence};
+  }
+  function renderEnergyBalance(r){
+    const e=energyBalance(r),noGrid=e.grid.totalEnergy<0.05;
+    const status=noGrid?'대표일 한전 무수전 가능':'대표일 한전 무수전 불가';
+    const statusValue=noGrid?'수전 0.0 kWh/일':`수전 ${fmt1(e.grid.totalEnergy)} kWh/일 필요`;
+    $('gridDependenceSummary').innerHTML=`<div class="flow-status">${status}<strong>${statusValue}</strong></div><div class="flow-explain">한전 총수전/고객 총부하 = <b>${fmt1(e.dependence)}%</b> · ESS는 저장된 전력을 시간 이동하므로 정격용량을 PV 발전량에 단순 합산하지 않음.</div>`;
+    const cards=[
+      ['대표일 총부하',`${fmt1(e.load)} kWh/일`,'고객 1호의 하루 전력사용량',''],
+      ['태양광 발전',`${fmt1(e.pv)} kWh/일`,`총부하의 ${fmt1(e.load>0?e.pv/e.load*100:0)}% 수준`,''],
+      ['한전 총수전',`${fmt1(e.grid.totalEnergy)} kWh/일`,'직접 부하공급 + ESS 계통충전','grid-main'],
+      ['한전 → 부하',`${fmt1(e.grid.toLoadEnergy)} kWh/일`,'ESS 충전을 제외한 직접 수전','grid-load'],
+      ['한전 → ESS',`${fmt1(e.grid.toEssEnergy)} kWh/일`,'저가시간 등에 ESS를 충전한 계통전력','grid-ess'],
+      ['계통 역송',`${fmt1(e.exp)} kWh/일`,'PV·ESS에서 한전으로 역송된 전력',e.exp>0.05?'':'warn']
+    ];
+    $('energyBalanceCards').innerHTML=cards.map(([a,b,c,cls])=>`<div class="flow-card ${cls}"><b>${a}</b><strong>${b}</strong><span>${c}</span></div>`).join('');
+  }
+  function renderPeriodSummary(r){
+    if(!$('periodSummary')) return;
+    const periods=['경','중','최'];
+    const names={경:'경부하',중:'중간부하',최:'최대부하'};
+    const annual=365;
+    const rows=periods.map(period=>{
+      const hours=newPeriods.map((p,i)=>p===period?i:-1).filter(i=>i>=0);
+      const customerLoad=hours.reduce((s,h)=>s+r.load[h],0)*annual;
+      const baseUse=hours.reduce((s,h)=>s+r.base.import[h],0)*annual;
+      const newUse=hours.reduce((s,h)=>s+r.new.import[h],0)*annual;
+      const baseFee=hours.reduce((s,h)=>s+r.base.import[h]*tariffs.baseBuy[h],0)*annual;
+      const newFee=hours.reduce((s,h)=>s+r.new.import[h]*tariffs.newBuy[h]-r.new.export[h]*tariffs.newSell[h],0)*annual;
+      const useDiff=newUse-baseUse, feeDiff=newFee-baseFee;
+      const usePct=Math.abs(baseUse)>1e-9?useDiff/baseUse*100:null;
+      const feePct=Math.abs(baseFee)>1e-9?feeDiff/baseFee*100:null;
+      return {period,name:names[period],hours,customerLoad,baseUse,newUse,useDiff,usePct,baseFee,newFee,feeDiff,feePct};
+    });
+    const pct=v=>v==null?'–':`${v>0?'+':''}${fmt1(v)}%`;
+    $('periodSummary').innerHTML=rows.map(x=>`<div class="period-card ${periodClass(x.period)}">
+      <div class="period-card-head"><b>${x.name}</b><span>${hourRanges(x.hours)}</span></div>
+      <div class="period-metric"><span>고객 총부하</span><strong>${fmt1(x.customerLoad)} kWh/호·년</strong><em>기준·신규 동일</em></div>
+      <div class="period-metric"><span>한전 수전량</span><strong>${fmt1(x.baseUse)} → ${fmt1(x.newUse)} kWh/호·년</strong><em class="${x.useDiff>0?'positive':x.useDiff<0?'negative':''}">${x.useDiff>0?'+':''}${fmt1(x.useDiff)} kWh (${pct(x.usePct)})</em></div>
+      <div class="period-metric"><span>순 전력량요금</span><strong>${fmt0(x.baseFee)} → ${fmt0(x.newFee)} 원/호·년</strong><em class="${x.feeDiff>0?'positive':x.feeDiff<0?'negative':''}">${x.feeDiff>0?'+':''}${fmt0(x.feeDiff)}원 (${pct(x.feePct)})</em></div>
+    </div>`).join('');
+  }
+  function essParamsFromCfg(c){return {
+    capacityKWh:c.essCapacityKWh,powerKW:c.essPowerKW,minSocPct:c.minSocPct,maxSocPct:c.maxSocPct,
+    initialSocPct:c.initialSocPct,roundTripEfficiencyPct:c.roundTripEfficiencyPct,socStepKWh:0.2,
+    allowGridCharge:c.allowGridCharge,allowBatteryExport:c.allowBatteryExport
+  }}
+  function batteryExportAt(out,h){return Math.max(0,(out.export?.[h]||0)-(out.pvExport?.[h]||0))}
+  function saleSwitchThreshold(r,c,h){
+    if(!c.allowBatteryExport || (+c.essAdoptionPct||0)<=0 || (+c.essCapacityKWh||0)<=0) return null;
+    const params=essParamsFromCfg(c),target=0.10;
+    const test=price=>{
+      const sell=tariffs.newSell.slice(); sell[h]=price;
+      const o=E.optimizeDay(r.load,r.pv,tariffs.newBuy,sell,params);
+      return batteryExportAt(o,h);
+    };
+    let lo=0,hi=Math.max(300,tariffs.newSell[h]+120,Math.max(...tariffs.newBuy)+100);
+    while(test(hi)<target && hi<1000) hi+=100;
+    if(test(hi)<target) return null;
+    for(let k=0;k<11;k++){
+      const mid=(lo+hi)/2;
+      if(test(mid)>=target) hi=mid; else lo=mid;
+    }
+    const exact=hi;
+    const observed=Math.ceil((exact+0.05)/5)*5;
+    return {exact,observed};
+  }
+  function loadSupplyChoice(r,h){
+    const out=r.new;
+    const load=Math.max(0,r.load[h]||0);
+    const pv=Math.max(0,out.pvDirect?.[h]||0);
+    const residual=Math.max(load-pv,0);
+    const ess=Math.min(Math.max(0,out.discharge?.[h]||0),residual);
+    const grid=Math.max(0,(out.import?.[h]||0)-(out.gridCharge?.[h]||0));
+    const parts=[['계통',grid,'grid'],['PV',pv,'pv'],['ESS',ess,'ess']].filter(x=>x[1]>0.03);
+    if(load<=0.03) return {label:'부하 거의 없음',cls:'mix',detail:'–'};
+    if(!parts.length) return {label:'공급 미확인',cls:'mix',detail:'–'};
+    parts.sort((a,b)=>b[1]-a[1]);
+    const dominant=parts[0];
+    let label,cls;
+    if(parts.length===1 || dominant[1]/load>=0.75){
+      label=dominant[0]==='계통'?'계통수전 우선':dominant[0]==='PV'?'PV 공급 우선':'ESS 공급 우선';
+      cls=dominant[2];
+    }else{
+      label=parts.map(x=>x[0]).join('+')+' 혼합'; cls='mix';
+    }
+    const detail=`계통 ${fmt1(grid)} · PV ${fmt1(pv)} · ESS ${fmt1(ess)} kWh`;
+    return {label,cls,detail,grid,pv,ess};
+  }
+  function renderHourlyChoice(r,c){
+    const el=$('hourlyChoiceTable'); if(!el) return;
+    const n=r.new;
+    const thresholds=Array.from({length:24},(_,h)=>saleSwitchThreshold(r,c,h));
+    let html='<thead><tr><th>시간</th><th>수전단가<br>(원/kWh)</th><th>역송단가<br>(원/kWh)</th><th>PV·ESS 운전 선택</th><th>부하 공급 선택<br>(kWh/호·1시간)</th><th>역송전환 관찰단가<br>(원/kWh)</th><th>현재 대비 조정</th></tr></thead><tbody>';
+    for(let h=0;h<24;h++){
+      const residual=Math.max((r.load[h]||0)-(r.pv[h]||0),0);
+      const battExport=batteryExportAt(n,h),dis=n.discharge?.[h]||0,charge=n.charge?.[h]||0,pvCharge=n.pvCharge?.[h]||0;
+      let label='대기/직접사용',cls='wait';
+      if(battExport>0.10){label='계통 역송 유리';cls='sell'}
+      else if(dis>0.05 && residual>0.05){label='ESS 자가소비 유리';cls='self'}
+      else if(charge>0.05){label=pvCharge>0.05?'ESS 충전 유리':'계통충전 유리';cls='charge'}
+      else if((r.pv[h]||0)>0.05){label='PV 직접사용';cls='direct'}
+      const supply=loadSupplyChoice(r,h);
+      const th=thresholds[h]; let thText='–',adj='–',adjCls='threshold-na';
+      if(th){
+        thText=`약 ${fmt1(th.observed)} 이상`;
+        const diff=th.observed-tariffs.newSell[h];
+        if(diff<=0.05){adj='현재 단가에서 역송 가능';adjCls='threshold-met'}
+        else {adj=`+${fmt1(diff)}원`;adjCls='threshold-up'}
+      }else if(!c.allowBatteryExport){thText='역송 미허용';adj='설정 변경 필요'}
+      else if((+c.essAdoptionPct||0)<=0 || (+c.essCapacityKWh||0)<=0){thText='ESS 미적용';adj='–'}
+      html+=`<tr><td title="${hourInterval(h)}">${hourStart(h)}~${hourEnd(h)}</td><td>${fmt1(tariffs.newBuy[h])}</td><td>${fmt1(tariffs.newSell[h])}</td><td><span class="choice-chip ${cls}">${label}</span></td><td><div class="supply-choice"><span class="supply-chip ${supply.cls}">${supply.label}</span><span class="supply-detail">${supply.detail}</span></div></td><td>${thText}</td><td class="${adjCls}">${adj}</td></tr>`;
+    }
+    el.innerHTML=html+'</tbody>';
+  }
+  function customerBehavior(r,c){
+    const buy=tariffs.newBuy,sell=tariffs.newSell;
+    const minBuy=Math.min(...buy),maxBuy=Math.max(...buy),minSell=Math.min(...sell),maxSell=Math.max(...sell);
+    const buySpan=Math.max(maxBuy-minBuy,1e-9),sellSpan=Math.max(maxSell-minSell,1e-9);
+    const lowBuy=buy.map((v,i)=>v<=minBuy+buySpan*.25?i:-1).filter(i=>i>=0);
+    const highBuy=buy.map((v,i)=>v>=minBuy+buySpan*.75?i:-1).filter(i=>i>=0);
+    const highSell=sell.map((v,i)=>v>=minSell+sellSpan*.75?i:-1).filter(i=>i>=0);
+    const n=r.newEss;
+    const charge=selectedHours(n.charge||[]),gridCharge=selectedHours(n.gridCharge||[]),pvCharge=selectedHours(n.pvCharge||[]),discharge=selectedHours(n.discharge||[]),exports=selectedHours(n.export||[]);
+    const hasEss=(+c.essAdoptionPct||0)>0 && (+c.essCapacityKWh||0)>0;
+    const buyAvoid=avgAt(buy,discharge),sellValue=avgAt(sell,discharge);
+    const pvHours=r.pv.map((v,i)=>v>0.05?i:-1).filter(i=>i>=0);
+    const peakHours=newPeriods.map((p,i)=>p==='최'?i:-1).filter(i=>i>=0);
+    const lowPeriodHours=newPeriods.map((p,i)=>p==='경'?i:-1).filter(i=>i>=0);
+    const midHours=newPeriods.map((p,i)=>p==='중'?i:-1).filter(i=>i>=0);
+    const avg=(arr,idx)=>idx.length?idx.reduce((s,i)=>s+arr[i],0)/idx.length:0;
+    const peakBuy=avg(buy,peakHours),peakSell=avg(sell,peakHours);
+    const lowPeriodBuy=avg(buy,lowPeriodHours),lowPeriodSell=avg(sell,lowPeriodHours);
+    const midBuy=avg(buy,midHours),midSell=avg(sell,midHours);
+
+    let summaryHtml='';
+    if(!hasEss){
+      summaryHtml=`<p class="behavior-lead">현재 설정에서는 ESS가 적용되지 않아, 고객은 태양광을 우선 자가소비하고 남는 전력을 역송하는 방식으로 비용을 최소화함.</p>
+      <ul>
+        <li><b>태양광 발전 시:</b> 고객부하를 PV로 먼저 충당하여 한전 수전을 줄이는 것이 우선이며, 부하를 초과한 발전량만 계통 역송 대상으로 남음.</li>
+        <li><b>PV 부족 시:</b> ESS가 없으므로 부족한 전력은 한전에서 직접 수전함.</li>
+      </ul>`;
+    }else{
+      const chargeRange=charge.length?hourRanges(charge):'없음';
+      const dischargeRange=discharge.length?hourRanges(discharge):'없음';
+      const exportRange=exports.length?hourRanges(exports):'거의 없음';
+      const pvRange=pvHours.length?hourRanges(pvHours):'없음';
+      const lowRange=lowPeriodHours.length?hourRanges(lowPeriodHours):hourRanges(lowBuy);
+      const peakRange=peakHours.length?hourRanges(peakHours):hourRanges(highBuy);
+      const selfVsSell=peakBuy>peakSell
+        ? `최대부하 구간은 수전단가 ${fmt1(peakBuy)}원이 역송단가 ${fmt1(peakSell)}원보다 높아, 저장전력을 역송하는 것보다 <b>자가소비하여 한전 수전을 회피</b>하는 가치가 큼.`
+        : `최대부하 구간은 역송단가 ${fmt1(peakSell)}원이 수전단가 ${fmt1(peakBuy)}원 이상이므로, SOC와 부하 여건이 허용되면 <b>계통 역송</b> 유인이 커질 수 있음.`;
+      summaryHtml=`<p class="behavior-lead">현재 가격신호에서 합리적 고객은 ‘싼 시간에 충전 → PV는 우선 활용·저장 → 비싼 시간에 방전 → 역송은 자가소비보다 유리할 때 선택’하는 방향으로 움직임.</p>
+      <ul>
+        <li><b>① 가격신호 판단:</b> 고객은 매 시간 ‘수전단가’, ‘역송단가’, PV 발전량, ESS SOC와 효율을 함께 비교하여 연간 순요금을 최소화하는 선택을 함.</li>
+        <li><b>② 저가시간 ${lowRange}:</b> 평균 수전단가 ${fmt1(lowPeriodBuy||minBuy)}원/kWh로 상대적으로 저렴함. 계통충전이 허용된 경우 현재 최적운전에서는 <b>${hourRanges(gridCharge)} 계통충전</b>이 선택되며, 이후 고가시간의 수전을 줄이기 위한 저장 행동으로 해석 가능함.</li>
+        <li><b>③ 태양광 발전시간 ${pvRange}:</b> PV는 먼저 현재 부하를 직접 충당하고, 잉여분은 역송단가와 향후 수전회피 가치를 비교해 ESS에 저장하거나 역송함. 현재 PV→ESS 충전은 <b>${hourRanges(pvCharge)}</b>에 나타남.</li>
+        <li><b>④ 고가시간 ${peakRange}:</b> ${selfVsSell} 실제 ESS 방전은 <b>${dischargeRange}</b>, 계통 역송은 <b>${exportRange}</b>으로 계산됨.</li>
+        <li><b>⑤ 부하 공급 관점:</b> 각 시간의 고객부하는 ‘PV → ESS → 한전수전’ 중 비용이 가장 낮은 조합으로 충당됨. PV와 ESS로 부족한 부분만 한전에서 수전하므로, 한전 수전량이 0이어도 고객부하가 0이라는 의미는 아님.</li>
+      </ul>
+      <div class="behavior-link">아래 ‘시간대별 행동 유불리’에서 <b>PV·ESS 운전 선택</b>은 충전·방전·역송 판단을, <b>부하 공급 선택</b>은 실제 부하를 PV·ESS·계통 중 무엇으로 충당했는지를 보여줌. ‘역송전환 관찰단가’는 현재 자가소비 우선 시간이 어느 역송단가부터 계통 역송으로 바뀌는지 확인하는 지표임.</div>`;
+    }
+    $('behaviorSummary').innerHTML=summaryHtml;
+
+    const chargeText=!hasEss?'ESS 미적용':charge.length
+      ? `실제 최적화상 ${hourRanges(charge)}에 충전함. PV 잉여 충전은 ${hourRanges(pvCharge)}, 계통전력 충전은 ${hourRanges(gridCharge)}임.${!c.allowGridCharge?' 계통충전은 설정상 허용하지 않음.':''}`
+      : '현재 가격차와 효율을 고려하면 추가 충전의 경제적 유인이 나타나지 않음.';
+    let dischargeText=!hasEss?'ESS 미적용':discharge.length
+      ? `실제 최적화상 ${hourRanges(discharge)}에 방전함. 해당 시간의 평균 수전단가는 ${fmt1(buyAvoid)}원/kWh, 평균 역송단가는 ${fmt1(sellValue)}원/kWh임.`
+      : '현재 조건에서는 ESS 방전이 선택되지 않음.';
+    if(discharge.length && buyAvoid>sellValue) dischargeText+=' 같은 전력을 계통에 파는 것보다 고객 수전을 줄이는 가치가 커 자가소비가 우선될 수 있음.';
+    const exportText=exports.length
+      ? `실제 계통 역송은 ${hourRanges(exports)}에 발생함. 신규 역송단가가 높은 구간은 ${hourRanges(highSell)}이며 최고 ${fmt1(maxSell)}원/kWh임.`
+      : `실제 최적화에서는 계통 역송이 거의 발생하지 않음. 역송 최고단가는 ${fmt1(maxSell)}원/kWh이지만 수전회피 가치·ESS 효율·부하를 함께 고려한 결과임.`;
+    $('behaviorCards').innerHTML=`
+      <div class="behavior-card"><b>① 저가시간의 선택</b><p>경부하 ${lowPeriodHours.length?hourRanges(lowPeriodHours):hourRanges(lowBuy)}의 평균 수전단가는 ${fmt1(lowPeriodBuy||minBuy)}원/kWh임. 가격이 낮을수록 즉시 사용뿐 아니라 ESS 충전을 통해 향후 고가시간 사용을 준비하는 선택이 유리해짐.</p></div>
+      <div class="behavior-card"><b>② 태양광 발전시간의 선택</b><p>태양광 발전은 먼저 부하를 직접 충당하고, 남는 전력은 즉시 역송과 ESS 저장의 가치를 비교함. ${chargeText}</p></div>
+      <div class="behavior-card"><b>③ 고가시간의 선택</b><p>${dischargeText}<br>최대부하 ${peakHours.length?hourRanges(peakHours):hourRanges(highBuy)}의 평균 수전/역송단가는 ${fmt1(peakBuy||maxBuy)} / ${fmt1(peakSell||maxSell)}원/kWh임.</p></div>
+      <div class="behavior-card"><b>④ 역송 여부의 선택</b><p>${exportText} 하단의 역송전환 관찰단가를 현재 역송단가와 비교하면, 어느 수준부터 자가소비보다 역송이 유리해지는지 시간대별로 확인할 수 있음.</p></div>`;
+  }
+  function detail(res){
+    const split=gridFlowSplit(res.new);
+    let h='<thead><tr><th>시간</th><th>부하<br><small>kWh</small></th><th>PV<br><small>kWh</small></th><th>기준 수전<br><small>kWh</small></th><th>신규 총수전<br><small>kWh</small></th><th>한전→부하<br><small>kWh</small></th><th>한전→ESS<br><small>kWh</small></th><th>기준 역송<br><small>보상 없음·kWh</small></th><th>신규 역송<br><small>kWh</small></th><th>신규 ESS 충전<br><small>kWh</small></th><th>신규 ESS 방전<br><small>kWh</small></th><th>신규 SOC<br><small>kWh</small></th></tr></thead><tbody>';
+    for(let i=0;i<24;i++)h+=`<tr><td title="${hourInterval(i)}">${hourStart(i)}</td><td>${fmt1(res.load[i])}</td><td>${fmt1(res.pv[i])}</td><td>${fmt1(res.base.import[i])}</td><td>${fmt1(split.total[i])}</td><td>${fmt1(split.toLoad[i])}</td><td>${fmt1(split.toEss[i])}</td><td>${fmt1(res.base.export[i])}</td><td>${fmt1(res.new.export[i])}</td><td>${fmt1(res.new.charge[i]||0)}</td><td>${fmt1(res.new.discharge[i]||0)}</td><td>${fmt1(res.new.soc[i+1]||0)}</td></tr>`;
+    $('detailTable').innerHTML=h+'</tbody>';
+
+    const groups=[
+      {title:'부하·PV·기준 수전 (kWh/호·1시간)',cols:[['부하',i=>res.load[i]],['PV',i=>res.pv[i]],['기준 수전',i=>res.base.import[i]]]},
+      {title:'신규 한전 수전 구조 (kWh/호·1시간)',cols:[['총수전',i=>split.total[i]],['한전→부하',i=>split.toLoad[i]],['한전→ESS',i=>split.toEss[i]]]},
+      {title:'계통 역송·ESS 운전 (kWh/호·1시간)',cols:[['신규 역송',i=>res.new.export[i]],['ESS 충전',i=>res.new.charge[i]||0],['ESS 방전',i=>res.new.discharge[i]||0]]},
+      {title:'SOC (kWh/호 · 시간 종료 시점)',cols:[['SOC',i=>res.new.soc[i+1]||0]]}
+    ];
+    $('detailResponsive').innerHTML=groups.map(g=>{
+      let t=`<table class="detail-mini"><caption>${g.title}</caption><thead><tr><th>시간</th>${g.cols.map(c=>`<th>${c[0]}</th>`).join('')}</tr></thead><tbody>`;
+      for(let i=0;i<24;i++)t+=`<tr><td title="${hourInterval(i)}">${hourStart(i)}</td>${g.cols.map(c=>`<td>${fmt1(c[1](i))}</td>`).join('')}</tr>`;
+      return t+'</tbody></table>';
+    }).join('');
+  }
+  function bars(d){const arr=[['수전단가 효과',d.buyPriceEffect],['역송단가 효과',d.sellPriceEffect],['충방전 행동효과',d.behaviorEffect],['총 재무영향',d.totalEffect]];const max=Math.max(...arr.map(x=>Math.abs(x[1])),1);$('decomp').innerHTML=arr.map(([n,v],i)=>{const w=Math.abs(v)/max*100;const bg=v>=0?'#12b76a':'#f04438';return `<div class="bar-row"><div class="bar-label">${n}</div><div class="bar-track"><div class="bar-fill" style="width:${w}%;left:${v>=0?50-w/2:50}%;background:${bg};opacity:${i===3?1:.78}"></div></div><div class="bar-value ${v>=0?'positive':'negative'}">${signedMoney(v)}</div></div>`}).join('')+'<div class="hint">(+): 한전 순 전력량요금 수입 증가, (–): 감소. 행동효과는 신규 단가 하에서 ESS 최적운전으로 물량이 변한 효과임.</div>'}
+  function energyCards(r){const p=r.perCustomer;const split=gridFlowSplit(r.new);const cards=[['연간 한전 총수전',`${fmt1(p.baseImport)} → ${fmt1(p.newImport)} kWh/호`],['연간 직접수전(한전→부하)',`${fmt1(split.toLoadEnergy*365)} kWh/호·년`],['연간 계통충전(한전→ESS)',`${fmt1(split.toEssEnergy*365)} kWh/호·년`],['연간 계통 역송량',`${fmt1(p.baseExport)} → ${fmt1(p.newExport)} kWh/호`],['PV 현장활용률',`${(p.basePvUtilization*100).toFixed(1)}% → ${(p.newPvUtilization*100).toFixed(1)}%`],['신규안 ESS 방전',`${fmt1(p.newBatteryDischarge)} kWh/호·년`],['실제 참여 고객수',`${fmt0(r.total.participants)}호`]];$('energyKpis').innerHTML=cards.map(([a,b])=>`<div class="note-card"><b>${a}</b><p>${b}</p></div>`).join('')}
+  function calcSmpImpact(r,c){
+    const key=(c.smpYear&&SMP_HOURLY_AVG_BY_YEAR[c.smpYear])?c.smpYear:'2025';
+    const smp=SMP_HOURLY_AVG_BY_YEAR[key];
+    const days=365,N=Math.max(0,+c.customerCount||0),pr=Math.max(0,Math.min(1,(+c.participationPct||0)/100)),participants=N*pr;
+    const sumArr=a=>a.reduce((x,y)=>x+(Number.isFinite(y)?y:0),0);
+    let baseDailyCost=0,newDailyCost=0,importEffectDay=0,exportEffectDay=0;
+    let baseNetDay=0,newNetDay=0,deltaImportDay=0,deltaExportDay=0;
+    for(let h=0;h<24;h++){
+      const bImp=r.base.import[h]||0,nImp=r.new.import[h]||0,bExp=r.base.export[h]||0,nExp=r.new.export[h]||0,p=smp[h]||0;
+      const bNet=bImp-bExp,nNet=nImp-nExp;
+      baseDailyCost+=bNet*p;newDailyCost+=nNet*p;baseNetDay+=bNet;newNetDay+=nNet;
+      const dImp=nImp-bImp,dExp=nExp-bExp;
+      deltaImportDay+=dImp;deltaExportDay+=dExp;
+      importEffectDay+=dImp*p;
+      exportEffectDay+=-dExp*p;
+    }
+    const baseCost=baseDailyCost*days*N;
+    const scenarioCost=baseDailyCost*days*(N-participants)+newDailyCost*days*participants;
+    const importEffect=importEffectDay*days*participants,exportEffect=exportEffectDay*days*participants;
+    const delta=importEffect+exportEffect;
+    const importDeltaKwh=deltaImportDay*days*participants,exportDeltaKwh=deltaExportDay*days*participants;
+    const netDeltaKwh=(deltaImportDay-deltaExportDay)*days*participants;
+    const baseNetKwh=baseNetDay*days*N,newNetKwh=baseNetDay*days*(N-participants)+newNetDay*days*participants;
+    return {key,label:SMP_YEAR_LABEL[key],smp,baseCost,scenarioCost,delta,importEffect,exportEffect,importDeltaKwh,exportDeltaKwh,netDeltaKwh,baseNetKwh,newNetKwh};
+  }
+  function signedKwh(x){return `${x>0?'+':''}${fmt1(x)} kWh`;}
+  function renderSmpImpact(s){
+    const sum=$('smpSummary'),body=$('smpImpactBody'),note=$('smpNote');if(!sum||!body||!note)return;
+    const clsCost=x=>x<0?'positive':x>0?'negative':'';
+    sum.innerHTML=`
+      <div class="smp-summary-card"><div class="smp-label">기준 SMP 기반 구입비</div><div class="smp-value">${money(s.baseCost)}</div><div class="smp-sub">순계통조달 ${fmt1(s.baseNetKwh)} kWh</div></div>
+      <div class="smp-summary-card"><div class="smp-label">신규 SMP 기반 구입비</div><div class="smp-value">${money(s.scenarioCost)}</div><div class="smp-sub">순계통조달 ${fmt1(s.newNetKwh)} kWh</div></div>
+      <div class="smp-summary-card"><div class="smp-label">순 SMP 기반 구입비 영향</div><div class="smp-value ${clsCost(s.delta)}">${signedMoney(s.delta)}</div><div class="smp-sub">(-)는 구입비 절감 · (+)는 증가</div></div>`;
+    const rows=[
+      ['한전 수전 변화',s.importDeltaKwh,s.importEffect,'신규안의 한전 수전량 변화 × 해당 시간대 제주 SMP'],
+      ['고객 역송 변화',s.exportDeltaKwh,s.exportEffect,'역송 증가분은 시장 구입 필요량을 줄이므로 구입비 절감으로 반영'],
+      ['순 계통조달 변화',s.netDeltaKwh,s.delta,'수전 변화 효과 + 역송 변화 효과']
+    ];
+    body.innerHTML=rows.map((r,i)=>`<tr><td><b>${r[0]}</b></td><td>${signedKwh(r[1])}</td><td class="${clsCost(r[2])}">${signedMoney(r[2])}</td><td>${r[3]}</td></tr>`).join('');
+    note.innerHTML=`<b>${s.label} 제주 SMP</b>의 실제 시간별 자료를 00~23시별 평균으로 변환해 현재 대표일 전력흐름에 적용하고 365일로 환산함. 핵심 산식은 <b>Σ[(신규 순계통조달량−기준 순계통조달량)×시간대별 SMP]</b>이며, 순계통조달량은 <b>한전 수전−고객 역송</b>으로 정의함. 이 비용효과는 상단의 순 전력량요금 수입과 별도 항목이며, SMP 자체가 고객 행동으로 변하는 효과는 반영하지 않음.`;
+  }
+  function assumptions(){const m=D.metadata;$('assumptionCards').innerHTML=`<div class="note-card"><b>부하 데이터</b><p>${m.loadSource}</p></div><div class="note-card"><b>태양광 데이터</b><p>${m.pvSource}<br>89호 중 365일 완전자료 ${m.pvCompleteCustomers}호</p></div><div class="note-card"><b>태양광 발전 가정</b><p>대표일 발전량은 설비용량 × 24시간 × 발전 이용률로 산정. 기본값 3.0kW × 24 × 15.0% = 10.8kWh/일. 89호 관측 평균 발전량은 ${fmt1(m.pvObservedAvgDailyKWh)}kWh/일.</p></div><div class="note-card"><b>재무 범위</b><p>기본요금·연료비조정·기후환경요금·부가세·기금 제외. 기준안은 역송 보상 없음으로 고객전력 매입지급액을 0원 처리하고, 신규안에서만 신규 역송단가에 따른 지급액을 반영.</p></div><div class="note-card"><b>ESS 운전</b><p>24시간 동적계획법으로 고객 순 전력량요금 최소화. 기준안은 ESS 계통 역송을 금지하고, 신규안에서만 화면의 ‘신규요금 ESS 역송 허용’ 설정에 따라 ESS 역송 가능. PV 잉여의 물리적 역송은 발생할 수 있으나 기준안에서는 보상하지 않음.</p></div><div class="note-card"><b>제주 SMP</b><p>기존 EV·HP 분석에 사용한 2022~2025년 제주 시간별 SMP 자료를 활용. 현재 PV/ESS는 대표일 모형이므로 선택연도의 시간별 SMP를 00~23시별 평균으로 변환해 대표일에 적용하고 365일 환산함.</p></div><div class="note-card"><b>현 단계 한계</b><p>${m.note}</p></div>`}
+  let lastInverseSolution=null;
+  const inverseLabels={
+    buy_low:'경부하 수전단가',buy_mid:'중간부하 수전단가',buy_peak:'최대부하 수전단가',buy_all:'수전단가 전체',buy_custom:'특정 시간대 수전단가',
+    sell_low:'경부하 역송단가',sell_mid:'중간부하 역송단가',sell_peak:'최대부하 역송단가',sell_all:'역송단가 전체',sell_custom:'특정 시간대 역송단가'
+  };
+  function inverseHours(target){
+    if(target.endsWith('_all')) return Array.from({length:24},(_,i)=>i);
+    if(target.endsWith('_custom')){
+      const st=Math.max(0,Math.min(23,+$('inverseStart').value||0)),en=Math.max(st+1,Math.min(24,+$('inverseEnd').value||24));
+      return Array.from({length:en-st},(_,i)=>st+i);
+    }
+    const period=target.endsWith('_low')?'경':target.endsWith('_mid')?'중':'최';
+    return newPeriods.map((p,i)=>p===period?i:-1).filter(i=>i>=0);
+  }
+  function inverseSpec(){
+    const target=$('inverseTarget').value;
+    const key=target.startsWith('buy_')?'newBuy':'newSell';
+    const strategy=target.endsWith('_all')?'delta':'flat';
+    return {target,key,strategy,hours:inverseHours(target),label:inverseLabels[target]||target};
+  }
+  function inverseTariffs(baseTariffs,spec,x){
+    const t=JSON.parse(JSON.stringify(baseTariffs)),arr=t[spec.key];
+    spec.hours.forEach(h=>{arr[h]=spec.strategy==='delta'?Math.max(0,arr[h]+x):Math.max(0,x)});
+    return t;
+  }
+  function inverseMetric(r,basis){return basis==='newTotal'?r.total.newNetRevenue:r.total.changeNetRevenue}
+  function inverseSignature(){
+    const c=cfg();
+    return JSON.stringify({loadYear:c.loadYear,customerCount:c.customerCount,participationPct:c.participationPct,loadScalePct:c.loadScalePct,pvCapacityKW:c.pvCapacityKW,pvUtilizationPct:c.pvUtilizationPct,essAdoptionPct:c.essAdoptionPct,essCapacityKWh:c.essCapacityKWh,essPowerKW:c.essPowerKW,minSocPct:c.minSocPct,maxSocPct:c.maxSocPct,initialSocPct:c.initialSocPct,roundTripEfficiencyPct:c.roundTripEfficiencyPct,allowGridCharge:c.allowGridCharge,allowBatteryExport:c.allowBatteryExport,tariffs});
+  }
+  function updateInverseControls(){
+    const spec=inverseSpec(),isCustom=spec.target.endsWith('_custom'),isDelta=spec.strategy==='delta';
+    $('inverseCustomRange').classList.toggle('show',isCustom);
+    $('inverseMinLabel').textContent=isDelta?'최소 조정폭(원/kWh)':'탐색 최소단가(원/kWh)';
+    $('inverseMaxLabel').textContent=isDelta?'최대 조정폭(원/kWh)':'탐색 최대단가(원/kWh)';
+    if(isDelta && +$('inverseMin').value===0 && +$('inverseMax').value===500){$('inverseMin').value='-200';$('inverseMax').value='300'}
+    if(!isDelta && +$('inverseMin').value===-200 && +$('inverseMax').value===300){$('inverseMin').value='0';$('inverseMax').value='500'}
+    const hours=spec.hours.length?hourRanges(spec.hours):'없음';
+    $('inverseMethodNote').textContent=isDelta
+      ? `${spec.label}: 현재 시간대별 가격차를 유지하면서 ${hours}의 모든 신규 ${spec.key==='newBuy'?'수전':'역송'}단가에 동일 금액을 가감하여 목표를 탐색함.`
+      : `${spec.label}: ${hours}의 신규 ${spec.key==='newBuy'?'수전':'역송'}단가를 하나의 동일 단가로 조정하고 나머지 시간대 단가는 현재값으로 고정하여 목표를 탐색함.`;
+    lastInverseSolution=null;$('inverseApply').disabled=true;
+  }
+  function renderInverseResult(best,goal,basis,spec,reachable,minMetric,maxMetric){
+    const achieved=best.metric,err=achieved-goal,r=best.result;
+    const goalLabel=basis==='newTotal'?'신규 순수입':'순수입 변화';
+    const xLabel=spec.strategy==='delta'?'필요 조정폭':'필요 단가';
+    const xValue=spec.strategy==='delta'?`${best.x>=0?'+':''}${fmt1(best.x)}원/kWh`:`${fmt1(best.x)}원/kWh`;
+    const afterRates=spec.hours.map(h=>best.tariffs[spec.key][h]);
+    const beforeRates=spec.hours.map(h=>tariffs[spec.key][h]);
+    const rangeText=a=>{const lo=Math.min(...a),hi=Math.max(...a);return Math.abs(hi-lo)<0.05?`${fmt1(lo)}`:`${fmt1(lo)}~${fmt1(hi)}`};
+    const cls=Math.abs(err)<=1e6?'success':'warning';
+    $('inverseResult').innerHTML=`<div class="inverse-summary">
+      <div class="inverse-card primary"><b>${xLabel}</b><strong>${xValue}</strong><span>${spec.label} · ${hourRanges(spec.hours)}</span></div>
+      <div class="inverse-card"><b>선택구간 단가</b><strong>${rangeText(beforeRates)} → ${rangeText(afterRates)}</strong><span>원/kWh · 다른 시간대는 고정</span></div>
+      <div class="inverse-card ${cls}"><b>예상 ${goalLabel}</b><strong>${money(achieved)}</strong><span>목표 ${money(goal)} · 오차 ${signedMoney(err)}</span></div>
+      <div class="inverse-card"><b>예상 계통 역송량</b><strong>${fmt1(r.perCustomer.newExport)} kWh/호·년</strong><span>현재 ${fmt1(window.lastResult?.perCustomer?.newExport||0)} kWh/호·년</span></div>
+      <div class="inverse-card"><b>예상 한전 총수전</b><strong>${fmt1(r.perCustomer.newImport)} kWh/호·년</strong><span>신규 요금 적용 후 고객 1호 기준</span></div>
+    </div><div class="inverse-result-note">${reachable?'탐색 범위에서 목표 수준을 달성 가능한 것으로 확인됨.':'입력한 탐색 범위에서 목표값을 정확히 통과하지 않아 가장 가까운 근사값을 제시함.'} 고객 행동은 각 후보단가마다 ESS SOC·효율·충방전·역송 조건을 포함해 다시 최적화함. 1차 탐색에서 가능한 ${goalLabel} 범위는 약 ${money(minMetric)} ~ ${money(maxMetric)}임.</div>`;
+  }
+  function solveInverse(){
+    const c=cfg(),basis=$('inverseGoalBasis').value,goal=(+$('inverseGoalValue').value||0)*1e8,spec=inverseSpec();
+    let lo=+$('inverseMin').value,hi=+$('inverseMax').value;
+    if(!Number.isFinite(lo)||!Number.isFinite(hi)||lo>=hi){alert('역산 탐색범위의 최소값과 최대값을 확인하세요.');return}
+    if(!spec.hours.length){alert('조정할 시간대를 확인하세요.');return}
+    const baseTariffs=JSON.parse(JSON.stringify(tariffs));
+    let best=null,firstMetrics=[];const originalLo=lo,originalHi=hi;
+    for(let pass=0;pass<3;pass++){
+      const points=41,span=(hi-lo)/(points-1);let passBest=null;
+      for(let i=0;i<points;i++){
+        const x=lo+span*i,tt=inverseTariffs(baseTariffs,spec,x),rr=E.simulate({...c,tariffs:tt},D),metric=inverseMetric(rr,basis),err=Math.abs(metric-goal);
+        const row={x,tariffs:tt,result:rr,metric,err};
+        if(pass===0) firstMetrics.push(metric);
+        if(!passBest||err<passBest.err) passBest=row;
+        if(!best||err<best.err) best=row;
+      }
+      const nextHalf=Math.max(span*1.25,0.01);lo=Math.max(originalLo,passBest.x-nextHalf);hi=Math.min(originalHi,passBest.x+nextHalf);
+      if(hi-lo<0.02) break;
+    }
+    const minMetric=Math.min(...firstMetrics),maxMetric=Math.max(...firstMetrics),reachable=goal>=minMetric-1e-6&&goal<=maxMetric+1e-6;
+    lastInverseSolution={...best,spec,basis,goal,signature:inverseSignature()};
+    $('inverseApply').disabled=false;
+    renderInverseResult(best,goal,basis,spec,reachable,minMetric,maxMetric);
+  }
+  function applyInverse(){
+    if(!lastInverseSolution) return;
+    if(lastInverseSolution.signature!==inverseSignature()){alert('역산 이후 분석조건 또는 단가가 변경되었습니다. 목표단가를 다시 계산하세요.');lastInverseSolution=null;$('inverseApply').disabled=true;return}
+    tariffs=JSON.parse(JSON.stringify(lastInverseSolution.tariffs));
+    buildTariff();run();
+    $('inverseApply').disabled=true;
+    const n=$('inverseResult').querySelector('.inverse-result-note');if(n)n.textContent='계산된 단가를 시간대별 요금 설정에 적용했습니다. 다른 목표를 검토하려면 목표금액 또는 조정 대상을 변경해 다시 계산하세요.';
+    lastInverseSolution=null;
+  }
+
+  function run(){
+    updatePvCalculated();
+    const c=cfg();if(c.minSocPct>c.maxSocPct){alert('최소 SOC는 최대 SOC보다 작아야 합니다.');return}
+    const r=E.simulate(c,D);window.lastResult=r;
+    const kn=$('kpiNet');kn.textContent=signedMoney(r.total.changeNetRevenue);setSign(kn,r.total.changeNetRevenue);$('kpiNetSub').textContent=`기준 ${money(r.total.baseNetRevenue)} → 신규 ${money(r.total.newNetRevenue)}`;
+    const ks=$('kpiSales');ks.textContent=signedMoney(r.total.changeSalesRevenue);setSign(ks,r.total.changeSalesRevenue);$('kpiSalesSub').textContent=`기준 ${money(r.total.baseSalesRevenue)} → 신규 ${money(r.total.newSalesRevenue)}`;
+    const smpImpact=calcSmpImpact(r,c);
+    const ksm=$('kpiSmp');ksm.textContent=signedMoney(smpImpact.delta);setSign(ksm,-smpImpact.delta);$('kpiSmpSub').textContent=`${smpImpact.label} · 기준 ${money(smpImpact.baseCost)} → 신규 ${money(smpImpact.scenarioCost)}`;
+    const kp=$('kpiPayout');kp.textContent=signedMoney(r.total.changePurchasePayout);setSign(kp,-r.total.changePurchasePayout);$('kpiPayoutSub').textContent=`기준 ${money(r.total.basePurchasePayout)} → 신규 ${money(r.total.newPurchasePayout)}`;
+    const kc=$('kpiPerCust');
+    kc.textContent=money(r.perCustomer.newNetRevenue);
+    kc.classList.remove('positive','negative');
+    const perCustChange=r.perCustomer.changeNetRevenue;
+    $('kpiPerCustSub').innerHTML=`기준 ${money(r.perCustomer.baseNetRevenue)} → 신규 ${money(r.perCustomer.newNetRevenue)}<br>기준 대비 <span class="${perCustChange>0?'negative':perCustChange<0?'positive':''}">${signedMoney(perCustChange)}</span>`;
+    const split=gridFlowSplit(r.new);
+    const energySeries=[{name:'부하',data:r.load,color:colors.load},{name:'PV',data:r.pv,color:colors.pv},{name:'기준 수전',data:r.base.import,color:colors.baseImp,dash:'5 4'},{name:'신규 총수전',data:split.total,color:colors.newImp,width:2.5},{name:'한전→부하',data:split.toLoad,color:colors.gridLoad},{name:'한전→ESS',data:split.toEss,color:colors.gridEss,dash:'3 3'},{name:'신규 역송',data:r.new.export,color:colors.newExp}];
+    energyLegend(energySeries);renderEnergyChart();
+    const priceSeries=[{name:'기준 수전',data:tariffs.baseBuy,color:colors.baseBuy},{name:'신규 수전',data:tariffs.newBuy,color:colors.newBuy},{name:'신규 역송',data:tariffs.newSell,color:colors.newSell}];
+    priceLegend(priceSeries);renderPriceChart();
+    renderSocChart(r,c);
+    renderSmpImpact(smpImpact);
+    renderEnergyBalance(r);bars(r.decomposition);energyCards(r);renderPeriodSummary(r);customerBehavior(r,c);renderHourlyChoice(r,c);detail(r);
+  }
+  $('recalc').addEventListener('click',run);
+  ids.filter(id=>id!=='customerCount').forEach(id=>$(id).addEventListener('change',run));
+  $('customerCount').addEventListener('focus',e=>{e.target.value=String(parseInputNumber(e.target.value));});
+  $('customerCount').addEventListener('blur',()=>{formatCustomerCount();run();});
+  $('customerCount').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();e.target.blur();}});
+  $('allowGridCharge').addEventListener('change',run);$('allowBatteryExport').addEventListener('change',run);
+  $('applyObservedPv').onclick=()=>{const cap=Math.max(0,+$('pvCapacityKW').value||0);if(cap<=0){alert('실측 발전량을 이용률로 환산하려면 태양광 설비용량을 0보다 크게 입력하세요.');return}$('pvUtilizationPct').value=(D.metadata.pvObservedAvgDailyKWh/(cap*24)*100).toFixed(1);run()};
+  $('applyFluxPv').onclick=()=>{$('pvUtilizationPct').value='15.0';run()};
+  $('resetTariff').onclick=()=>{tariffs=JSON.parse(JSON.stringify(D.tariffs));buildTariff();run()};
+  const startSel=$('inverseStart'),endSel=$('inverseEnd');
+  startSel.innerHTML=Array.from({length:24},(_,i)=>`<option value="${i}"${i===18?' selected':''}>${hourStart(i)}시</option>`).join('');
+  endSel.innerHTML=Array.from({length:24},(_,i)=>`<option value="${i+1}"${i+1===21?' selected':''}>${hourEnd(i)}시</option>`).join('');
+  const invalidateInverse=()=>{lastInverseSolution=null;$('inverseApply').disabled=true};
+  $('inverseTarget').addEventListener('change',updateInverseControls);
+  $('inverseStart').addEventListener('change',updateInverseControls);$('inverseEnd').addEventListener('change',updateInverseControls);
+  ['inverseGoalValue','inverseMin','inverseMax'].forEach(id=>$(id).addEventListener('input',invalidateInverse));
+  $('inverseGoalBasis').addEventListener('change',()=>{if(window.lastResult){$('inverseGoalValue').value=$('inverseGoalBasis').value==='change'?'0.0':(window.lastResult.total.newNetRevenue/1e8).toFixed(1)}lastInverseSolution=null;$('inverseApply').disabled=true});
+  $('inverseSolve').addEventListener('click',solveInverse);$('inverseApply').addEventListener('click',applyInverse);
+  document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.tab-content').forEach(x=>x.classList.remove('active'));b.classList.add('active');$(b.dataset.tab).classList.add('active')});
+  let resizeTimer;window.addEventListener('resize',()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(()=>{if(window.lastResult)run()},160)});
+  formatCustomerCount();buildTariff();assumptions();updateInverseControls();run();
+})();
+
+</script></body></html>

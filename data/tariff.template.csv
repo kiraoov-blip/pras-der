@@ -1,0 +1,2 @@
+tariff_id,season,day_type,time_band,start_hour,end_hour,energy_rate_won_per_kwh
+CURRENT_RESIDENTIAL_TOU,OTHER,WEEKDAY,OFF_PEAK,0,1,0

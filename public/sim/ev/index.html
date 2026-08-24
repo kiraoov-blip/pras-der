@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PRAS - EV</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js" defer></script>
+  <script src="data/ev_usage_2025.js" defer></script>
+  <script src="data/smp_jeju_2025.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <header class="hero">
+    <div class="hero-title-wrap">
+      <h1>전기차 요금설계 및 매출영향 분석 시뮬레이터(PRAS-EV)</h1>
+      <p>Pricing and Revenue Analysis Simulator - EV Charging</p>
+    </div>
+  </header>
+
+  <main class="layout">
+    <aside class="control-panel" aria-label="시나리오 설정">
+      <section class="panel-section">
+        <h2>1. 분석 기준</h2>
+        <label class="field">
+          <span>분석 대상</span>
+          <select id="filterType">
+            <option value="all">전체</option>
+            <option value="slow">완속 50kW 미만</option>
+            <option value="fast">급속 50kW 이상</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>완속 현행 요금</span>
+          <select id="slowTariff"></select>
+        </label>
+        <label class="field">
+          <span>급속 현행 요금</span>
+          <select id="fastTariff"></select>
+        </label>
+        <label class="field">
+          <span>현행요금 조정 방식</span>
+          <select id="currentTariffAdjMode">
+            <option value="none">조정 없음</option>
+            <option value="pct">요금표 일괄 조정률(%)</option>
+            <option value="avg">연평균 단가 직접 입력</option>
+          </select>
+        </label>
+        <label class="field synced-field is-hidden" id="currentTariffAdjPctWrap">
+          <span>현행요금 조정률</span>
+          <div class="range-number-row">
+            <input type="range" id="currentTariffAdjPct" min="-100" max="200" step="0.1" value="0.0" data-paired="true" aria-label="현행요금 조정률 슬라이드" />
+            <div class="number-unit">
+              <input type="number" id="currentTariffAdjPctNumber" min="-100" step="0.1" value="0.0" data-paired="true" aria-label="현행요금 조정률 직접 입력" />
+              <span>%</span>
+            </div>
+          </div>
+          <small class="field-help">직접 입력값에 따라 슬라이더 상한 자동 확장</small>
+        </label>
+        <label class="field with-output is-hidden" id="currentTariffAvgPriceWrap">
+          <span>조정 후 현행 연평균 단가</span>
+          <input type="number" id="currentTariffAvgPrice" min="0" step="0.1" value="0.0" />
+          <output>원/kWh</output>
+          <small class="field-help full-span">기존 TOU 시간대별 상대구조를 유지하면서 전체 단가를 비례 조정</small>
+        </label>
+        <div id="currentTariffSummary" class="current-rate-summary"></div>
+        <div class="inline-checks">
+          <label><input type="checkbox" id="applyWeekendDiscount" checked /> 봄·가을 주말 11~14시 50% 할인 반영</label>
+          <label><input type="checkbox" id="allowStacking" checked /> 신규 할인과 기존 주말할인 중복 허용</label>
+        </div>
+      </section>
+
+      <section class="panel-section">
+        <h2>2. 신규 할인요금</h2>
+        <div class="grid-2">
+          <label class="field">
+            <span>할인 시작</span>
+            <select id="discountStart"></select>
+          </label>
+          <label class="field">
+            <span>할인 종료</span>
+            <select id="discountEnd"></select>
+          </label>
+        </div>
+        <label class="field">
+          <span>할인 방식</span>
+          <select id="pricingMode">
+            <option value="pct">현행 단가 대비 정률 할인</option>
+            <option value="fixed">고정 단가 적용</option>
+          </select>
+        </label>
+        <label class="field synced-field" id="discountPctWrap">
+          <span>할인율</span>
+          <div class="range-number-row">
+            <input type="range" id="discountPct" min="0" max="90" step="0.1" value="70.0" data-paired="true" aria-label="할인율 슬라이드" />
+            <div class="number-unit">
+              <input type="number" id="discountPctNumber" min="0" max="90" step="0.1" value="70.0" data-paired="true" aria-label="할인율 직접 입력" />
+              <span>%</span>
+            </div>
+          </div>
+        </label>
+        <label class="field with-output is-hidden" id="fixedPriceWrap">
+          <span>고정 단가(0.1원 단위)</span>
+          <input type="number" id="fixedPrice" min="0" max="1000" step="0.1" value="80.0" />
+          <output>원/kWh</output>
+        </label>
+        <label class="field synced-field">
+          <span>할인시간 외 단가 조정률</span>
+          <div class="range-number-row">
+            <input type="range" id="nonDiscountAdj" min="-100" max="200" step="0.1" value="0.0" data-paired="true" aria-label="할인시간 외 단가 조정률 슬라이드" />
+            <div class="number-unit">
+              <input type="number" id="nonDiscountAdjNumber" min="-100" step="0.1" value="0.0" data-paired="true" aria-label="할인시간 외 단가 조정률 직접 입력" />
+              <span>%</span>
+            </div>
+          </div>
+          <small class="field-help">상한 제한 없음 · 직접 입력값에 따라 슬라이더 상한 자동 확장</small>
+        </label>
+        <label class="field synced-field">
+          <span>요금제 참여율</span>
+          <div class="range-number-row">
+            <input type="range" id="participation" min="0" max="100" step="1" value="80" data-paired="true" aria-label="요금제 참여율 슬라이드" />
+            <div class="number-unit">
+              <input type="number" id="participationNumber" min="0" max="100" step="1" value="80" data-paired="true" aria-label="요금제 참여율 직접 입력" />
+              <span>%</span>
+            </div>
+          </div>
+        </label>
+        <div class="rate-compare-box" aria-label="현재 할인안과 매출중립안 단가 비교">
+          <div class="rate-compare-heading">
+            <strong>동일 할인조건 단가 비교</strong>
+            <span>현행·신규·매출중립 단가 비교</span>
+          </div>
+          <div id="rateComparison"></div>
+        </div>
+        <button id="neutralFixedBtn" type="button" class="primary-btn">매출중립 근사단가 적용</button>
+        <button id="neutralizeBtn" type="button" class="secondary-btn">매출중립 근사 조정률 적용</button>
+      </section>
+
+      <section class="panel-section">
+        <h2>3. 부하이전</h2>
+        <p class="hint">선택한 원천 시간대의 참여고객 사용량 중 일부를 할인시간대로 같은 날짜 안에서 이전.</p>
+        <div class="inline-checks compact">
+          <label><input type="checkbox" class="sourcePeriod" value="off" checked /> 경부하</label>
+          <label><input type="checkbox" class="sourcePeriod" value="mid" checked /> 중간부하</label>
+          <label><input type="checkbox" class="sourcePeriod" value="peak" checked /> 최대부하</label>
+        </div>
+        <label class="field synced-field">
+          <span>완속 이전율</span>
+          <div class="range-number-row">
+            <input type="range" id="slowShiftPct" min="0" max="80" step="1" value="50" data-paired="true" aria-label="완속 이전율 슬라이드" />
+            <div class="number-unit">
+              <input type="number" id="slowShiftPctNumber" min="0" max="80" step="1" value="50" data-paired="true" aria-label="완속 이전율 직접 입력" />
+              <span>%</span>
+            </div>
+          </div>
+        </label>
+        <label class="field synced-field">
+          <span>급속 이전율</span>
+          <div class="range-number-row">
+            <input type="range" id="fastShiftPct" min="0" max="80" step="1" value="30" data-paired="true" aria-label="급속 이전율 슬라이드" />
+            <div class="number-unit">
+              <input type="number" id="fastShiftPctNumber" min="0" max="80" step="1" value="30" data-paired="true" aria-label="급속 이전율 직접 입력" />
+              <span>%</span>
+            </div>
+          </div>
+        </label>
+        <label class="field">
+          <span>할인시간 내 배분 방식</span>
+          <select id="distributionMode">
+            <option value="even">균등배분</option>
+            <option value="profile">기존 할인시간 패턴 비례</option>
+          </select>
+        </label>
+      </section>
+
+      <section class="panel-section note-box">
+        <h2>모델 기준</h2>
+        <ul>
+          <li>2025년 연간 시간대별 사용량을 2026년 현행 전기차 요금으로 재계산</li>
+          <li>2025.1.27은 평일로 보정</li>
+          <li>부가가치세·전력산업기반기금·기후환경요금·연료비조정요금 제외</li>
+          <li>SMP 기반 구입비 영향: 시간대별 사용량 증감 × 2025년 해당 시각 제주 SMP를 합산하여 산정</li>
+        </ul>
+      </section>
+    </aside>
+
+    <section class="workspace">
+      <section class="kpi-grid" id="kpiGrid" aria-label="핵심 결과"></section>
+
+      <section class="card smp-card" aria-label="SMP 기반 구입비 영향">
+        <div class="card-title-row">
+          <h2>SMP 기반 구입비 영향</h2>
+          <span class="muted">2025년 제주 시간대별 SMP 고정 · 시간대별 사용량 증감 × 해당 시각 SMP로 직접 산정</span>
+        </div>
+        <div class="smp-grid" id="smpGrid"></div>
+      </section>
+
+      <section class="card neutral-card" aria-label="매출중립 단가 분석">
+        <div class="card-title-row">
+          <h2>매출중립 할인시간 단가 분석</h2>
+          <span class="muted">현재 참여율·부하이전·주말할인 조건을 그대로 반영</span>
+        </div>
+        <div class="neutral-grid" id="neutralGrid"></div>
+      </section>
+
+      <section class="chart-grid">
+        <article class="card wide">
+          <div class="card-title-row">
+            <h2>24시간 평균 충전부하</h2>
+            <span class="muted">현행 vs 신규요금·부하이전 반영</span>
+          </div>
+          <canvas id="hourlyChart" height="110"></canvas>
+        </article>
+        <article class="card wide">
+          <div class="card-title-row">
+            <h2>월별 전력량요금 매출</h2>
+            <span class="muted">기본요금 제외</span>
+          </div>
+          <canvas id="monthlyChart" height="110"></canvas>
+        </article>
+      </section>
+
+      <section class="table-grid">
+        <article class="card">
+          <h2>매출변동 요인분해</h2>
+          <div class="table-wrap">
+            <table id="decompTable"></table>
+          </div>
+        </article>
+        <article class="card">
+          <h2>부하시간대별 사용량 변화</h2>
+          <div class="table-wrap">
+            <table id="periodTable"></table>
+          </div>
+        </article>
+      </section>
+
+      <section class="card">
+        <div class="card-title-row">
+          <h2>시간대별 상세 결과</h2>
+          <button id="downloadCsv" type="button" class="secondary-btn small">CSV 다운로드</button>
+        </div>
+        <div class="table-wrap tall">
+          <table id="hourlyTable"></table>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <span>PRAS-EV v2.14 · GitHub Pages 정적 웹앱</span>
+    <span>전력량요금 매출 영향 검토용</span>
+  </footer>
+</body>
+</html>
