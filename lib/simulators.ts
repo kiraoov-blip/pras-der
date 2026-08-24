@@ -33,7 +33,7 @@ export const SIMULATORS: readonly Simulator[] = [
     short: "히트펌프",
     tag: "Heatpump",
     name: "히트펌프",
-    desc: "Cosy 요금제 도입 시 고객·한전 손익",
+    desc: "Octopus 요금제 도입시 고객과 한전의 요금·편익 분석",
     icon: "heatpump",
   },
   {
