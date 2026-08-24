@@ -1,7 +1,0 @@
-node_modules/
-.next/
-out/
-dist/
-.wrangler/
-*.log
-.DS_Store
