@@ -29,7 +29,7 @@ export default function Home() {
         <div className="landing-grid">
           {SIMULATORS.map((sim) => (
             <Link key={sim.href} href={sim.href} className="landing-card">
-              <span className="landing-card-tag">{sim.short}</span>
+              <span className="landing-card-tag">{sim.tag}</span>
               <span className="landing-card-head">
                 <span className="landing-card-icon">
                   <SimIcon name={sim.icon} />

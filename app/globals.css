@@ -104,3 +104,20 @@ body>main>.workspace{flex:1 0 auto}
   .landing-card-icon{width:37px;height:37px;border-radius:10px}
   .landing-card-icon svg{width:20px;height:20px}
 }
+
+/* ── 상단 영역 정렬 통일 ──────────────────────────────────────────────
+   히트펌프·전기차는 헤더가 화면 맨 왼쪽에서 시작하는데
+   전기예보·PV/ESS 는 1480px 컨테이너 안에 갇혀 우측으로 밀려 있었다.
+   네비게이션과 헤더를 좌측 정렬로 맞춘다. 본문은 1480px 중앙정렬 유지. */
+.site-nav .site-nav-inner,
+.hero > .page-shell{width:100%;max-width:none;margin:0;padding:0 30px}
+@media(max-width:640px){
+  .site-nav .site-nav-inner,
+  .hero > .page-shell{padding:0 14px}
+}
+
+/* PRAS 와 DER 사이 간격 */
+.site-brand{gap:9px}
+
+/* 랜딩 카드 태그 — 영문 표기 */
+.landing-card-tag{letter-spacing:.01em}
