@@ -1,0 +1,46 @@
+name: 계산 결과 검증
+
+# 배포와 분리된 검증 전용 워크플로.
+# 계산 결과가 기준선과 달라지면 여기서 빨간불이 뜬다.
+# 안정화된 뒤 Settings > Branches 의 보호 규칙에 이 검사를 필수로 걸면
+# 결과가 바뀐 코드는 main 에 병합될 수 없다.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  golden:
+    name: 골든 테스트
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: 탐라 엔진 참조 테스트
+        run: npm run test:engine
+
+      # Playwright 는 골든 테스트에서만 쓰이므로 package-lock 을 건드리지 않는다.
+      # --no-package-lock / --legacy-peer-deps 는 기존 lock 과의 충돌을 피하기 위한 것.
+      - name: Install Playwright
+        run: npm install --no-save --no-package-lock --legacy-peer-deps playwright@1.56.0
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: 바닐라 시뮬레이터 계산 결과 대조
+        run: npm run test:golden
