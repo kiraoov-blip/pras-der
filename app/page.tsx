@@ -9,7 +9,7 @@ export default function Home() {
         <div className="page-shell hero-grid">
           <div className="hero-title">
             <div>
-              <h1>제주 분산에너지자원 요금·편익 분석 시뮬레이터(PRAS-DER)</h1>
+              <h1>제주 분산에너지자원 요금·편익 분석 시뮬레이터(PRAS - DER)</h1>
               <p>Pricing and Revenue Analysis Simulator — Distributed Energy Resources</p>
             </div>
           </div>
