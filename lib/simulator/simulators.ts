@@ -10,7 +10,10 @@ export type SimulatorIcon = "forecast" | "heatpump" | "ev" | "pv-ess";
 
 export type Simulator = {
   href: string;
+  /** 상단 네비게이션 라벨 (국문) */
   short: string;
+  /** 랜딩 카드 태그 (영문) */
+  tag: string;
   name: string;
   desc: string;
   icon: SimulatorIcon;
@@ -20,6 +23,7 @@ export const SIMULATORS: readonly Simulator[] = [
   {
     href: "/forecast",
     short: "전기예보",
+    tag: "Electricity Forecast",
     name: "탐라는 전기예보",
     desc: "주택용 TOU·전기차 고객의 예보 할인 효과",
     icon: "forecast",
@@ -27,6 +31,7 @@ export const SIMULATORS: readonly Simulator[] = [
   {
     href: "/hp",
     short: "히트펌프",
+    tag: "Heatpump",
     name: "히트펌프",
     desc: "Cosy 요금제 도입 시 고객·한전 손익",
     icon: "heatpump",
@@ -34,6 +39,7 @@ export const SIMULATORS: readonly Simulator[] = [
   {
     href: "/ev",
     short: "전기차",
+    tag: "Electric Vehicle",
     name: "전기차 충전",
     desc: "충전요금 할인과 부하이전 효과",
     icon: "ev",
@@ -41,6 +47,7 @@ export const SIMULATORS: readonly Simulator[] = [
   {
     href: "/pv-ess",
     short: "PV/ESS",
+    tag: "PV/ESS",
     name: "태양광·ESS",
     desc: "자가소비·계통연계 수익 구조",
     icon: "pv-ess",
