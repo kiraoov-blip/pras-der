@@ -1,0 +1,99 @@
+name: Deploy PRAS-DER to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  # 계산 결과가 기준선과 같은지 먼저 확인한다.
+  # 여기서 막히면 빌드도 배포도 진행되지 않는다.
+  golden:
+    name: 골든 테스트
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Playwright는 골든 테스트에서만 쓰이므로 package-lock 을 건드리지 않고
+      # 이 잡에서만 설치한다. 버전을 올릴 때는 아래 두 줄을 함께 고친다.
+      - name: Install Playwright
+        run: |
+          npm install --no-save playwright@1.56.0
+          npx playwright install --with-deps chromium
+
+      - name: 탐라 엔진 참조 테스트
+        run: npm run test:engine
+
+      - name: 바닐라 시뮬레이터 계산 결과 대조
+        run: npm run test:golden
+
+  build:
+    name: 정적 빌드
+    runs-on: ubuntu-latest
+    needs: golden
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check application types
+        run: npm run typecheck
+
+      - name: Build static site
+        env:
+          GITHUB_PAGES: "true"
+        run: npm run build:github-pages
+
+      - name: Upload GitHub Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: ./out
+
+  deploy:
+    name: 배포
+    # PR에서는 검증까지만 하고 배포하지 않는다.
+    if: github.event_name != 'pull_request'
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
