@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { SIMULATORS } from "./site-nav";
+import { SIMULATORS } from "@/lib/simulators";
 
 export default function Home() {
   return (
