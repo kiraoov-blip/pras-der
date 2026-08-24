@@ -137,3 +137,11 @@ body>main>.workspace{flex:1 0 auto}
 /* 제목↔부제 간격 6px 로 통일 (탐라는 grid gap 8px 이었다) */
 .hero-title>div{gap:6px}
 @media(max-width:640px){.hero-title>div{gap:6px}}
+
+/* 본문 좌우 여백을 시뮬레이터와 맞춘다 (바닐라 3종은 컨테이너 안쪽 20px) */
+.page-shell.workspace{padding-left:20px;padding-right:20px}
+@media(max-width:640px){.page-shell.workspace{padding-left:8px;padding-right:8px}}
+
+/* 뷰포트가 1480px 이하로 좁아질 때 .page-shell 이 좌우 24px 씩 더 깎여
+   시뮬레이터(20px)와 어긋나던 것을 맞춘다. 폭은 컨테이너가 아닌 패딩으로 잡는다. */
+.page-shell.workspace{width:min(1480px,100%)}
