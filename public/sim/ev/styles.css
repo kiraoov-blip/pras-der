@@ -26,7 +26,7 @@ body{
 .hero{
   display:flex;
   align-items:center;
-  padding:24px 34px;
+  padding:24px 30px;
   color:#fff;
   background:radial-gradient(circle at 78% 15%,rgba(56,168,198,.19),transparent 29%),linear-gradient(118deg,#0b223d 0%,#12385f 62%,#124d69 100%);
 }
