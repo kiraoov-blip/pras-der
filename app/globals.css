@@ -92,3 +92,15 @@ body>main{flex:1 0 auto;display:flex;flex-direction:column}
 body>main>footer,body>main>.workspace{flex:0 0 auto}
 body>main>.workspace{flex:1 0 auto}
 .sim-host{flex:1 0 auto}
+
+/* 랜딩 카드 아이콘 */
+.landing-card-head{display:flex;align-items:center;gap:12px;min-width:0}
+.landing-card-icon{flex:0 0 auto;display:grid;place-items:center;width:42px;height:42px;border-radius:11px;background:var(--blue-soft);color:var(--blue);border:1px solid #d3e3fb;transition:background .15s,color .15s,border-color .15s}
+.landing-card-icon svg{width:23px;height:23px;display:block}
+.landing-card:hover .landing-card-icon{background:var(--blue);color:#fff;border-color:var(--blue)}
+.landing-card-head strong{min-width:0;overflow-wrap:anywhere}
+@media(max-width:640px){
+  .landing-card-head{gap:10px}
+  .landing-card-icon{width:37px;height:37px;border-radius:10px}
+  .landing-card-icon svg{width:20px;height:20px}
+}

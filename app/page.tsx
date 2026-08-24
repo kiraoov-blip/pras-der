@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { SIMULATORS } from "@/lib/simulators";
+import SimIcon from "./sim-icon";
 
 export default function Home() {
   return (
@@ -29,7 +30,12 @@ export default function Home() {
           {SIMULATORS.map((sim) => (
             <Link key={sim.href} href={sim.href} className="landing-card">
               <span className="landing-card-tag">{sim.short}</span>
-              <strong>{sim.name}</strong>
+              <span className="landing-card-head">
+                <span className="landing-card-icon">
+                  <SimIcon name={sim.icon} />
+                </span>
+                <strong>{sim.name}</strong>
+              </span>
               <p>{sim.desc}</p>
               <span className="landing-card-go" aria-hidden="true">
                 분석 열기 →
