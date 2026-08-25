@@ -753,7 +753,7 @@ function updatePctRatePreview(){const d=Math.max(0,Math.min(100,+$('discountPct'
 function updatePriceModeUI(){const fixed=$('cosyPriceMode').value==='fixed';$('pctRateControls').style.display=fixed?'none':'grid';$('fixedRateControls').style.display=fixed?'grid':'none';$('pctPriceNote').style.display=fixed?'none':'inline';$('fixedPriceNote').style.display=fixed?'inline':'none';$('peakHours').value=summarizeHours('peak');updatePctRatePreview()}
 function progBill(m,kwh){const summer=[7,8].includes(m),b1=summer?300:200,b2=summer?450:400;let x=kwh,b=0,a=Math.min(x,b1);b+=a*120;x-=a;if(x>0){a=Math.min(x,b2-b1);b+=a*214.6;x-=a}if(x>0){if([1,2,7,8,12].includes(m)){a=Math.min(x,Math.max(0,1000-b2));b+=a*307.3;x-=a;if(x>0)b+=x*736.2}else b+=x*307.3}return b}
 function matchFilters(r, ignoreWeekday=false){const [c,y,m,d,w]=r;const Y=$('year').value,M=$('month').value,C=$('customer').value,S=$('season').value,W=$('weekday').value;if(Y!=='all'&&+Y!==y)return false;if(M!=='all'&&+M!==m)return false;if(C!=='all'&&C!==c)return false;if(S!=='all'&&seasonOf(m)!==S)return false;if(!ignoreWeekday&&W!=='all'){if(W==='weekday'&&w>4)return false;if(W==='weekend'&&w<5)return false;if(/^[0-6]$/.test(W)&&+W!==w)return false}return true}
-function buildMonthParams(){const totals=new Map();for(const r of RAW){if(!matchFilters(r,true))continue;const key=r[0]+'|'+r[1]+'|'+r[2];let u=totals.get(key)||0;for(let h=0;h<24;h++){const v=r[5+h];if(v!=null)u+=v}totals.set(key,u)}const progEff=new Map(),touSuperFrac=new Map();for(const [k,u] of totals){const m=+k.split('|')[2];progEff.set(k,u>0?progBill(m,u)/u:0);const superMonth=[1,2,6,7,8,11,12].includes(m);touSuperFrac.set(k,superMonth&&u>1000?(u-1000)/u:0)}return {progEff,touSuperFrac}}
+function buildMonthParams(){const totals=new Map();for(const r of RAW){if(!matchFilters(r,true))continue;const key=r[0]+'|'+r[1]+'|'+r[2];let u=totals.get(key)||0;for(let h=0;h<24;h++){const v=r[5+h];if(v!=null)u+=v}totals.set(key,u)}const progEff=new Map(),touSuperFrac=new Map();for(const [k,u] of totals){const m=+k.split('|')[2];progEff.set(k,u>0?progBill(m,u)/u:0);const superMonth=[1,2,7,8,12].includes(m);touSuperFrac.set(k,superMonth&&u>1000?(u-1000)/u:0)}return {progEff,touSuperFrac}}
 function tariffValue(x,key){return x?.[key]??0}
 function shiftEnabled(){return $('loadShiftMode').value==='on'&&shiftRules.length>0}
 const SHIFT_GROUP_OPTIONS=[
@@ -921,7 +921,7 @@ function buildAnnual2025MonthParams(){
  const totals=new Map();
  for(const r of RAW){if(r[1]!==2025)continue;const key=r[0]+'|'+r[2];let u=totals.get(key)||0;for(let h=0;h<24;h++){const v=r[5+h];if(v!=null)u+=v}totals.set(key,u)}
  const progEff=new Map(),touSuperFrac=new Map();
- for(const [k,u] of totals){const m=+k.split('|')[1];progEff.set(k,u>0?progBill(m,u)/u:0);const superMonth=[1,2,6,7,8,11,12].includes(m);touSuperFrac.set(k,superMonth&&u>1000?(u-1000)/u:0)}
+ for(const [k,u] of totals){const m=+k.split('|')[1];progEff.set(k,u>0?progBill(m,u)/u:0);const superMonth=[1,2,7,8,12].includes(m);touSuperFrac.set(k,superMonth&&u>1000?(u-1000)/u:0)}
  return {progEff,touSuperFrac};
 }
 function calculateAnnual2025Sample(){
