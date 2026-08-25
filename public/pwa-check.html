@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PWA 설정 검증 — PRAS-DER</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Pretendard", sans-serif;
+            background: #f3f6fa;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            padding: 24px;
+        }
+        h1 {
+            color: #0b1f3a;
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+        .subtitle {
+            color: #667387;
+            font-size: 13px;
+            margin-bottom: 24px;
+        }
+        .check-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 12px;
+            margin-bottom: 8px;
+            border-radius: 10px;
+            background: #f7f9fc;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+        .check-mark {
+            flex-shrink: 0;
+            font-weight: 800;
+            font-size: 16px;
+        }
+        .check-mark.ok { color: #087f68; }
+        .check-mark.error { color: #bf2d1c; }
+        .section {
+            margin-top: 24px;
+            padding-top: 20px;
+            border-top: 1px solid #e6ebf2;
+        }
+        .section-title {
+            color: #0b1f3a;
+            font-weight: 700;
+            font-size: 14px;
+            margin-bottom: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>✅ PWA 설정 검증</h1>
+        <p class="subtitle">PRAS-DER 모바일 앱 설치 호환성 확인</p>
+
+        <div id="checks"></div>
+
+        <div class="section">
+            <div class="section-title">📱 iOS Safari 설치 방법</div>
+            <div class="check-item">
+                <span class="check-mark">1️⃣</span>
+                <span>Safari의 하단 공유 버튼(↗) 탭</span>
+            </div>
+            <div class="check-item">
+                <span class="check-mark">2️⃣</span>
+                <span>"홈 화면에 추가" 선택</span>
+            </div>
+            <div class="check-item">
+                <span class="check-mark">3️⃣</span>
+                <span>이름 확인 후 "추가" 클릭</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function checkPWA() {
+            const checks = [];
+
+            // manifest.json 확인
+            try {
+                const manifest = await fetch('/manifest.json');
+                if (manifest.ok) {
+                    const data = await manifest.json();
+                    checks.push({
+                        name: 'manifest.json 파일',
+                        status: 'ok',
+                        detail: `✓ ${data.name} 설정 완료`
+                    });
+                } else {
+                    checks.push({
+                        name: 'manifest.json 파일',
+                        status: 'error',
+                        detail: '⚠️ manifest.json을 로드할 수 없습니다'
+                    });
+                }
+            } catch (e) {
+                checks.push({
+                    name: 'manifest.json 파일',
+                    status: 'error',
+                    detail: '⚠️ ' + e.message
+                });
+            }
+
+            // HTTPS 확인
+            checks.push({
+                name: 'HTTPS 연결',
+                status: location.protocol === 'https:' ? 'ok' : 'error',
+                detail: location.protocol === 'https:' ? '✓ 보안 연결 확인' : '⚠️ HTTP 연결입니다'
+            });
+
+            // Service Worker 확인
+            if ('serviceWorker' in navigator) {
+                checks.push({
+                    name: 'Service Worker',
+                    status: 'ok',
+                    detail: '✓ 브라우저 지원 확인'
+                });
+            } else {
+                checks.push({
+                    name: 'Service Worker',
+                    status: 'error',
+                    detail: '⚠️ 이 브라우저에서는 지원하지 않을 수 있습니다'
+                });
+            }
+
+            // 렌더링
+            const container = document.getElementById('checks');
+            container.innerHTML = checks.map(check => `
+                <div class="check-item">
+                    <span class="check-mark ${check.status}">${
+                        check.status === 'ok' ? '✓' : '✗'
+                    }</span>
+                    <span>
+                        <strong>${check.name}</strong><br>
+                        ${check.detail}
+                    </span>
+                </div>
+            `).join('');
+        }
+
+        checkPWA();
+    </script>
+</body>
+</html>
