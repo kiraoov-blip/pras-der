@@ -31,6 +31,29 @@ const nextConfig: NextConfig = isGitHubPages
       // The shared repository also contains Cloudflare Worker-only source.
       // GitHub Pages application types are checked separately before this build.
       typescript: { ignoreBuildErrors: true },
+      headers: async () => [
+        {
+          source: "/manifest.json",
+          headers: [
+            { key: "Content-Type", value: "application/manifest+json" },
+            { key: "Cache-Control", value: "public, max-age=3600" },
+          ],
+        },
+        {
+          source: "/icon-:size(192|512)x:size.png",
+          headers: [
+            { key: "Content-Type", value: "image/png" },
+            { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
+          ],
+        },
+        {
+          source: "/icon-maskable-:size(192|512)x:size.png",
+          headers: [
+            { key: "Content-Type", value: "image/png" },
+            { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
+          ],
+        },
+      ],
     }
   : { env: { NEXT_PUBLIC_BASE_PATH: "" } };
 
