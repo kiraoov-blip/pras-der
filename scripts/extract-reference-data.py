@@ -49,6 +49,27 @@ def compact(value: float) -> float:
     return round(float(value), 9)
 
 
+# 주택용 워크북의 시간축은 0-based 1시(01:00~02:00)에서 시작해, 24시간이 한 칸
+# 왼쪽으로 회전된 상태로 저장돼 있다.  전기차 워크북(급속 1h충전 / 완속 10가지)의
+# 같은 날짜 SMP와 대조하면 2024~2026년 113일 전부가 정확히 좌측 1칸 회전으로
+# 일치하고, 발령시간도 같은 방향으로 한 시간씩 어긋난다.  이 값을 그대로 쓰면
+# 발령시간대가 실제(10:00~16:00)보다 한 시간 앞선 09:00~15:00으로 계산된다.
+#
+# 아래에서 우측 1칸 회전을 적용해 0 = 00:00~01:00 기준으로 정규화한다.
+# 원본 워크북의 시간축이 바로잡히면 이 값을 0으로 되돌리면 된다.
+HOUR_AXIS_ROTATION = 1
+
+
+def normalize_hour_series(values: list) -> list:
+    """워크북 시간축을 0 = 00:00~01:00 기준으로 회전한다."""
+    offset = HOUR_AXIS_ROTATION % 24
+    return values[-offset:] + values[:-offset] if offset else list(values)
+
+
+def normalize_hour(hour: int) -> int:
+    return (hour + HOUR_AXIS_ROTATION) % 24
+
+
 def read_profiles():
     residential_path = SOURCE_ROOT / "탐라는 전기예보 시뮬레이션 계산_0%.xlsx"
     ws = load_workbook(residential_path, data_only=True)["계산시트_주말반영"]
@@ -117,17 +138,18 @@ def read_events():
         if date.year not in (2024, 2025, 2026):
             continue
 
-        smp = [compact(base.cell(row, col).value) for col in range(4, 28)]
-        manual_hours = [
-            hour
+        smp = normalize_hour_series([compact(base.cell(row, col).value) for col in range(4, 28)])
+        manual_hours = sorted(
+            normalize_hour(hour)
             for hour, col in enumerate(range(29, 53))
             if isinstance(shifted.cell(row, col).value, (int, float)) and shifted.cell(row, col).value > 1e-12
-        ]
+        )
         # 2024/2025 workbooks contain the actual scenario windows.  The 2026
         # YTD rows do not, so use the published SMP<=0 candidate window.
+        # 정규화 후 기준이므로 발령 가능 구간은 10:00~16:00(0-based 10~15)이다.
         actual_hours = manual_hours or [
             hour for hour, value in enumerate(smp)
-            if 9 <= hour <= 15 and value <= 0
+            if 10 <= hour <= 15 and value <= 0
         ]
         if not actual_hours:
             continue

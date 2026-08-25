@@ -15,7 +15,7 @@ import {
   type ReferenceSeason,
 } from "./reference-data.generated";
 
-export const ENGINE_VERSION = "2.6.0-ev-tariff-audit";
+export const ENGINE_VERSION = "2.7.0-ev-representative-alignment";
 
 type BaseCustomerType = Exclude<CustomerTypeCode, "EV_TOTAL">;
 type ResolvedEvTariffVoltage = Exclude<EvTariffVoltage, "AUTO">;
@@ -24,7 +24,11 @@ type HourlyRoute = {
   base: number[];
   shifted: number[];
   movedKwh: number;
-  /** 해당 발령일에 실제 충전이 존재할 확률. 2-1은 1, 2-2는 요일별 충전빈도를 적용한다. */
+  /**
+   * 해당 발령일에 대표고객의 충전이 배정되는지 여부(0 또는 1).
+   * 2-1은 모든 발령일에 충전한다고 보아 항상 1이고,
+   * 2-2는 주 2회 충전 한도 안에서 배정된 날만 1이다.
+   */
   occurrenceWeight?: number;
 };
 type SelectedEvent = ReferenceEvent & { hours: number[] };
@@ -72,13 +76,14 @@ const APPLIANCE_TO_CUSTOMER_SCALE = 0.625;
 const CURTAILMENT_AVOIDANCE_FACTOR = 0.85;
 const PEAK_HOURS = [16, 17, 18, 19, 20, 21] as const;
 const EV_SLOW_CHARGE_HOURS = [23, 0, 1, 2, 3, 4] as const;
-const EV_FAST_REPRESENTATIVE_SOURCE_HOUR = 17;
 
 export const EV_CONTRACT_POWER_THRESHOLD_KW = 50;
 export const EV_REPRESENTATIVE_BASIS = {
   slow: { contractPowerKw: 7, monthlyUsageKwh: 336, chargeHours: 6, sessionsPerMonth: 8 },
   fast: { contractPowerKw: 50, monthlyUsageKwh: 400, chargeHours: 1, sessionsPerMonth: 8 },
 } as const;
+/** 대표고객은 주 2회(평일 1회·주말 1회) 충전한다. */
+export const EV_REPRESENTATIVE_SESSIONS_PER_WEEK = 2;
 
 function repeated(value: number, count: number): number[] {
   return Array.from({ length: count }, () => value);
@@ -325,49 +330,77 @@ function evScenario21(
   return moveEnergy(base, [sourceHour], [eventHours[0]], shiftRate);
 }
 
-function representativeEvProfile(type: BaseCustomerType): number[] {
-  const profile = repeated(0, 24);
-  if (type === "EV_SLOW_LOW_VOLTAGE") {
-    EV_SLOW_CHARGE_HOURS.forEach((hour) => {
-      profile[hour] = EV_REPRESENTATIVE_BASIS.slow.contractPowerKw;
+function isoWeekStart(date: string): string {
+  const time = Date.UTC(
+    Number(date.slice(0, 4)),
+    Number(date.slice(5, 7)) - 1,
+    Number(date.slice(8, 10)),
+  );
+  const mondayOffset = (new Date(time).getUTCDay() + 6) % 7;
+  return new Date(time - mondayOffset * 24 * 60 * 60 * 1_000).toISOString().slice(0, 10);
+}
+
+/**
+ * 주 2회(평일 1회·주말 1회) 충전하는 대표고객이 실제로 발령일에 충전하게 되는 날.
+ *
+ * 발령이 난 주에는 그 주의 충전을 발령일로 옮긴다고 보고, 주(월~일)마다
+ * 평일 발령일 1일과 주말·공휴일 발령일 1일에 충전을 배정한다. 한쪽 요일유형만
+ * 발령된 주는 같은 유형에서 두 번째 날까지 채운다. 주당 충전 횟수를 이미
+ * 소진한 나머지 발령일은 충전이 없으므로 편익 계산에서 제외한다.
+ *
+ * 기존 워크북(주 2회 대표고객 기준)도 같은 한도로 2025년 발령 56일 중 40일만
+ * 집계에 반영한다. 이 규칙은 주 경계를 ISO 기준(월~일)으로 잡아 39일이 된다.
+ */
+function representativeChargingDates(events: readonly ReferenceEvent[]): ReadonlySet<string> {
+  const weeks = new Map<string, { weekday: string[]; weekend: string[] }>();
+  events.forEach((event) => {
+    const key = isoWeekStart(event.date);
+    let bucket = weeks.get(key);
+    if (!bucket) {
+      bucket = { weekday: [], weekend: [] };
+      weeks.set(key, bucket);
+    }
+    (event.dayType === "WEEKDAY" ? bucket.weekday : bucket.weekend).push(event.date);
+  });
+
+  const selected = new Set<string>();
+  weeks.forEach(({ weekday, weekend }) => {
+    weekday.sort();
+    weekend.sort();
+    const picks: string[] = [];
+    [weekday, weekend].forEach((pool) => { if (pool.length > 0) picks.push(pool[0]); });
+    [weekday, weekend].forEach((pool) => {
+      pool.slice(1).forEach((date) => {
+        if (picks.length < EV_REPRESENTATIVE_SESSIONS_PER_WEEK) picks.push(date);
+      });
     });
-  } else if (type === "EV_FAST_HIGH_VOLTAGE") {
-    profile[EV_FAST_REPRESENTATIVE_SOURCE_HOUR] = EV_REPRESENTATIVE_BASIS.fast.contractPowerKw;
-  }
-  return profile;
+    picks.slice(0, EV_REPRESENTATIVE_SESSIONS_PER_WEEK).forEach((date) => selected.add(date));
+  });
+  return selected;
 }
 
-function weeklyChargeOccurrence(dayType: ReferenceDayType): number {
-  // 대표고객은 매주 평일 1회, 주말 1회 충전한다. 발령일이 특정 요일에
-  // 균등하게 분포한다고 보고 평일 발령일에는 1/5, 주말·공휴일에는 1/2를 적용한다.
-  return dayType === "WEEKDAY" ? 1 / 5 : 1 / 2;
+const EV_REPRESENTATIVE_CHARGING_DATES: Record<`${AnalysisYear}`, ReadonlySet<string>> = {
+  2024: representativeChargingDates(EVENTS["2024"]),
+  2025: representativeChargingDates(EVENTS["2025"]),
+  2026: representativeChargingDates(EVENTS["2026"]),
+};
+
+function chargesOnEventDay(year: AnalysisYear, date: string): boolean {
+  return EV_REPRESENTATIVE_CHARGING_DATES[String(year) as `${AnalysisYear}`].has(date);
 }
 
+/**
+ * 시나리오 2-2는 2-1과 같은 계약종별 부하곡선·이전규칙을 쓰되,
+ * 주 2회 충전 한도 안에서 배정된 발령일에만 충전이 일어난다고 본다.
+ */
 function evScenario22(
   type: BaseCustomerType,
-  dayType: ReferenceDayType,
+  season: ReferenceSeason,
   eventHours: readonly number[],
   shiftRate: number,
+  charging: boolean,
 ): HourlyRoute {
-  const base = representativeEvProfile(type);
-  if (type === "RESIDENTIAL_TOU") return { base, shifted: [...base], movedKwh: 0 };
-  const occurrenceWeight = weeklyChargeOccurrence(dayType);
-  if (type === "EV_SLOW_LOW_VOLTAGE") {
-    const hourCount = Math.min(EV_SLOW_CHARGE_HOURS.length, eventHours.length);
-    return {
-      ...moveEnergy(
-        base,
-        EV_SLOW_CHARGE_HOURS.slice(0, hourCount),
-        eventHours.slice(0, hourCount),
-        shiftRate,
-      ),
-      occurrenceWeight,
-    };
-  }
-  return {
-    ...moveEnergy(base, [EV_FAST_REPRESENTATIVE_SOURCE_HOUR], [eventHours[0]], shiftRate),
-    occurrenceWeight,
-  };
+  return { ...evScenario21(type, season, eventHours, shiftRate), occurrenceWeight: charging ? 1 : 0 };
 }
 
 function routeForEvent(
@@ -383,7 +416,15 @@ function routeForEvent(
     return residentialApplianceScenario(event.season, event.dayType, event.hours, input, selectedAppliances);
   }
   if (input.shiftMode === "EV_SCENARIO_2_1") return evScenario21(type, event.season, event.hours, input.shiftRate);
-  if (input.shiftMode === "EV_SCENARIO_2_2") return evScenario22(type, event.dayType, event.hours, input.shiftRate);
+  if (input.shiftMode === "EV_SCENARIO_2_2") {
+    return evScenario22(
+      type,
+      event.season,
+      event.hours,
+      input.shiftRate,
+      chargesOnEventDay(input.analysisYear, event.date),
+    );
+  }
   const base = copyProfile(type, event.season);
   return { base, shifted: [...base], movedKwh: 0 };
 }
@@ -514,7 +555,7 @@ export function runSimulation(input: SimulationInput): SimulationResult {
   const evChargingEventDays = input.shiftMode === "EV_SCENARIO_2_1"
     ? events.length
     : input.shiftMode === "EV_SCENARIO_2_2"
-      ? events.reduce((sum, event) => sum + weeklyChargeOccurrence(event.dayType), 0)
+      ? events.filter((event) => chargesOnEventDay(input.analysisYear, event.date)).length
       : 0;
 
   let benefitPerCustomer = 0;
@@ -580,8 +621,9 @@ export function runSimulation(input: SimulationInput): SimulationResult {
     warnings.push("EV 시나리오 2-1은 전기예보 발령일에만 충전하는 계약종별 부하를 적용합니다. 완속은 6시간 충전구간 중 발령시간 수만큼 경부하에서, 급속은 최대부하 1시간을 발령시간으로 이전합니다.");
   }
   if (input.shiftMode === "EV_SCENARIO_2_2") {
-    warnings.push(`EV 시나리오 2-2는 대표고객이 주 2회(평일 1회·주말 1회) 충전한다고 가정합니다. 선택 발령일과 충전일이 겹치는 계산상 기대일수는 ${evChargingEventDays.toFixed(1)}일입니다.`);
-    warnings.push("대표고객 기준은 완속 7kW·6시간·월 336kWh, 급속 50kW·1시간·월 400kWh이며 월 4주(각 8회 충전)로 환산합니다.");
+    warnings.push(`EV 시나리오 2-2는 대표고객이 주 2회(평일 1회·주말 1회) 충전하고, 발령이 난 주에는 그 주의 충전을 발령일로 옮긴다고 가정합니다. 선택 발령일 ${events.length}일 중 주당 충전한도 안에서 배정되는 날은 ${evChargingEventDays}일입니다.`);
+    warnings.push("대표고객 기준은 완속 7kW·6시간·월 336kWh, 급속 50kW·1시간·월 400kWh이며 시간대별 형상은 계약종별 부하곡선(완속 42kWh/회·급속 50kWh/회)을 따릅니다.");
+    warnings.push("2-1은 모든 발령일에 충전한다고 보는 상한, 2-2는 주 2회 충전한도를 적용한 값입니다. 발령일 대응이 100%가 아니면 실제 편익은 2-2보다 작습니다.");
   }
   if (input.customerType !== "RESIDENTIAL_TOU") {
     warnings.push("EV는 계약전력 50kW 미만을 완속, 50kW 이상을 급속으로 구분합니다.");

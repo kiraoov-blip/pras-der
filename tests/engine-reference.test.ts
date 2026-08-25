@@ -4,6 +4,8 @@ import { DEFAULT_CUSTOMER_COUNTS, DEFAULT_SIMULATION_INPUT } from "../lib/simula
 import {
   EV_BASIC_CHARGE_WON_PER_KW,
   EV_ENERGY_RATE_TABLE,
+  EV_REPRESENTATIVE_BASIS,
+  EV_REPRESENTATIVE_SESSIONS_PER_WEEK,
   EV_TOTAL_FAST_WEIGHT,
   EV_TOTAL_SLOW_WEIGHT,
   findRevenueNeutralDiscount,
@@ -36,8 +38,24 @@ test("2025 실적 발령구간과 SMP 자동판정 시간을 서로 구분한다
   assert.equal(actual.eventDays, 56);
   assert.equal(actual.eventHours, 195);
   assert.equal(rule.eventDays, 56);
-  assert.equal(rule.eventHours, 150);
+  assert.equal(rule.eventHours, 149);
   assert.equal(sum(actual.monthlyEventDays), 56);
+});
+
+test("원자료 시간축은 0시=00:00~01:00 기준으로 정규화되어 있다", () => {
+  // 주택용 워크북은 시간축이 한 칸 왼쪽으로 회전된 상태로 저장돼 있어
+  // extract-reference-data.py 에서 우측 1칸 회전으로 정규화한다.
+  // 회전이 빠지면 발령시간대가 10:00~16:00 대신 09:00~15:00으로 계산된다.
+  const event = REFERENCE_DATA.events["2025"].find((item) => item.date === "2025-12-11");
+  assert.ok(event);
+  assert.deepEqual([...event.actualHours], [12, 13, 14]);
+  assert.equal(event.smp[0], 105.14);
+  assert.equal(event.smp[12], 0);
+  assert.equal(event.smp[13], 0);
+
+  const hours = Object.values(REFERENCE_DATA.events).flat().flatMap((item) => item.actualHours);
+  assert.equal(Math.min(...hours), 10);
+  assert.equal(Math.max(...hours), 15);
 });
 
 test("고객유형별 초기 대상 고객 수를 적용한다", () => {
@@ -68,7 +86,7 @@ test("계절·요일 전체 선택은 연간 결과를 유지하고 세부 선�
 test("할인만 적용한 기준점과 기본요금 제외 전력량요금을 재현한다", () => {
   const scenarioOne = simulate({ shiftMode: "SCENARIO_1", shiftRate: 0 });
   const scenarioTwo = simulate({ shiftMode: "RES_SCENARIO_2", shiftRate: 0 });
-  nearly(scenarioOne.customer.annualBenefitPerCustomerWon, 10_142.423876244207);
+  nearly(scenarioOne.customer.annualBenefitPerCustomerWon, 10_113.991012003851);
   nearly(scenarioTwo.customer.annualBenefitPerCustomerWon, scenarioOne.customer.annualBenefitPerCustomerWon);
   nearly(scenarioOne.customer.currentAnnualBillWon, 1_127_265.02449335);
   assert.equal(scenarioOne.grid.shiftedEnergyMwh, 0);
@@ -201,22 +219,26 @@ test("EV 2-1과 2-2는 완속·급속을 모두 계산하고 충전빈도를 구
   assert.ok(fast21.grid.shiftedEnergyMwh > 0);
   assert.ok(fast22.grid.shiftedEnergyMwh > 0);
   assert.equal(slow21.evChargingEventDays, slow21.eventDays);
-  nearly(slow22.evChargingEventDays, 19.0, 1e-9);
-  nearly(fast22.evChargingEventDays, slow22.evChargingEventDays, 1e-9);
+  assert.equal(slow22.evChargingEventDays, 39);
+  assert.equal(fast22.evChargingEventDays, slow22.evChargingEventDays);
   nearly(sum(slow21.baseLoadProfile), sum(slow21.shiftedLoadProfile), 1e-9);
   nearly(sum(fast21.baseLoadProfile), sum(fast21.shiftedLoadProfile), 1e-9);
   nearly(sum(slow22.baseLoadProfile), sum(slow22.shiftedLoadProfile), 1e-9);
   nearly(sum(fast22.baseLoadProfile), sum(fast22.shiftedLoadProfile), 1e-9);
 });
 
-test("EV 2-2 대표고객은 완속 7kW×6시간, 급속 50kW×1시간과 주중·주말 빈도를 재현한다", () => {
+test("EV 2-2는 2-1과 같은 부하곡선을 쓰고 주 2회 충전한도만 추가로 적용한다", () => {
   const slow = simulate({ customerType: "EV_SLOW_LOW_VOLTAGE", shiftMode: "EV_SCENARIO_2_2", shiftRate: 1 });
   const fast = simulate({ customerType: "EV_FAST_HIGH_VOLTAGE", shiftMode: "EV_SCENARIO_2_2", shiftRate: 1 });
-  nearly(sum(slow.baseLoadProfile), 42, 1e-9);
-  nearly(sum(fast.baseLoadProfile), 50, 1e-9);
-  assert.equal(slow.baseLoadProfile.filter((value) => value === 7).length, 6);
-  assert.equal(fast.baseLoadProfile.filter((value) => value === 50).length, 1);
+  const slow21 = simulate({ customerType: "EV_SLOW_LOW_VOLTAGE", shiftMode: "EV_SCENARIO_2_1", shiftRate: 1 });
 
+  // 대표고객 월 사용량 336kWh(완속 8회) · 400kWh(급속 8회)와 1회 충전량이 일치한다.
+  nearly(sum(slow.baseLoadProfile), EV_REPRESENTATIVE_BASIS.slow.monthlyUsageKwh / EV_REPRESENTATIVE_BASIS.slow.sessionsPerMonth, 1e-6);
+  nearly(sum(fast.baseLoadProfile), EV_REPRESENTATIVE_BASIS.fast.monthlyUsageKwh / EV_REPRESENTATIVE_BASIS.fast.sessionsPerMonth, 1e-6);
+  assert.deepEqual(slow.baseLoadProfile, slow21.baseLoadProfile);
+  assert.ok(slow.customer.annualBenefitPerCustomerWon < slow21.customer.annualBenefitPerCustomerWon);
+
+  // 주(월~일)마다 최대 2일까지만 충전일로 배정한다.
   const weekday = simulate({
     customerType: "EV_SLOW_LOW_VOLTAGE",
     shiftMode: "EV_SCENARIO_2_2",
@@ -227,8 +249,17 @@ test("EV 2-2 대표고객은 완속 7kW×6시간, 급속 50kW×1시간과 주중
     shiftMode: "EV_SCENARIO_2_2",
     dayTypeFilter: "WEEKEND",
   });
-  nearly(weekday.evChargingEventDays, weekday.eventDays / 5, 1e-9);
-  nearly(weekend.evChargingEventDays, weekend.eventDays / 2, 1e-9);
+  assert.equal(weekday.evChargingEventDays + weekend.evChargingEventDays, slow.evChargingEventDays);
+  assert.ok(slow.evChargingEventDays < slow.eventDays);
+
+  const weeks = new Set(
+    REFERENCE_DATA.events["2025"].map((event) => {
+      const time = Date.parse(`${event.date}T00:00:00Z`);
+      const monday = time - ((new Date(time).getUTCDay() + 6) % 7) * 24 * 60 * 60 * 1_000;
+      return new Date(monday).toISOString().slice(0, 10);
+    }),
+  );
+  assert.ok(slow.evChargingEventDays <= weeks.size * EV_REPRESENTATIVE_SESSIONS_PER_WEEK);
 });
 
 test("EV 전체는 완속·급속 실적 비중을 합산한다", () => {

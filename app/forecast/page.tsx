@@ -231,7 +231,7 @@ export default function Home() {
     : [
       { mode: "SCENARIO_1", title: "시나리오 1 · 전체부하 균등이전", description: "계약종별 전체 부하에서 발령시간 수만큼 최대부하 시간대 사용량을 균등 이전" },
       { mode: "EV_SCENARIO_2_1" as const, title: "시나리오 2-1 · 발령일 계약종별 충전", description: "발령일에만 충전: 완속은 경부하에서 발령시간만큼, 급속은 최대부하 1시간을 이전" },
-      { mode: "EV_SCENARIO_2_2" as const, title: "시나리오 2-2 · 주 2회 대표고객 충전", description: "평일 1회·주말 1회 충전하는 대표고객에 동일한 완속·급속 이전 규칙 적용" },
+      { mode: "EV_SCENARIO_2_2" as const, title: "시나리오 2-2 · 주 2회 대표고객 충전", description: "2-1과 같은 이전 규칙에 주 2회 충전한도 적용: 발령이 난 주는 평일 1일·주말 1일에만 충전 배정" },
     ];
 
   const routeSource = scenario === "RES_SCENARIO_2"
@@ -340,7 +340,7 @@ export default function Home() {
             <div><span>급속 · 50kW 이상</span><strong>{EV_REPRESENTATIVE_BASIS.fast.contractPowerKw}kW × {EV_REPRESENTATIVE_BASIS.fast.chargeHours}시간</strong><small>최대부하 충전 · 월 {formatInteger(EV_REPRESENTATIVE_BASIS.fast.monthlyUsageKwh)}kWh</small></div>
             <p>{scenario === "EV_SCENARIO_2_1"
               ? `계약종별 실적 부하곡선을 사용하고 선택된 ${result.eventDays}개 발령일에 충전한 것으로 계산합니다.`
-              : `대표고객이 주 2회(평일 1회·주말 1회) 충전하며, 선택 발령일과 충전일이 겹치는 기대일수 ${formatOneDecimal(result.evChargingEventDays)}일을 계산에 반영합니다.`}</p>
+              : `계약종별 실적 부하곡선에 주 2회(평일 1회·주말 1회) 충전한도를 적용해, 선택된 ${result.eventDays}개 발령일 중 ${formatInteger(result.evChargingEventDays)}일을 충전일로 배정합니다.`}</p>
           </div> : null}
           {scenario === "RES_SCENARIO_2" && customerType === "주택용 TOU" ? <div className="appliance-selector">
             <div className="appliance-selector-head">
