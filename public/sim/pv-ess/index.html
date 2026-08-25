@@ -739,9 +739,13 @@ body{font-size:15.5px}
   function blend(a,b,r){
     r=clamp(r,0,1);
     const o={};
-    for(const k of Object.keys(a)){
-      if(Array.isArray(a[k])) o[k]=a[k].map((x,i)=>x*(1-r)+(b[k][i]??0)*r);
-      else if(typeof a[k]==='number') o[k]=a[k]*(1-r)+(b[k]??0)*r;
+    // a(무배터리)와 b(배터리) 결과의 키 합집합을 순회한다. 배터리 전용 스칼라
+    // (batteryDischargeEnergy·gridChargeEnergy 등)는 b(optimizeDay)에만 있어,
+    // a 기준으로만 순회하면 누락돼 방전량 등이 항상 0으로 표시됐다.
+    for(const k of new Set([...Object.keys(a),...Object.keys(b)])){
+      const av=a[k], bv=b[k], ref=Array.isArray(av)?av:(Array.isArray(bv)?bv:null);
+      if(ref) o[k]=ref.map((_,i)=>((Array.isArray(av)?av[i]:0)??0)*(1-r)+((Array.isArray(bv)?bv[i]:0)??0)*r);
+      else if(typeof av==='number'||typeof bv==='number') o[k]=(av??0)*(1-r)+(bv??0)*r;
     }
     return o;
   }
@@ -870,7 +874,10 @@ body{font-size:15.5px}
     $('tariffResponsive').innerHTML=rows.map(([k,n])=>`<div class="tariff-card"><div class="tariff-card-title">${n}</div><div class="tariff-hour-grid">${tariffs[k].map((v,i)=>{const heat=(k==='baseBuy'||k==='newBuy')?` style="background:${buyHeatColor(v)}"`:'';const period=periodFor(k,i);return `<div class="tariff-hour"><label title="${hourInterval(i)}">${hourStart(i)}</label><input type="number" step="0.1" data-tariff="${k}" data-h="${i}" value="${v.toFixed(1)}"${heat}><span class="period-tag ${periodClass(period)}">${period}</span></div>`}).join('')}</div></div>`).join('');
 
     document.querySelectorAll('[data-tariff][data-h]').forEach(inp=>inp.addEventListener('change',()=>{
-      tariffs[inp.dataset.tariff][+inp.dataset.h]=+inp.value;
+      const nv=parseFloat(inp.value);
+      // 셀을 비우거나 숫자가 아니면 직전 유효값으로 되돌려 NaN 전파를 막는다.
+      if(!Number.isFinite(nv)){inp.value=Number(tariffs[inp.dataset.tariff][+inp.dataset.h]).toFixed(1);return;}
+      tariffs[inp.dataset.tariff][+inp.dataset.h]=nv;
       buildTariff();
       run();
     }));
