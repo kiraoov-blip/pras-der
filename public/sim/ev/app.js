@@ -1323,9 +1323,10 @@ function compactNumber(value, maxDigits = 6) {
 }
 
 function number(value, digits = 0) {
-  // 화면 표시 숫자는 소수점 첫째자리까지만 (정수 표기는 0자리 유지)
-  const d = Math.min(digits, 1);
-  return Number(value).toLocaleString("ko-KR", { maximumFractionDigits: d, minimumFractionDigits: d });
+  // 호출부가 요청한 소수 자릿수를 그대로 반영한다(정수 표기는 0자리 유지).
+  // 이전에는 Math.min(digits,1)로 강제해 number(x,2)로 요청한 "정확 단가"가
+  // 소수 1자리로 절삭됐다.
+  return Number(value).toLocaleString("ko-KR", { maximumFractionDigits: digits, minimumFractionDigits: digits });
 }
 
 function round(value, digits = 0) {
