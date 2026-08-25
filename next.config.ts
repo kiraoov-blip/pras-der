@@ -3,8 +3,20 @@ import type { NextConfig } from "next";
 const isGitHubPages = process.env.GITHUB_PAGES === "true";
 const repositoryName = process.env.GITHUB_REPOSITORY?.split("/")[1] ?? "";
 const isAccountPage = repositoryName.endsWith(".github.io");
+
+/**
+ * 커스텀 도메인(예: simulator-kepco.co.kr)은 저장소 이름 없이 루트에서 서비스된다.
+ * 이때 basePath에 /<저장소명>이 남아 있으면 모든 링크·에셋·iframe 경로가
+ * /pras-der 아래를 가리켜 전부 깨지므로, 커스텀 도메인 배포에서는 basePath를 비운다.
+ *
+ * 워크플로에서 PAGES_CUSTOM_DOMAIN=true 로 켠다.
+ * 기본 github.io 주소로만 배포할 때는 이 변수를 지우면 된다.
+ */
+const hasCustomDomain = process.env.PAGES_CUSTOM_DOMAIN === "true";
 const repositoryBasePath =
-  isGitHubPages && repositoryName && !isAccountPage ? `/${repositoryName}` : "";
+  isGitHubPages && repositoryName && !isAccountPage && !hasCustomDomain
+    ? `/${repositoryName}`
+    : "";
 
 const nextConfig: NextConfig = isGitHubPages
   ? {
