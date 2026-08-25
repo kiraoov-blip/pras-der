@@ -34,6 +34,11 @@ jobs:
       - name: 탐라 엔진 참조 테스트
         run: npm run test:engine
 
+      # 제주 TOU 시간대와 EV 단가가 엔진·전기차·히트펌프 세 곳에 하드코딩돼 있다.
+      # 요금 개정 시 한 곳만 고쳐 조용히 어긋나는 것을 여기서 막는다.
+      - name: 요금표 교차 일치 검사
+        run: node --test tests/tariff-consistency.test.mjs
+
       # Playwright 는 골든 테스트에서만 쓰이므로 package-lock 을 건드리지 않는다.
       # --no-package-lock / --legacy-peer-deps 는 기존 lock 과의 충돌을 피하기 위한 것.
       - name: Install Playwright
