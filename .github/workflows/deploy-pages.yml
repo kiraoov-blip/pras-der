@@ -41,6 +41,10 @@ jobs:
       - name: Build static site
         env:
           GITHUB_PAGES: "true"
+          # 커스텀 도메인(simulator-kepco.co.kr)은 루트에서 서비스되므로
+          # basePath에 /<저장소명>을 붙이지 않는다.
+          # 기본 kiraoov-blip.github.io/pras-der/ 주소로 되돌리려면 이 줄을 지운다.
+          PAGES_CUSTOM_DOMAIN: "true"
         run: npm run build:github-pages
 
       - name: Upload GitHub Pages artifact
