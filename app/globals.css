@@ -47,7 +47,7 @@ footer{background:#0e2239;color:#aebccb;padding:21px 0}.footer-inner{display:fle
 @media(max-width:360px){.page-shell{width:calc(100% - 16px)}.hero h1{font-size:18px}.section-card{padding:13px}.shift-slider-row{grid-template-columns:minmax(0,1fr) 92px}.range-marks{margin-right:101px}.hour-range{grid-template-columns:1fr}.month-chart{gap:8px 5px}}
 
 /* ── PRAS-DER 통합 셸 ─────────────────────────────────────────────── */
-.site-nav{background:#081a2f;border-bottom:1px solid rgba(255,255,255,.08);position:sticky;top:0;z-index:50}
+.site-nav{background:#081a2f;border-bottom:1px solid rgba(255,255,255,.08);position:sticky;top:0;z-index:50;padding-top:max(0px,env(safe-area-inset-top))}
 .site-nav-inner{display:flex;align-items:center;gap:26px;height:52px}
 .site-brand{display:flex;align-items:baseline;gap:5px;color:#fff;font-size:15px;font-weight:800;letter-spacing:-.02em;text-decoration:none;flex:0 0 auto}
 .site-brand span{color:#5fc6dd;font-size:11px;font-weight:800;letter-spacing:.08em;padding:2px 6px;border:1px solid rgba(95,198,221,.4);border-radius:5px}
