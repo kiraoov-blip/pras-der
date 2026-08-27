@@ -1,5 +1,16 @@
-name: Deploy PRAS-DER to GitHub Pages
+name: Deploy PRAS-DER + CARE-Jeju Hub to GitHub Pages
 
+# 이 워크플로는 이제 pras-der 저장소 하나가 simulator-kepco.co.kr 커스텀 도메인
+# 전체를 조립해서 배포한다:
+#   /            → hub/index.html (이 저장소, 정적 허브 페이지)
+#   /pras/**     → 이 저장소의 Next.js 앱 (output: "export", basePath=/pras)
+#   /care/**     → kiraoov-blip/care 저장소를 체크아웃해서 그 자리에서 빌드한 결과
+#
+# GitHub Pages 커스텀 도메인은 저장소 하나에만 붙기 때문에, 두 제품을 한 도메인
+# 아래 서로 다른 경로로 보여주려면 이렇게 두 저장소를 이 워크플로 안에서 함께
+# 빌드해서 하나의 배포 아티팩트로 합치는 수밖에 없다. care 저장소는 공개
+# (public) 저장소이므로 별도 인증 토큰 없이 actions/checkout으로 그대로
+# 가져올 수 있다.
 on:
   push:
     branches: [main]
@@ -16,12 +27,20 @@ concurrency:
 
 jobs:
   build:
-    name: 정적 빌드
+    name: 정적 빌드 (허브 + pras + care)
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout (pras-der)
         uses: actions/checkout@v6
+
+      # care 저장소(공개)를 하위 폴더로 체크아웃한다. 계정명이 바뀌거나 저장소가
+      # 이관되면 이 repository 값만 갱신하면 된다.
+      - name: Checkout (care, public repo)
+        uses: actions/checkout@v6
+        with:
+          repository: kiraoov-blip/care
+          path: care-src
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -32,25 +51,52 @@ jobs:
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
 
-      - name: Install dependencies
+      # ---------- PRAS-DER (이 저장소) 빌드 ----------
+      - name: Install dependencies (pras-der)
         run: npm ci
 
-      - name: Check application types
+      - name: Check application types (pras-der)
         run: npm run typecheck
 
-      - name: Build static site
+      - name: Build static site (pras-der → /pras)
         env:
           GITHUB_PAGES: "true"
-          # 커스텀 도메인(simulator-kepco.co.kr)은 루트에서 서비스되므로
-          # basePath에 /<저장소명>을 붙이지 않는다.
-          # 기본 kiraoov-blip.github.io/pras-der/ 주소로 되돌리려면 이 줄을 지운다.
-          PAGES_CUSTOM_DOMAIN: "true"
+          # 커스텀 도메인 루트는 이제 아래에서 만드는 허브(hub/index.html)가
+          # 차지하고, 이 앱 자체는 그 아래 /pras 경로에서 서비스된다.
+          PAGES_BASE_PATH: "/pras"
         run: npm run build:github-pages
+
+      # ---------- CARE-Jeju (care-src, 방금 체크아웃한 별도 저장소) 빌드 ----------
+      - name: Install dependencies (care)
+        working-directory: care-src
+        run: npm ci
+
+      - name: Check application types (care)
+        working-directory: care-src
+        run: npm run typecheck
+
+      - name: Build static site (care → /care)
+        working-directory: care-src
+        run: npm run build:site
+
+      # care/site/src/data.ts는 데이터를 site/data/ (site/ 기준 상대경로)에서
+      # 읽는다. care 저장소 자체의 배포 워크플로와 동일하게, 빌드 결과물이 아닌
+      # data/ 폴더를 site/ 안으로 복사해줘야 한다.
+      - name: Copy CARE data into its site bundle
+        run: cp -r care-src/data care-src/site/data
+
+      # ---------- 허브 + pras + care를 하나의 배포 트리로 조립 ----------
+      - name: Assemble combined Pages artifact
+        run: |
+          mkdir -p public-root
+          cp hub/index.html public-root/index.html
+          cp -r out public-root/pras
+          cp -r care-src/site public-root/care
 
       - name: Upload GitHub Pages artifact
         uses: actions/upload-pages-artifact@v4
         with:
-          path: ./out
+          path: ./public-root
 
   deploy:
     name: 배포
