@@ -1,0 +1,57 @@
+PRAS-DER 저장소 적용 안내
+==========================
+
+이 압축파일은 "pras-der" GitHub 저장소(현재 simulator-kepco.co.kr 도메인을
+직접 차지하고 있는 그 저장소)에 적용할 변경 파일 5개만 모아둔 것입니다.
+(CARE 저장소가 아닙니다 — 이번 변경은 pras-der 쪽입니다.)
+
+적용 방법: 아래 5개 파일을 pras-der 저장소의 같은 경로에 그대로
+덮어쓰기(업로드)하면 됩니다. 폴더 구조가 이미 압축파일 안에 그대로
+들어있으니, GitHub 웹 화면에서 "Add file → Upload files"로 이 5개를
+한 번에 끌어다 놓으면 각자 원래 있던 경로에 알아서 들어갑니다.
+
+1. next.config.ts
+   → 도메인 루트를 허브 페이지가 차지하고, 이 앱은 /pras 경로 아래에서
+     서비스되도록 basePath 계산 로직을 확장했습니다. (기존 방식과도
+     호환되게 만들어서, 혹시 나중에 다시 도메인 루트를 이 앱이 직접
+     차지해야 할 일이 생겨도 안전합니다.)
+
+2. app/layout.tsx
+   → 파비콘·매니페스트 경로가 /pras 아래에서도 정확히 걸리도록 고쳤습니다.
+
+3. public/manifest.json
+   → PWA 아이콘·스크린샷·바로가기 경로를 전부 /pras 기준으로 바꿨습니다.
+
+4. hub/index.html  (신규 파일)
+   → 도메인 루트(simulator-kepco.co.kr)에 새로 놓일 허브(첫 화면) 페이지.
+     PRAS-DER / CARE-Jeju 두 시뮬레이터를 카드 형태로 보여주고, 클릭하면
+     각각 /pras/ , /care/ 로 이동합니다. 아이콘·설명·색상까지 포함된
+     완성된 정적 HTML 한 장이라 별도 빌드가 필요 없습니다.
+
+5. .github/workflows/deploy-pages.yml
+   → 배포 워크플로 전체를 다시 짰습니다. 이제 이 워크플로 하나가:
+     - 이 저장소(pras-der)를 /pras 경로용으로 빌드하고
+     - 공개 저장소인 care 저장소를 함께 체크아웃해서 /care 경로용으로
+       빌드하고 (데이터 폴더 복사 포함)
+     - hub/index.html(루트) + pras 빌드결과 + care 빌드결과를
+       한 배포물로 합쳐서
+     - GitHub Pages에 올립니다.
+     즉 이 워크플로가 실질적으로 두 저장소를 하나의 사이트로 묶어주는
+     역할을 합니다. care 저장소 자체의 배포 워크플로는 그대로 둬도
+     상관없습니다(더 이상 실제 서비스 주소에는 안 쓰이지만, care 저장소
+     자체를 열어서 확인해보는 용도로는 계속 쓸 수 있습니다).
+
+주의할 점
+---------
+- care 저장소 이름이 실제로 "kiraoov-blip/care"가 맞는지 한 번만
+  확인해 주세요. deploy-pages.yml 안에서
+  "repository: kiraoov-blip/care" 로 지정해뒀는데, 만약 저장소 이름이나
+  계정명이 다르면 그 한 줄만 고치면 됩니다.
+- 이 5개 파일을 올리고 나면 pras-der 저장소의 GitHub Actions가 자동으로
+  다시 돌아갑니다. 초록불로 끝나면:
+    simulator-kepco.co.kr        → 허브(선택 화면)
+    simulator-kepco.co.kr/pras/  → PRAS-DER
+    simulator-kepco.co.kr/care/  → CARE-Jeju
+  세 가지가 모두 뜨는지 확인해보시면 됩니다.
+- 도메인 스펠링 확인: simulator-kepco.co.kr 입니다(simulation이 아니라
+  simulator).

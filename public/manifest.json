@@ -2,8 +2,8 @@
   "name": "PRAS-DER EV 요금 시뮬레이터",
   "short_name": "PRAS-DER",
   "description": "제주 분산에너지자원 요금·편익 분석 시뮬레이터 — 전기예보·히트펌프·전기차·태양광/ESS",
-  "start_url": "/",
-  "scope": "/",
+  "start_url": "/pras/",
+  "scope": "/pras/",
   "display": "standalone",
   "orientation": "portrait",
   "dir": "ltr",
@@ -13,25 +13,25 @@
   "categories": ["utilities", "productivity"],
   "icons": [
     {
-      "src": "/icon-192x192.png",
+      "src": "/pras/icon-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icon-512x512.png",
+      "src": "/pras/icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icon-maskable-192x192.png",
+      "src": "/pras/icon-maskable-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "/icon-maskable-512x512.png",
+      "src": "/pras/icon-maskable-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
@@ -39,14 +39,14 @@
   ],
   "screenshots": [
     {
-      "src": "/screenshot-540x720.png",
+      "src": "/pras/screenshot-540x720.png",
       "sizes": "540x720",
       "type": "image/png",
       "form_factor": "narrow",
       "label": "모바일 시나리오 선택 화면"
     },
     {
-      "src": "/screenshot-1280x720.png",
+      "src": "/pras/screenshot-1280x720.png",
       "sizes": "1280x720",
       "type": "image/png",
       "form_factor": "wide",
@@ -58,10 +58,10 @@
       "name": "열부하 시뮬레이터",
       "short_name": "열부하",
       "description": "히트펌프 시뮬레이터",
-      "url": "/?page=heatpump",
+      "url": "/pras/?page=heatpump",
       "icons": [
         {
-          "src": "/icon-192x192.png",
+          "src": "/pras/icon-192x192.png",
           "sizes": "192x192",
           "type": "image/png"
         }
@@ -71,10 +71,10 @@
       "name": "전기차 충전 분석",
       "short_name": "전기차",
       "description": "EV 충전 시나리오 분석",
-      "url": "/?page=ev",
+      "url": "/pras/?page=ev",
       "icons": [
         {
-          "src": "/icon-192x192.png",
+          "src": "/pras/icon-192x192.png",
           "sizes": "192x192",
           "type": "image/png"
         }

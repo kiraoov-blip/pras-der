@@ -5,18 +5,28 @@ const repositoryName = process.env.GITHUB_REPOSITORY?.split("/")[1] ?? "";
 const isAccountPage = repositoryName.endsWith(".github.io");
 
 /**
- * 커스텀 도메인(예: simulator-kepco.co.kr)은 저장소 이름 없이 루트에서 서비스된다.
- * 이때 basePath에 /<저장소명>이 남아 있으면 모든 링크·에셋·iframe 경로가
- * /pras-der 아래를 가리켜 전부 깨지므로, 커스텀 도메인 배포에서는 basePath를 비운다.
+ * basePath 결정 순서 (우선순위 높은 것부터):
  *
- * 워크플로에서 PAGES_CUSTOM_DOMAIN=true 로 켠다.
- * 기본 github.io 주소로만 배포할 때는 이 변수를 지우면 된다.
+ * 1. PAGES_BASE_PATH 를 명시적으로 지정한 경우 그 값을 그대로 쓴다.
+ *    커스텀 도메인(simulator-kepco.co.kr) 루트를 PRAS-DER 전용 허브가 차지하고,
+ *    이 앱은 그 아래 /pras 경로에서 서비스되는 지금 배포 구조가 여기 해당한다
+ *    (deploy-pages.yml 에서 PAGES_BASE_PATH=/pras 로 켠다).
+ * 2. PAGES_CUSTOM_DOMAIN=true 이면서 PAGES_BASE_PATH 가 없으면 basePath를 비운다
+ *    — "이 저장소가 다시 도메인 루트를 통째로 차지"하던 이전 배포 방식과의
+ *    하위 호환용으로 남겨둔다.
+ * 3. 둘 다 없으면 저장소 이름으로 자동 계산한다(project page 기본값, 예: /pras-der).
  */
+const explicitBasePath = process.env.PAGES_BASE_PATH ?? "";
 const hasCustomDomain = process.env.PAGES_CUSTOM_DOMAIN === "true";
-const repositoryBasePath =
-  isGitHubPages && repositoryName && !isAccountPage && !hasCustomDomain
-    ? `/${repositoryName}`
-    : "";
+const repositoryBasePath = isGitHubPages
+  ? explicitBasePath
+    ? explicitBasePath
+    : hasCustomDomain
+      ? ""
+      : repositoryName && !isAccountPage
+        ? `/${repositoryName}`
+        : ""
+  : "";
 
 const nextConfig: NextConfig = isGitHubPages
   ? {
