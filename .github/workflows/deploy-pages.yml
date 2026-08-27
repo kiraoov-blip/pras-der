@@ -67,9 +67,11 @@ jobs:
         run: npm run build:github-pages
 
       # ---------- CARE-Jeju (care-src, 방금 체크아웃한 별도 저장소) 빌드 ----------
+      # care 저장소에는 package-lock.json이 커밋되어 있지 않아 npm ci를 쓸 수
+      # 없다(npm ci는 lockfile이 반드시 있어야 한다) → npm install을 쓴다.
       - name: Install dependencies (care)
         working-directory: care-src
-        run: npm ci
+        run: npm install
 
       - name: Check application types (care)
         working-directory: care-src
