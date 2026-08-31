@@ -1,16 +1,18 @@
-name: Deploy PRAS-DER + CARE-Jeju Hub to GitHub Pages
+name: Deploy PRAS-DER + PRAS-TOU + CARE-Jeju Hub to GitHub Pages
 
 # 이 워크플로는 이제 pras-der 저장소 하나가 simulator-kepco.co.kr 커스텀 도메인
 # 전체를 조립해서 배포한다:
 #   /            → hub/index.html (이 저장소, 정적 허브 페이지)
 #   /pras/**     → 이 저장소의 Next.js 앱 (output: "export", basePath=/pras)
+#   /tou/**      → kiraoov-blip/pras-tou 저장소를 체크아웃해서 그대로 복사(빌드 불필요)
 #   /care/**     → kiraoov-blip/care 저장소를 체크아웃해서 그 자리에서 빌드한 결과
 #
-# GitHub Pages 커스텀 도메인은 저장소 하나에만 붙기 때문에, 두 제품을 한 도메인
-# 아래 서로 다른 경로로 보여주려면 이렇게 두 저장소를 이 워크플로 안에서 함께
-# 빌드해서 하나의 배포 아티팩트로 합치는 수밖에 없다. care 저장소는 공개
-# (public) 저장소이므로 별도 인증 토큰 없이 actions/checkout으로 그대로
-# 가져올 수 있다.
+# GitHub Pages 커스텀 도메인은 저장소 하나에만 붙기 때문에, 여러 제품을 한 도메인
+# 아래 서로 다른 경로로 보여주려면 이렇게 여러 저장소를 이 워크플로 안에서 함께
+# 조립해서 하나의 배포 아티팩트로 합치는 수밖에 없다. care·pras-tou 저장소는
+# 공개(public) 저장소이므로 별도 인증 토큰 없이 actions/checkout으로 그대로
+# 가져올 수 있다. pras-tou는 바닐라 정적 사이트(빌드 단계 없음)라 체크아웃한
+# 그대로 복사만 하면 된다.
 on:
   push:
     branches: [main]
@@ -27,12 +29,20 @@ concurrency:
 
 jobs:
   build:
-    name: 정적 빌드 (허브 + pras + care)
+    name: 정적 빌드 (허브 + pras + tou + care)
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout (pras-der)
         uses: actions/checkout@v6
+
+      # pras-tou 저장소(공개)를 하위 폴더로 체크아웃한다. 계정명이 바뀌거나
+      # 저장소가 이관되면 이 repository 값만 갱신하면 된다.
+      - name: Checkout (pras-tou, public repo)
+        uses: actions/checkout@v6
+        with:
+          repository: kiraoov-blip/pras-tou
+          path: tou-src
 
       # care 저장소(공개)를 하위 폴더로 체크아웃한다. 계정명이 바뀌거나 저장소가
       # 이관되면 이 repository 값만 갱신하면 된다.
@@ -87,12 +97,19 @@ jobs:
       - name: Copy CARE data into its site bundle
         run: cp -r care-src/data care-src/site/data
 
-      # ---------- 허브 + pras + care를 하나의 배포 트리로 조립 ----------
+      # ---------- 허브 + pras + tou + care를 하나의 배포 트리로 조립 ----------
+      # pras-tou는 index.html/app.js/style.css/data/*.xlsx로만 이뤄진 바닐라
+      # 정적 사이트라 빌드 없이 체크아웃 결과를 그대로 /tou로 복사한다.
+      # actions/checkout은 저장소 파일만 받고 .git 디렉터리는 각 체크아웃 경로
+      # 안에 남으므로, cp -r로 복사한 뒤 배포물에 불필요한 .git만 지운다
+      # (rsync 없이도 어느 러너에서나 동일하게 동작하도록 cp+rm 조합을 쓴다).
       - name: Assemble combined Pages artifact
         run: |
           mkdir -p public-root
           cp hub/index.html public-root/index.html
           cp -r out public-root/pras
+          cp -r tou-src public-root/tou
+          rm -rf public-root/tou/.git
           cp -r care-src/site public-root/care
 
       - name: Upload GitHub Pages artifact
