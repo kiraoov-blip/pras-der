@@ -107,6 +107,7 @@ jobs:
         run: |
           mkdir -p public-root
           cp hub/index.html public-root/index.html
+          cp hub/favicon.svg public-root/favicon.svg
           cp -r out public-root/pras
           cp -r tou-src public-root/tou
           rm -rf public-root/tou/.git
