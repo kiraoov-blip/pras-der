@@ -392,7 +392,7 @@ export default function Home() {
           <article className="metric-card"><p>분석대상 고객</p><strong>{formatInteger(result.targetCustomers)}<small>호</small></strong><span>입력한 대상 고객 전체</span></article>
           <article className="metric-card accent-green"><p>부하 이전량</p><strong>{formatOneDecimal(result.grid.shiftedEnergyMwh)}<small>MWh</small></strong><span>에너지 총량 보존</span></article>
           <article className="metric-card"><p>고객당 기준기간 편익</p><strong>{formatInteger(result.customer.annualBenefitPerCustomerWon)}<small>원</small></strong><span>할인 및 부하이전 반영</span></article>
-          <article className="metric-card accent-blue"><p>대상고객 전체편익</p><strong>{formatTenThousandWon(result.customer.totalAnnualBenefitWon)}</strong><span>대상 고객 전체의 편익 합계</span></article>
+          <article className="metric-card accent-blue"><p>대상고객 전체편익</p><strong>{formatInteger(result.customer.totalAnnualBenefitWon / 10_000)}<small>만원</small></strong><span>대상 고객 전체의 편익 합계</span></article>
         </section>
 
         <section className="analysis-grid">
