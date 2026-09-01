@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { DEFAULT_CUSTOMER_COUNTS, REFERENCE_MONTHLY_USAGE_KWH } from "@/lib/simulator/defaults";
-import { EV_CONTRACT_POWER_THRESHOLD_KW, EV_REPRESENTATIVE_BASIS, findRevenueNeutralDiscount, runSimulation } from "@/lib/simulator/engine";
+import { EV_CONTRACT_POWER_THRESHOLD_KW, EV_REPRESENTATIVE_BASIS, findRevenueNeutralDiscount, findTargetBenefitSettings, runSimulation } from "@/lib/simulator/engine";
 import { ALL_APPLIANCE_CODES, SELECTABLE_APPLIANCES } from "@/lib/simulator/appliances";
 import type { AnalysisDayType, AnalysisSeason, AnalysisYear, ApplianceCode, CustomerTypeCode, EventMode, EvTariffVoltage, LoadShiftMode, RevenueNeutralDiscountResult, SimulationInput } from "@/lib/simulator/types";
 
@@ -85,6 +85,9 @@ export default function Home() {
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [hoveredHour, setHoveredHour] = useState<number | null>(null);
   const [neutralDiscountResult, setNeutralDiscountResult] = useState<RevenueNeutralDiscountResult | null>(null);
+  const [targetPerEvent, setTargetPerEvent] = useState<number | null>(null);
+  const [solveDiscount, setSolveDiscount] = useState(true);
+  const [solveShift, setSolveShift] = useState(true);
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const [chartWidth, setChartWidth] = useState(MAX_CHART_WIDTH);
 
@@ -133,6 +136,57 @@ export default function Home() {
   const averageEventHours = result.eventDays ? result.eventHours / result.eventDays : 0;
   const yearLabel = analysisYear === 2026 ? "2026 YTD" : `${analysisYear}년`;
   const scopeLabel = `${yearLabel} · ${SEASON_LABELS[seasonFilter]} · ${DAY_TYPE_LABELS[dayTypeFilter]}`;
+
+  // 발령 1회당 편익 = 기준기간 편익 ÷ 발령일수
+  const perEventBenefit = result.eventDays
+    ? result.customer.annualBenefitPerCustomerWon / result.eventDays
+    : 0;
+
+  // 목표 편익 슬라이더 상한: 할인율·수요이전율을 모두 100%로 올렸을 때의 1회당 편익
+  const targetSliderMax = useMemo(() => {
+    if (!result.eventDays) return 0;
+    const ceiling = findTargetBenefitSettings(simulationInput, {
+      targetPerEventBenefitWon: Number.POSITIVE_INFINITY,
+      solveDiscount: true,
+      solveShift: true,
+    }).maxReachablePerEventBenefitWon;
+    return Math.max(Math.ceil(ceiling / 10) * 10, Math.ceil(perEventBenefit / 10) * 10, 10);
+  }, [simulationInput, result.eventDays, perEventBenefit]);
+
+  // 목표값 미입력 시 현재 1회당 편익을 기본값으로 사용(내림해 반올림으로 인한 미달 표시 방지)
+  const effectiveTarget = targetPerEvent ?? Math.floor(perEventBenefit);
+
+  const targetSolution = useMemo(() => findTargetBenefitSettings(simulationInput, {
+    targetPerEventBenefitWon: effectiveTarget,
+    solveDiscount,
+    solveShift,
+  }), [simulationInput, effectiveTarget, solveDiscount, solveShift]);
+
+  const targetMessage = (() => {
+    const s = targetSolution;
+    const d = `할인율 ${formatOneDecimal(s.discountRate * 100)}%`;
+    const t = `수요이전율 ${formatOneDecimal(s.shiftRate * 100)}%`;
+    switch (s.status) {
+      case "NO_EVENTS":
+        return "선택한 분석범위에 발령일이 없어 1회당 편익을 계산할 수 없습니다.";
+      case "NO_VARIABLE":
+        return "조절할 변수를 하나 이상 선택하세요.";
+      case "ALREADY_MET":
+        return `현재 설정(${d}, ${t})으로 목표를 이미 충족합니다.`;
+      case "UNREACHABLE":
+        return `선택한 변수를 100%까지 올려도 최대 ${formatInteger(s.maxReachablePerEventBenefitWon)}원입니다. 목표 달성을 위해서는 다른 변수도 함께 조절해야 합니다.`;
+      default:
+        if (solveDiscount && solveShift) return `목표 편익 달성을 위해서는 ${d}, ${t}이 필요합니다.`;
+        if (solveDiscount) return `수요이전율 ${formatOneDecimal(shiftRate)}% 고정 시, 목표 편익 달성을 위해서는 ${d}이 필요합니다.`;
+        return `할인율 ${formatOneDecimal(discount)}% 고정 시, 목표 편익 달성을 위해서는 ${t}이 필요합니다.`;
+    }
+  })();
+
+  const applyTargetSolution = () => {
+    if (targetSolution.status !== "OK") return;
+    if (solveDiscount) setDiscount(Number((targetSolution.discountRate * 100).toFixed(1)));
+    if (solveShift) setShiftRate(Number((targetSolution.shiftRate * 100).toFixed(1)));
+  };
   const compactChart = chartWidth < 520;
   const lineChart = {
     width: chartWidth,
@@ -393,6 +447,45 @@ export default function Home() {
           <article className="metric-card accent-green"><p>부하 이전량</p><strong>{formatOneDecimal(result.grid.shiftedEnergyMwh)}<small>MWh</small></strong><span>에너지 총량 보존</span></article>
           <article className="metric-card"><p>고객당 기준기간 편익</p><strong>{formatInteger(result.customer.annualBenefitPerCustomerWon)}<small>원</small></strong><span>할인 및 부하이전 반영</span></article>
           <article className="metric-card accent-blue"><p>대상고객 전체편익</p><strong>{formatInteger(result.customer.totalAnnualBenefitWon / 10_000)}<small>만원</small></strong><span>대상 고객 전체의 편익 합계</span></article>
+          <article className="metric-card accent-green"><p>고객당 1회당 편익</p><strong>{formatInteger(perEventBenefit)}<small>원</small></strong><span>기준기간 편익 ÷ 발령 {formatInteger(result.eventDays)}일</span></article>
+          <article className="metric-card"><p>목표 1회당 편익</p><strong>{formatInteger(effectiveTarget)}<small>원</small></strong><span>{effectiveTarget > perEventBenefit ? `현재 대비 +${formatInteger(effectiveTarget - perEventBenefit)}원` : "현재 수준 이하"}</span></article>
+        </section>
+
+        <section className="target-solver" aria-label="목표 편익 역산">
+          <div className="target-solver-input">
+            <div className="target-solver-head">
+              <span>목표 1회당 편익</span>
+              <label className="percent-entry">
+                <input
+                  aria-label="목표 1회당 편익 직접 입력"
+                  type="number"
+                  min={0}
+                  max={targetSliderMax}
+                  step={10}
+                  value={effectiveTarget}
+                  onChange={(event) => setTargetPerEvent(Math.max(0, Math.round(Number(event.target.value) || 0)))}
+                />
+                <span>원</span>
+              </label>
+            </div>
+            <input
+              type="range"
+              min={0}
+              max={targetSliderMax}
+              step={10}
+              value={Math.min(effectiveTarget, targetSliderMax)}
+              onChange={(event) => setTargetPerEvent(Number(event.target.value))}
+            />
+            <div className="target-solver-vars">
+              <span>조절 변수</span>
+              <label><input type="checkbox" checked={solveDiscount} onChange={(event) => setSolveDiscount(event.target.checked)} />할인율</label>
+              <label><input type="checkbox" checked={solveShift} onChange={(event) => setSolveShift(event.target.checked)} />수요이전율</label>
+            </div>
+          </div>
+          <div className="target-solver-output">
+            <p className={`target-message ${targetSolution.status.toLowerCase()}`}>{targetMessage}</p>
+            <button type="button" onClick={applyTargetSolution} disabled={targetSolution.status !== "OK"}>이 조합 적용</button>
+          </div>
         </section>
 
         <section className="analysis-grid">
