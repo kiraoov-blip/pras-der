@@ -9,7 +9,9 @@ import {
   EV_TOTAL_FAST_WEIGHT,
   EV_TOTAL_SLOW_WEIGHT,
   findRevenueNeutralDiscount,
+  findTargetBenefitSettings,
   getEvTariffRates,
+  perEventBenefitWon,
   runSimulation,
 } from "../lib/simulator/engine.ts";
 import { ALL_APPLIANCE_CODES } from "../lib/simulator/appliances.ts";
@@ -354,4 +356,75 @@ test("부하이전과 할인이 모두 없으면 0.0%가 정확한 매출중립 
   assert.equal(neutral.discountRate, 0);
   nearly(neutral.shortTermNetImpactWon, 0, 1e-9);
   assert.ok(neutral.neutralPointWithinRange);
+});
+
+// ── 목표 1회당 편익 역산 ────────────────────────────────────────────
+function solveFor(target: number, solveDiscount: boolean, solveShift: boolean) {
+  return findTargetBenefitSettings(DEFAULT_SIMULATION_INPUT, {
+    targetPerEventBenefitWon: target,
+    solveDiscount,
+    solveShift,
+  });
+}
+
+test("1회당 편익은 기준기간 편익을 발령일수로 나눈 값이다", () => {
+  const result = simulate();
+  const expected = result.customer.annualBenefitPerCustomerWon / result.eventDays;
+  assert.ok(result.eventDays > 0);
+  assert.ok(Math.abs(perEventBenefitWon(DEFAULT_SIMULATION_INPUT) - expected) < 1e-9);
+});
+
+test("두 변수를 모두 조절하면 현재 비율을 유지한 채 목표를 달성한다", () => {
+  const target = Math.round(perEventBenefitWon(DEFAULT_SIMULATION_INPUT) * 1.15);
+  const solution = solveFor(target, true, true);
+  assert.equal(solution.status, "OK");
+  assert.ok(solution.achievedPerEventBenefitWon >= target - 0.5);
+  // 기본 입력은 할인율·수요이전율이 같으므로 해도 같아야 한다.
+  assert.ok(Math.abs(solution.discountRate - solution.shiftRate) < 2e-3);
+});
+
+test("할인율만 조절하면 수요이전율은 현재값으로 고정된다", () => {
+  const target = Math.round(perEventBenefitWon(DEFAULT_SIMULATION_INPUT) * 1.15);
+  const solution = solveFor(target, true, false);
+  assert.equal(solution.status, "OK");
+  assert.equal(solution.shiftRate, DEFAULT_SIMULATION_INPUT.shiftRate);
+  assert.ok(solution.discountRate > DEFAULT_SIMULATION_INPUT.discountRate);
+  assert.ok(solution.achievedPerEventBenefitWon >= target - 0.5);
+});
+
+test("수요이전율만 조절하면 할인율은 현재값으로 고정된다", () => {
+  const target = Math.round(perEventBenefitWon(DEFAULT_SIMULATION_INPUT) * 1.15);
+  const solution = solveFor(target, false, true);
+  assert.equal(solution.status, "OK");
+  assert.equal(solution.discountRate, DEFAULT_SIMULATION_INPUT.discountRate);
+  assert.ok(solution.shiftRate > DEFAULT_SIMULATION_INPUT.shiftRate);
+  assert.ok(solution.achievedPerEventBenefitWon >= target - 0.5);
+});
+
+test("조절 변수를 선택하지 않으면 해를 제시하지 않는다", () => {
+  assert.equal(solveFor(10_000, false, false).status, "NO_VARIABLE");
+});
+
+test("현재 설정이 목표 이상이면 이미 충족으로 알린다", () => {
+  assert.equal(solveFor(1, true, true).status, "ALREADY_MET");
+});
+
+test("100%로도 닿지 않는 목표는 도달 불가로 알린다", () => {
+  const solution = solveFor(1e9, true, true);
+  assert.equal(solution.status, "UNREACHABLE");
+  assert.equal(solution.discountRate, 1);
+  assert.equal(solution.shiftRate, 1);
+  assert.ok(solution.maxReachablePerEventBenefitWon > 0);
+});
+
+test("역산한 할인율을 되먹이면 목표 편익이 재현된다", () => {
+  const target = Math.round(perEventBenefitWon(DEFAULT_SIMULATION_INPUT) * 1.2);
+  const solution = solveFor(target, true, false);
+  const replayed = perEventBenefitWon({
+    ...DEFAULT_SIMULATION_INPUT,
+    discountRate: solution.discountRate,
+    shiftRate: solution.shiftRate,
+  });
+  assert.ok(Math.abs(replayed - solution.achievedPerEventBenefitWon) < 1e-9);
+  assert.ok(replayed >= target - 0.5);
 });
