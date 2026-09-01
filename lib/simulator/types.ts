@@ -106,3 +106,34 @@ export interface SimulationResult {
   grid: GridResult;
   warnings: string[];
 }
+
+/** 목표 1회당 편익 역산에서 조절을 허용할 변수. */
+export interface TargetBenefitSolveOptions {
+  /** 목표로 하는 발령 1회당 고객 편익(원). */
+  targetPerEventBenefitWon: number;
+  /** 할인율을 조절 대상으로 삼을지 여부. */
+  solveDiscount: boolean;
+  /** 수요이전율을 조절 대상으로 삼을지 여부. */
+  solveShift: boolean;
+}
+
+export type TargetBenefitStatus =
+  | "OK"            // 목표 달성 조합을 찾음
+  | "ALREADY_MET"   // 현재 설정이 이미 목표 이상
+  | "UNREACHABLE"   // 선택한 변수를 100%까지 올려도 목표 미달
+  | "NO_VARIABLE"   // 조절할 변수를 하나도 선택하지 않음
+  | "NO_EVENTS";    // 발령일이 없어 1회당 편익 정의 불가
+
+export interface TargetBenefitSolution {
+  status: TargetBenefitStatus;
+  /** 해로 제시하는 할인율(0-1). */
+  discountRate: number;
+  /** 해로 제시하는 수요이전율(0-1). */
+  shiftRate: number;
+  /** 제시한 조합에서의 1회당 편익(원). */
+  achievedPerEventBenefitWon: number;
+  /** 현재 설정에서의 1회당 편익(원). */
+  currentPerEventBenefitWon: number;
+  /** 선택 변수를 최대(100%)로 올렸을 때 도달 가능한 1회당 편익(원). */
+  maxReachablePerEventBenefitWon: number;
+}

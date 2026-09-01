@@ -6,6 +6,8 @@ import type {
   RevenueNeutralDiscountResult,
   SimulationInput,
   SimulationResult,
+  TargetBenefitSolution,
+  TargetBenefitSolveOptions,
 } from "./types";
 import { SELECTABLE_APPLIANCES } from "./appliances";
 import {
@@ -732,5 +734,113 @@ export function findRevenueNeutralDiscount(input: SimulationInput): RevenueNeutr
     discountRate: best.discountRate,
     shortTermNetImpactWon: best.shortTermNetImpactWon,
     neutralPointWithinRange,
+  };
+}
+
+/**
+ * 발령 1회당 고객 편익(원)을 계산한다.
+ * 1회당 편익 = 기준기간 편익 ÷ 발령일수.
+ * 발령일수는 할인율·수요이전율과 무관하므로, 역산 과정에서 분모는 고정된다.
+ */
+export function perEventBenefitWon(input: SimulationInput): number {
+  const result = runSimulation(input);
+  if (!result.eventDays) return 0;
+  return result.customer.annualBenefitPerCustomerWon / result.eventDays;
+}
+
+/**
+ * 목표 1회당 편익을 달성하는 (할인율, 수요이전율) 조합을 찾는다.
+ *
+ * 미지수가 둘이고 식이 하나이므로 해는 하나로 정해지지 않는다.
+ * 따라서 호출자가 조절을 허용할 변수를 지정한다.
+ *  - 한쪽만 허용: 나머지를 현재값으로 고정하고 허용 변수만 이분법으로 탐색
+ *  - 둘 다 허용: 현재 두 값의 비율을 유지한 채 같은 배율로 확대(비율 유지 확대)
+ *                현재 두 값이 모두 0이면 두 변수를 동일한 값으로 함께 올린다
+ *
+ * 편익은 두 변수에 대해 단조증가하므로 이분법으로 안정적으로 수렴한다.
+ */
+export function findTargetBenefitSettings(
+  input: SimulationInput,
+  options: TargetBenefitSolveOptions,
+): TargetBenefitSolution {
+  const { targetPerEventBenefitWon, solveDiscount, solveShift } = options;
+
+  const baseDiscount = input.discountRate;
+  const baseShift = input.shiftRate;
+  const currentPerEvent = perEventBenefitWon(input);
+
+  const baseResult = {
+    discountRate: baseDiscount,
+    shiftRate: baseShift,
+    achievedPerEventBenefitWon: currentPerEvent,
+    currentPerEventBenefitWon: currentPerEvent,
+    maxReachablePerEventBenefitWon: currentPerEvent,
+  };
+
+  if (!runSimulation(input).eventDays) {
+    return { ...baseResult, status: "NO_EVENTS" };
+  }
+  if (!solveDiscount && !solveShift) {
+    return { ...baseResult, status: "NO_VARIABLE" };
+  }
+
+  // 탐색 파라미터 t(0~1)를 실제 (할인율, 수요이전율)로 변환한다.
+  const bothScalable = solveDiscount && solveShift && (baseDiscount > 0 || baseShift > 0);
+  const settingsAt = (t: number): { discountRate: number; shiftRate: number } => {
+    if (solveDiscount && solveShift) {
+      if (bothScalable) {
+        // 현재 비율 유지: 큰 쪽이 100%에 닿는 배율을 상한으로 삼는다.
+        const maxScale = 1 / Math.max(baseDiscount, baseShift);
+        const scale = t * maxScale;
+        return {
+          discountRate: Math.min(1, baseDiscount * scale),
+          shiftRate: Math.min(1, baseShift * scale),
+        };
+      }
+      return { discountRate: t, shiftRate: t };
+    }
+    if (solveDiscount) return { discountRate: t, shiftRate: baseShift };
+    return { discountRate: baseDiscount, shiftRate: t };
+  };
+
+  const benefitAt = (t: number) => perEventBenefitWon({ ...input, ...settingsAt(t) });
+
+  const maxReachable = benefitAt(1);
+  if (targetPerEventBenefitWon > maxReachable) {
+    const at100 = settingsAt(1);
+    return {
+      ...baseResult,
+      ...at100,
+      status: "UNREACHABLE",
+      achievedPerEventBenefitWon: maxReachable,
+      maxReachablePerEventBenefitWon: maxReachable,
+    };
+  }
+  if (targetPerEventBenefitWon <= currentPerEvent) {
+    return { ...baseResult, status: "ALREADY_MET", maxReachablePerEventBenefitWon: maxReachable };
+  }
+
+  // 이분법 탐색 (편익의 단조증가성 이용)
+  let low = 0;
+  let high = 1;
+  for (let i = 0; i < 40; i += 1) {
+    const mid = (low + high) / 2;
+    if (benefitAt(mid) < targetPerEventBenefitWon) low = mid;
+    else high = mid;
+  }
+
+  // 0.1%p 단위로 올림 정렬해 목표를 확실히 충족시킨다.
+  const solved = settingsAt(high);
+  const round = (value: number) => Math.min(1, Math.ceil(value * 1_000) / 1_000);
+  const discountRate = solveDiscount ? round(solved.discountRate) : baseDiscount;
+  const shiftRate = solveShift ? round(solved.shiftRate) : baseShift;
+
+  return {
+    status: "OK",
+    discountRate,
+    shiftRate,
+    achievedPerEventBenefitWon: perEventBenefitWon({ ...input, discountRate, shiftRate }),
+    currentPerEventBenefitWon: currentPerEvent,
+    maxReachablePerEventBenefitWon: maxReachable,
   };
 }
