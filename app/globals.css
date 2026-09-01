@@ -57,11 +57,17 @@ footer{background:#0e2239;color:#aebccb;padding:21px 0}.footer-inner{display:fle
 .site-nav a:hover{color:#e3edf7;background:rgba(255,255,255,.06)}
 .site-nav a.active{color:#fff;background:rgba(95,198,221,.16);box-shadow:inset 0 0 0 1px rgba(95,198,221,.34)}
 .site-nav a:focus-visible{outline:2px solid #5fc6dd;outline-offset:2px}
-.site-home-btn{margin-left:auto;flex:0 0 auto;display:flex;align-items:center;gap:6px;padding:6px 11px;border-radius:8px;color:#9fb4ca;font-size:12px;font-weight:700;letter-spacing:-.01em;text-decoration:none;white-space:nowrap;border:1px solid rgba(255,255,255,.14)}
-.site-home-btn svg{width:15px;height:15px;flex:0 0 auto}
-.site-home-btn:hover{color:#e3edf7;background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.22)}
-.site-home-btn:focus-visible{outline:2px solid #5fc6dd;outline-offset:2px}
-@media(max-width:640px){.site-home-btn span{display:none}.site-home-btn{padding:7px;border-radius:8px}}
+/* .site-home-btn도 .site-nav 안의 <a> 태그라서, 위의 ".site-nav a"(클래스 1개 + 태그 1개
+   = 명시도 0,1,1)가 이 규칙(".site-home-btn" 단독, 명시도 0,1,0)보다 명시도가 더 높아
+   display 등 겹치는 속성에서 이 규칙을 조용히 덮어써 버렸다 — 그 결과 버튼이
+   display:flex가 아니라 display:block으로 깨져서 아이콘·글자가 gap/정렬 없이
+   제각각 배치되며 두 줄로 보이는 원인이 됐다. ".site-nav .site-home-btn"으로 선택자를
+   바꿔 명시도를 0,2,0으로 올려 확실히 이기도록 한다. */
+.site-nav .site-home-btn{margin-left:auto;flex:0 0 auto;display:flex;align-items:center;gap:6px;padding:6px 11px;border-radius:8px;color:#9fb4ca;font-size:12px;font-weight:700;letter-spacing:-.01em;text-decoration:none;white-space:nowrap;border:1px solid rgba(255,255,255,.14)}
+.site-nav .site-home-btn svg{width:15px;height:15px;flex:0 0 auto}
+.site-nav .site-home-btn:hover{color:#e3edf7;background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.22)}
+.site-nav .site-home-btn:focus-visible{outline:2px solid #5fc6dd;outline-offset:2px}
+@media(max-width:640px){.site-nav .site-home-btn span{display:none}.site-nav .site-home-btn{padding:7px;border-radius:8px}}
 
 /* 바닐라 시뮬레이터 프레임 (1단계 편입 방식) */
 .sim-host{display:block;background:var(--canvas)}
