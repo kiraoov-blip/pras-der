@@ -187,6 +187,17 @@ export default function Home() {
     if (solveDiscount) setDiscount(Number((targetSolution.discountRate * 100).toFixed(1)));
     if (solveShift) setShiftRate(Number((targetSolution.shiftRate * 100).toFixed(1)));
   };
+
+  // 목표 편익 역산 영역만 기본 상태로 되돌린다.
+  // (할인율·수요이전율 50%, 목표는 현재 1회당 편익, 두 변수 모두 조절 허용)
+  const resetTargetSolver = () => {
+    setDiscount(50);
+    setShiftRate(50);
+    setTargetPerEvent(null);
+    setSolveDiscount(true);
+    setSolveShift(true);
+    setNeutralDiscountResult(null);
+  };
   const compactChart = chartWidth < 520;
   const lineChart = {
     width: chartWidth,
@@ -258,6 +269,7 @@ export default function Home() {
     setWeekendPriority(true); setEventMode("ACTUAL"); setSmpThreshold(0);
     setStartHour(10); setEndHour(16);
     setNeutralDiscountResult(null);
+    setTargetPerEvent(null); setSolveDiscount(true); setSolveShift(true);
   };
 
   const changeCustomerType = (value: CustomerType) => {
@@ -484,7 +496,10 @@ export default function Home() {
           </div>
           <div className="target-solver-output">
             <p className={`target-message ${targetSolution.status.toLowerCase()}`}>{targetMessage}</p>
-            <button type="button" onClick={applyTargetSolution} disabled={targetSolution.status !== "OK"}>이 조합 적용</button>
+            <div className="target-solver-actions">
+              <button type="button" onClick={applyTargetSolution} disabled={targetSolution.status !== "OK"}>이 조합 적용</button>
+              <button type="button" className="secondary" onClick={resetTargetSolver} title="할인율·수요이전율을 50%로 되돌리고 목표 편익을 현재값으로 초기화합니다">기본값으로 초기화</button>
+            </div>
           </div>
         </section>
 
