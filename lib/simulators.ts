@@ -39,8 +39,8 @@ export const SIMULATORS: readonly Simulator[] = [
   {
     href: "/ev",
     short: "전기차",
-    tag: "Electric Vehicle",
-    name: "전기차 충전",
+    tag: "EVC/V2G",
+    name: "전기차 충전·V2G",
     desc: "충전요금 할인과 부하이전 효과",
     icon: "ev",
   },
