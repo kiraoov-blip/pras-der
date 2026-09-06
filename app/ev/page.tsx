@@ -4,5 +4,5 @@ import SimFrame from "../sim-frame";
 // 라우트별 metadata.title 을 두면 루트 제목을 덮어쓰므로 선언하지 않는다.
 
 export default function Page() {
-  return <SimFrame slug="ev" title="전기차 충전요금 분석 시뮬레이터" />;
+  return <SimFrame slug="ev" title="전기차 충전 및 V2G 요금 분석 시뮬레이터" />;
 }
