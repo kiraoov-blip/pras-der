@@ -188,9 +188,9 @@ small.cur{font-size:11px;color:#9489a8;font-weight:700;margin-left:2px}
 .rrow.base .nm,.rrow.cmp .nm{font-weight:800;color:var(--navy)}
 .rrow.base{background:#efe6ff}
 .rrow.agg .nm{color:#6a5c82;font-style:italic}
-.rrow.agg .fill{background:transparent;border:1.5px dashed var(--bar-hi);border-left:0}
+.rrow.agg .fill{background:var(--bar)}
 .rrow.gavg .nm{font-weight:800;color:var(--navy)}
-.rrow.gavg .fill{background:transparent;border:2px solid var(--navy);border-left:0}
+.rrow.gavg .fill{background:var(--bar)}
 .rrow.out .nm{color:#57496e}
 .pc{font-variant-numeric:tabular-nums;text-align:right;color:#867a9b;font-size:13px;font-weight:600}
 .pc.hi{color:var(--navy);font-weight:800}
@@ -222,14 +222,16 @@ small.cur{font-size:11px;color:#9489a8;font-weight:700;margin-left:2px}
 .brow .fill{position:absolute;left:0;top:0;bottom:0;border-radius:0 5px 5px 0}
 .brow .amt{text-align:right;font-variant-numeric:tabular-nums;font-weight:800;color:var(--navy);font-size:14px}
 .brow .dif{text-align:right;font-variant-numeric:tabular-nums;font-size:12.5px;font-weight:700}
-@media(max-width:640px){.brow{grid-template-columns:90px minmax(0,1fr) 100px}.brow .dif{display:none}}
+@media(max-width:640px){.brow{grid-template-columns:90px minmax(0,1fr) 100px}.brow .dif{display:none}
+  th{top:calc(48px + env(safe-area-inset-top,0px))}}
 
 .tbl-wrap{overflow-x:auto;border:1px solid #e6ddf4;border-radius:12px}
-.tbl-scroll{max-height:560px;overflow:auto}
-table{border-collapse:collapse;width:100%;min-width:1180px;font-size:13px}
-th,td{padding:8px 10px;border-bottom:1px solid #efe9f8;text-align:right;white-space:nowrap}
+.tbl-scroll{overflow:visible}
+table{border-collapse:collapse;width:100%;min-width:980px;font-size:13px}
+td:nth-child(2){white-space:normal;line-height:1.35;color:#6a5c82;font-size:12px}
+th,td{padding:7px 9px;border-bottom:1px solid #efe9f8;text-align:right;white-space:nowrap}
 th:first-child,td:first-child,th:nth-child(2),td:nth-child(2),td:last-child,th:last-child{text-align:left}
-th{background:#f6f1fd;font-weight:750;color:#6a5c82;position:sticky;top:0;cursor:pointer;user-select:none;font-size:12px;z-index:1}
+th{background:#f6f1fd;font-weight:750;color:#6a5c82;position:sticky;top:calc(52px + env(safe-area-inset-top,0px));cursor:pointer;user-select:none;font-size:12px;z-index:1;white-space:normal;line-height:1.3;vertical-align:bottom}
 th[aria-sort] .ar::after{content:"↕";color:#c3b6da;margin-left:4px}
 th[aria-sort=ascending] .ar::after{content:"▲";color:var(--blue)}
 th[aria-sort=descending] .ar::after{content:"▼";color:var(--blue)}
@@ -466,7 +468,7 @@ footer{background:#1d0944;color:#cbb8ee;padding:21px 0}
                 <p class="note">대각선 위쪽은 주택용이 산업용보다 비싼 국가, 아래쪽은 산업용이 더 비싼 국가입니다.</p>
               </div>
               <div>
-                <p class="sub-h">주택용 ÷ 산업용 단가 비율</p>
+                <p class="sub-h">산업용 대비 주택용 단가 비율</p>
                 <div id="ratio" class="bill"></div>
                 <div class="na-list" id="mixNA"></div>
               </div>
@@ -866,7 +868,7 @@ function renderKPI(){
   const bill=p?p.u*use*(S.unit==='USDM'?1/1000:1):null;
   K.push({k:`월 요금 (${use.toLocaleString('ko-KR')} kWh)`,v:bill!=null?fmtMoney(bill,p&&p.cur):'–',n:'단가 × 사용량 단순 계산'});
   const pr=sec==='R'?p:other, pi=sec==='R'?other:p;
-  K.push({k:'주택용 ÷ 산업용',v:pr&&pi?`${(pr.u/pi.u).toFixed(2)}<small>배</small>`:'–',n:pr&&pi?`${esc(ko(b))} 기준 (같은 통화 단가 비교)`:`${esc(ko(b))} ${!pi?'산업용':'주택용'} 자료 없음`});
+  K.push({k:'산업용 대비 주택용',v:pr&&pi?`${(pr.u/pi.u).toFixed(2)}<small>배</small>`:'–',n:pr&&pi?`${esc(ko(b))} 기준 (같은 통화 단가 비교)`:`${esc(ko(b))} ${!pi?'산업용':'주택용'} 자료 없음`});
   const li=list.filter(x=>!x.out);
   if(li.length){const hi=li[0],lo=li[li.length-1];K.push({k:`${NCM()?'최대 상승 · 최대 하락':'최고 · 최저'} (${esc(groupLabel())})`,v:`<span style="font-size:18px;display:flex;flex-wrap:wrap;gap:2px 8px">${nm(hi.iso)}${nm(lo.iso)}</span>`,n:NCM()?`${cmpFmt(hi.cv)} · ${cmpFmt(lo.cv)} (${cmpName()})`:`${fmt(hi.p.u)} · ${fmt(lo.p.u)} ${U}`})}
   $('#kpis').innerHTML=K.map(x=>`<div class="kpi${x.lead?' lead':''}"><div class="k">${x.k}</div><div class="v">${x.v}</div><div class="n">${x.n}</div></div>`).join('');
@@ -1037,7 +1039,7 @@ function renderScatter(){
   const list=viewList(), mset=memberSet();
   const pts=list.map(c=>{const r=price('R',c.iso),i=price('I',c.iso);return r&&i?{iso:c.iso,r,i,out:!mset.has(c.iso)}:null}).filter(Boolean);
   extraIds().forEach(a=>{const r=price('R',a),i=price('I',a);if(r&&i)pts.push({iso:a,r,i,agg:1})});
-  EXP.mix={name:`주택산업분포_${PS(S.year)}`,head:['국가','ISO',`주택용(${U})`,`산업용 세금제외(${U})`,'주택÷산업(USD 기준)','주택 자료시점','산업 자료시점','비고'],
+  EXP.mix={name:`주택산업분포_${PS(S.year)}`,head:['국가','ISO',`주택용(${U})`,`산업용 세금제외(${U})`,'산업용 대비 주택용','주택 자료시점','산업 자료시점','비고'],
     rows:pts.map(p=>[ko(p.iso),p.iso===AVG?'':p.iso,rnd(p.r.u),rnd(p.i.u),(p.r.usd/p.i.usd).toFixed(3),p.r.avg?'':PS(p.r.yr),p.i.avg?'':PS(p.i.yr),p.iso===AVG?'그룹 단순평균':p.agg?'IEA 권역':p.out?'그룹 외(기준)':''])};
   const noI=groupMembers().filter(c=>price('R',c.iso)&&!price('I',c.iso));
   $('#mixDesc').textContent=`${PL(S.year)} · ${groupLabel()} ${pts.filter(p=>!p.agg&&!p.out).length}개국 · 가로축 산업용(세금 제외), 세로축 주택용(세금 포함) · ${U}`;
@@ -1060,8 +1062,7 @@ function renderScatter(){
   hiL.forEach(({p,k,col})=>{
     const cx=x(p.i.u),cy=y(p.r.u);
     const lab=esc(ko(p.iso)); const f=flagSrc(p.iso);
-    if(p.iso===AVG) s+=`<rect data-k="${k}" x="${cx-6}" y="${cy-6}" width="12" height="12" transform="rotate(45 ${cx} ${cy})" fill="${tok('--ink')}"/>`;
-    else if(p.agg) s+=`<rect data-k="${k}" x="${cx-5}" y="${cy-5}" width="10" height="10" transform="rotate(45 ${cx} ${cy})" fill="${tok('--surface')}" stroke="${tok('--ink-2')}" stroke-width="1.5"/>`;
+    if(p.agg) s+=`<circle data-k="${k}" cx="${cx}" cy="${cy}" r="5.5" fill="${tok('--bar-hi')}"/>`;
     else if(f) s+=`<rect x="${cx-12}" y="${cy-9}" width="24" height="18" rx="3" fill="${col||tok('--surface')}"/><image data-k="${k}" href="${f}" x="${cx-10}" y="${cy-7.5}" width="20" height="15"/>`;
     else s+=`<circle data-k="${k}" cx="${cx}" cy="${cy}" r="${p.iso===S.base?7:5.5}" fill="${col||tok('--bar-hi')}" stroke="${tok('--surface')}" stroke-width="2"/>`;
     const right=cx<W-90;
@@ -1071,14 +1072,14 @@ function renderScatter(){
   box.innerHTML=s;
   box.querySelectorAll('[data-k]').forEach(el=>{const p=pts[+el.dataset.k];
     el.style.cursor='pointer';
-    el.addEventListener('mousemove',e=>showTip(e,tipHead(p.iso)+`<div class="r"><span>주택용</span><b>${fmt(p.r.u)}</b></div><div class="r"><span>산업용</span><b>${fmt(p.i.u)}</b></div><div class="r"><span>주택÷산업</span><span>${(p.r.usd/p.i.usd).toFixed(2)}배</span></div>${p.r.avg?`<div class="r"><span>산정</span><span>단순평균</span></div>`:`<div class="r"><span>자료 시점 (주택 / 산업)</span><span>${PS(p.r.yr)} / ${PS(p.i.yr)}</span></div><div class="r"><span>${esc(refName())} 대비 (주택 / 산업)</span><span>${[pct(p.r,refPrice('R')),pct(p.i,refPrice('I'))].map(v=>v!=null?v.toFixed(0)+'%':'–').join(' / ')}</span></div>`}${p.out?'<div style="color:var(--muted)">그룹 외 · 참고 표시</div>':''}<div style="color:var(--muted);margin-top:4px">${esc(U)}</div>`));
+    el.addEventListener('mousemove',e=>showTip(e,tipHead(p.iso)+`<div class="r"><span>주택용</span><b>${fmt(p.r.u)}</b></div><div class="r"><span>산업용</span><b>${fmt(p.i.u)}</b></div><div class="r"><span>산업용 대비 주택용</span><span>${(p.r.usd/p.i.usd).toFixed(2)}배</span></div>${p.r.avg?`<div class="r"><span>산정</span><span>단순평균</span></div>`:`<div class="r"><span>자료 시점 (주택 / 산업)</span><span>${PS(p.r.yr)} / ${PS(p.i.yr)}</span></div><div class="r"><span>${esc(refName())} 대비 (주택 / 산업)</span><span>${[pct(p.r,refPrice('R')),pct(p.i,refPrice('I'))].map(v=>v!=null?v.toFixed(0)+'%':'–').join(' / ')}</span></div>`}${p.out?'<div style="color:var(--muted)">그룹 외 · 참고 표시</div>':''}<div style="color:var(--muted);margin-top:4px">${esc(U)}</div>`));
     el.addEventListener('mouseleave',hideTip);
   });
   const ids=[S.base,...S.compare,...extraIds()];
   const rows=ids.map(i=>{const r=price('R',i),n=price('I',i);return {iso:i,r,n,ratio:r&&n?r.usd/n.usd:null}});
   const rmax=Math.max(2,...rows.map(r=>r.ratio||0));
   $('#ratio').innerHTML=rows.map(o=>{const col=colorOf(o.iso)||tok('--bar-hi');const agg=isAgg(o.iso);
-    const fillStyle=o.iso===AVG?`background:transparent;border:2px solid ${tok('--ink')};border-left:0`:agg?`background:transparent;border:1.5px dashed ${tok('--bar-hi')};border-left:0`:`background:${col}`;
+    const fillStyle=`background:${agg?tok('--bar'):col}`;
     return `<div class="brow" style="grid-template-columns:minmax(96px,150px) 1fr 64px"><span class="nm" style="${agg&&o.iso!==AVG?'font-weight:400;color:var(--ink-2)':''}">${nm(o.iso)}</span>
     <span class="track">${o.ratio?`<span class="fill" style="width:${o.ratio/rmax*100}%;${fillStyle}"></span><span class="vline" style="left:${1/rmax*100}%"></span>`:naPill('I')}</span>
     <span class="amt">${o.ratio?o.ratio.toFixed(2)+'배':'–'}</span></div>`}).join('')+`<p class="note" style="margin:2px 0 0">점선 = 1.0배 (주택용과 산업용 단가가 같음)</p>`;
@@ -1101,7 +1102,7 @@ function renderBill(){
   $('#billDesc').textContent=`${SECN[sec]} · ${use.toLocaleString('ko-KR')} kWh/월 · ${per===12?'연간 (×12)':'월'} · ${PL(S.year)} 단가 · ${S.unit==='KRW'?'원화':NCM()?'각국 통화 (막대 없이 금액만, 오른쪽은 '+cmpName()+')':'USD'} 기준 · 그룹: ${groupLabel()}`;
   $('#bill').innerHTML=rows.map((r,k)=>{const agg=isAgg(r.iso);const col=colorOf(r.iso);
     const d=r.amt!=null&&base!=null&&k>0?(r.amt-base)/base*100:null;
-    const fillStyle=r.iso===AVG?`border:2px solid ${tok('--ink')};border-left:0`:agg?`border:1.5px dashed ${tok('--bar-hi')};border-left:0`:`background:${col}`;
+    const fillStyle=`background:${agg?tok('--bar'):col}`;
     return `<div class="brow"><span class="nm" style="${agg&&r.iso!==AVG?'font-weight:400;color:var(--ink-2)':''}">${nm(r.iso)}</span>
       <span class="track">${r.amt!=null&&!NCM()?`<span class="fill" style="width:${r.amt/mx*100}%;${fillStyle}"></span>`:r.amt!=null?'':naPill(sec)}</span>
       <span class="amt">${r.amt!=null?fmtMoney(r.amt,r.p.cur):'–'} ${badge(r.p)}</span>
@@ -1126,7 +1127,7 @@ function renderTable(){
   const {k,d}=S.tsort;
   rows.sort((a,b)=>{const A=a[k],B=b[k];if(A==null&&B==null)return 0;if(A==null)return 1;if(B==null)return -1;return (typeof A==='string'?A.localeCompare(B,'ko'):A-B)*d});
   tableRows=rows;
-  const cols=[['name','국가'],['grp','구분'],['R',`주택용 (${U})`],['yR','주택 자료시점'],['I',`산업용 (${U})`],['yI','산업 자료시점'],['ratio','주택÷산업'],['vR',`주택 ${cmpName()}`],['vI',`산업 ${cmpName()}`],['nc','자국통화/kWh (주택 · 산업)'],['note','자료 성격 · 비고']];
+  const cols=[['name','국가'],['grp','구분'],['R',`주택용 (${U})`],['yR','주택 자료시점'],['I',`산업용 (${U})`],['yI','산업 자료시점'],['ratio','산업용 대비 주택용'],['vR',`주택 ${cmpName()}`],['vI',`산업 ${cmpName()}`],...(NCM()?[['nc','자국통화/kWh (주택 · 산업)']]:[]),['note','자료 성격 · 비고']];
   $('#tbl thead').innerHTML='<tr>'+cols.map(([key,l])=>`<th data-k="${key}" ${['nc','note'].includes(key)?'':`aria-sort="${S.tsort.k===key?(S.tsort.d>0?'ascending':'descending'):'none'}"`}>${esc(l)}<span class="ar"></span></th>`).join('')+'</tr>';
   const yc=p=>!p||p.avg?'–':p.sub?`<span class="pill sub" title="${PL(y)} 자료 없음">${PS(p.yr)}</span>`:`${PS(p.yr)}`;
   const ncf=p=>p?(p.v/1000).toLocaleString('ko-KR',{maximumFractionDigits:p.v/1000<10?3:1}):'–';
@@ -1140,12 +1141,12 @@ function renderTable(){
     return `<tr class="${x.iso===S.base?'base':''}"><td>${italic?'<i>'+nm(x.iso)+'</i>':nm(x.iso)}</td><td style="color:var(--ink-2)">${esc(x.grp)}</td>
     <td>${x.r?fmt(x.r.u)+(NCM()?` <small class="cur">${x.r.cur}</small>`:''):'–'}</td><td>${yc(x.r)}</td><td>${x.i?fmt(x.i.u)+(NCM()?` <small class="cur">${x.i.cur}</small>`:''):'–'}</td><td>${yc(x.i)}</td><td>${x.ratio?x.ratio.toFixed(2):'–'}</td>
     <td class="pc ${pcCls(x.vR)}">${cmpFmt(x.vR)}</td><td class="pc ${pcCls(x.vI)}">${cmpFmt(x.vI)}</td>
-    <td>${italic?'–':`${ncf(x.rn)} · ${ncf(x.inc)} <span style="color:var(--muted)">${x.c.cur}</span>`}</td><td>${notes.join(' ')}</td></tr>`}).join('');
+    ${NCM()?`<td>${italic?'–':`${ncf(x.rn)} · ${ncf(x.inc)} <span style="color:var(--muted)">${x.c.cur}</span>`}</td>`:''}<td>${notes.join(' ')}</td></tr>`}).join('');
   $('#dataDesc').textContent=`${PL(y)} 기준 · % 기준 ${cmpName()} · ${groupLabel()} · ${rows.length}행 · 머리글을 누르면 정렬됩니다. 자료시점이 분홍색 시점 배지이면 ${PL(y)} 자료가 없어 그 시점 값을 쓴 것입니다.`;
 }
 function tableData(){
   const U=UL[S.unit];
-  const head=['국가','영문명','ISO','구분',`주택용(${U})`,'주택용 자료시점','주택용 자료성격',`산업용 세금제외(${U})`,'산업용 자료시점','산업용 자료성격','주택÷산업',`주택 ${cmpName()}(%)`,`산업 ${cmpName()}(%)`,'통화','주택용 자국통화/kWh','산업용 자국통화/kWh'];
+  const head=['국가','영문명','ISO','구분',`주택용(${U})`,'주택용 자료시점','주택용 자료성격',`산업용 세금제외(${U})`,'산업용 자료시점','산업용 자료성격','산업용 대비 주택용',`주택 ${cmpName()}(%)`,`산업 ${cmpName()}(%)`,'통화','주택용 자국통화/kWh','산업용 자국통화/kWh'];
   const q=p=>p?(p.avg?'단순평균':QL[p.q]||''):'';
   const body=tableRows.map(x=>[x.c.ko,x.c.en,x.iso===AVG?'':x.iso,x.grp,x.r?rnd(x.r.u):'',x.yR?PS(x.yR):'',q(x.r),x.i?rnd(x.i.u):'자료 없음',x.yI?PS(x.yI):'',q(x.i),x.ratio?rnd(x.ratio):'',x.vR!=null?+x.vR.toFixed(2):'',x.vI!=null?+x.vI.toFixed(2):'',x.c.cur,x.rn?rnd(x.rn.v/1000):'',x.inc?rnd(x.inc.v/1000):'']);
   return {name:`국가별데이터_${PS(S.year)}_${groupLabel()}`,head,rows:body};
