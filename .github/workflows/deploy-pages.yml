@@ -1,4 +1,4 @@
-name: Deploy PRAS-DER + PRAS-TOU + CARE-Jeju Hub to GitHub Pages
+name: Deploy PRAS-DER + PRAS-TOU + CARE-Jeju + IEA Hub to GitHub Pages
 
 # 이 워크플로는 이제 pras-der 저장소 하나가 simulator-kepco.co.kr 커스텀 도메인
 # 전체를 조립해서 배포한다:
@@ -6,6 +6,7 @@ name: Deploy PRAS-DER + PRAS-TOU + CARE-Jeju Hub to GitHub Pages
 #   /pras/**     → 이 저장소의 Next.js 앱 (output: "export", basePath=/pras)
 #   /tou/**      → kiraoov-blip/pras-tou 저장소를 체크아웃해서 그대로 복사(빌드 불필요)
 #   /care/**     → kiraoov-blip/care 저장소를 체크아웃해서 그 자리에서 빌드한 결과
+#   /iea-price/** → 이 저장소의 iea-price/ 폴더(정적 HTML 한 장 + 폰트·데이터 내장, 빌드 불필요)
 #
 # GitHub Pages 커스텀 도메인은 저장소 하나에만 붙기 때문에, 여러 제품을 한 도메인
 # 아래 서로 다른 경로로 보여주려면 이렇게 여러 저장소를 이 워크플로 안에서 함께
@@ -29,7 +30,7 @@ concurrency:
 
 jobs:
   build:
-    name: 정적 빌드 (허브 + pras + tou + care)
+    name: 정적 빌드 (허브 + pras + tou + care + iea-price)
     runs-on: ubuntu-latest
 
     steps:
@@ -112,6 +113,9 @@ jobs:
           cp -r tou-src public-root/tou
           rm -rf public-root/tou/.git
           cp -r care-src/site public-root/care
+          # iea-price는 빌드 산출물이 아니라 이 저장소에 그대로 커밋된 정적 폴더다
+          # (index.html 한 장 + favicon + vendor 스크립트). 그대로 복사만 하면 된다.
+          cp -r iea-price public-root/iea-price
 
       - name: Upload GitHub Pages artifact
         uses: actions/upload-pages-artifact@v4
