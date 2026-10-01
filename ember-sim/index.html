@@ -268,6 +268,11 @@ input[type=range]{height:28px}
 @media(max-width:980px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:520px){.kpis{grid-template-columns:minmax(0,1fr)}}
 @media(min-width:1101px){.grid-in.top{grid-template-columns:repeat(6,minmax(0,1fr));gap:18px 12px}}
+@media(min-width:641px){.brow.mx{grid-template-columns:minmax(110px,170px) minmax(0,1fr) 78px 92px}}
+@media(max-width:640px){.brow.mx{grid-template-columns:minmax(0,1fr) 88px 78px;grid-template-areas:"nm amt dif" "tr tr tr";gap:5px 12px;padding:6px 0}
+.brow.mx .nm{grid-area:nm}.brow.mx .amt{grid-area:amt}.brow.mx .dif{grid-area:dif;display:block}.brow.mx .track{grid-area:tr}
+.brow.mx .amt::before,.brow.mx .dif::before{content:attr(data-l);font-size:11px;font-weight:600;color:var(--ink-2);margin-right:2px}
+.brow.mx .amt{font-size:13px}.brow.mx .dif{font-size:12.5px;color:var(--navy)}.brow.mx.mxh{display:none}}
 #scnKpis{grid-template-columns:repeat(auto-fit,minmax(185px,1fr))}
 </style>
 <style>
@@ -1141,11 +1146,11 @@ function renderMix(){
   EXP.mix={name:`전원믹스_${S.year}`,head:['국가','ISO','총 발전량(TWh)',...MIXSRC.map(s=>`${SRCN[s]} 비중(%)`),'무탄소 비중(%)','배출계수(gCO2e/kWh)','자료연도'],
     rows:rows.filter(r=>r.mx).map(r=>[ko(r.iso),isAgg(r.iso)?'':r.iso,rnd(r.mx.t),...MIXSRC.map(s=>+shareOf(r.mx,s).toFixed(2)),+cleanOf(r.mx).toFixed(2),intOf(r.mx)!=null?+intOf(r.mx).toFixed(1):'',r.mx.avg?'':r.mx.yr])};
   $('#mixBars').innerHTML=rows.map(r=>{const agg=isAgg(r.iso);
-    return `<div class="brow" style="grid-template-columns:minmax(110px,170px) minmax(0,1fr) 78px 92px"><span class="nm" style="${agg&&r.iso!==AVG?'font-weight:400;color:var(--ink-2)':''}">${nm(r.iso)}</span>
+    return `<div class="brow mx"><span class="nm" style="${agg&&r.iso!==AVG?'font-weight:400;color:var(--ink-2)':''}">${nm(r.iso)}</span>
     <span class="track" style="height:24px">${r.mx?mixBar(r.mx):naPill}</span>
-    <span class="amt" title="무탄소 비중">${r.mx?cleanOf(r.mx).toFixed(0)+'%':'–'}</span>
-    <span class="dif" title="배출계수 (gCO2e/kWh)">${r.mx&&intOf(r.mx)!=null?Math.round(intOf(r.mx))+' g':''}</span></div>`}).join('')
-    +`<div class="brow" style="grid-template-columns:minmax(110px,170px) minmax(0,1fr) 78px 92px;margin-top:-2px"><span></span><span class="hint">전원별 비중 (%)</span><span class="hint" style="text-align:right">무탄소</span><span class="hint" style="text-align:right">배출계수</span></div>`;
+    <span class="amt" data-l="무탄소 " title="무탄소 비중">${r.mx?cleanOf(r.mx).toFixed(0)+'%':'–'}</span>
+    <span class="dif" data-l="배출 " title="배출계수 (gCO2e/kWh)">${r.mx&&intOf(r.mx)!=null?Math.round(intOf(r.mx))+' g':''}</span></div>`}).join('')
+    +`<div class="brow mx mxh" style="margin-top:-2px"><span></span><span class="hint">전원별 비중 (%)</span><span class="hint" style="text-align:right">무탄소</span><span class="hint" style="text-align:right">배출계수</span></div>`;
   $$('#mixBars .mxbar span').forEach(el=>{el.addEventListener('mousemove',e=>showTip(e,`<div class="t">${SRCN[el.dataset.s]}</div><div class="r"><span>비중</span><b>${el.dataset.v}%</b></div>`));el.addEventListener('mouseleave',hideTip)});
 }
 
@@ -1198,7 +1203,7 @@ function renderScn(light){
   ];
   $('#scnKpis').innerHTML=K.map(x=>`<div class="kpi${x.lead?' lead':''}"><div class="k">${x.k}</div><div class="v">${x.v}</div><div class="n">${x.n}</div></div>`).join('');
   const before={g:mx.g,t:mx.t,e:mx.e}, after={g:g1,t:G1,e:E1};
-  const bar=(lab,m2)=>`<div class="brow" style="grid-template-columns:minmax(110px,170px) minmax(0,1fr) 78px 92px"><span class="nm">${lab}</span><span class="track" style="height:24px">${mixBar(m2)}</span><span class="amt">${cleanOf(m2).toFixed(0)}%</span><span class="dif">${Math.round(intOf(m2))} g</span></div>`;
+  const bar=(lab,m2)=>`<div class="brow mx"><span class="nm">${lab}</span><span class="track" style="height:24px">${mixBar(m2)}</span><span class="amt" data-l="무탄소 ">${cleanOf(m2).toFixed(0)}%</span><span class="dif" data-l="배출 ">${Math.round(intOf(m2))} g</span></div>`;
   $('#scnBars').innerHTML=`<div class="legend">${MIXSRC.map(s=>`<span><i style="background:${MIXCOL[s]};height:10px;width:10px;border-radius:3px"></i>${SRCN[s]}</span>`).join('')}</div>`
     +bar(nm(b)+' <span class="pill na">현재</span>',before)+bar(nm(b)+' <span class="pill ok">전환 후</span>',after);
   $$('#scnBars .mxbar span').forEach(el=>{el.addEventListener('mousemove',e=>showTip(e,`<div class="t">${SRCN[el.dataset.s]}</div><div class="r"><span>비중</span><b>${el.dataset.v}%</b></div>`));el.addEventListener('mouseleave',hideTip)});
