@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>요금분석 시뮬레이터</title>
-<meta name="description" content="에너지 시뮬레이터 모음 — 분산에너지자원 요금·편익 분석(PRAS-DER), 계시별 요금제 수익 분석(PRAS-TOU), TOU 고객 요금·에너지관리(CARE-Jeju), 국가별 전기요금 비교(IEA Prices and Taxes)">
+<meta name="description" content="에너지 시뮬레이터 모음 — 분산에너지자원 요금·편익 분석(PRAS-DER), 계시별 요금제 수익 분석(PRAS-TOU), TOU 고객 요금·에너지관리(CARE-Jeju), 국가별 전기요금 비교(IEA Prices and Taxes), 국가별 발전·설비·배출 비교(EMBER Electricity)">
 <!-- 이전에는 PRAS-DER의 파란 파비콘(/pras/favicon.svg)을 허브도 그대로 썼는데,
      그러면 브라우저 탭에서 허브와 PRAS-DER가 똑같은 파란 아이콘으로 보여
      구분이 안 됐다. 허브 전용 회색 계열 파비콘을 새로 만들어(hub/favicon.svg,
@@ -49,6 +49,10 @@
     /* IEA Prices and Taxes 카드 전용 로컬 토큰 — 시뮬레이터 본체와 같은 보라 계열.
        PRAS-DER(파랑)·PRAS-TOU(세이지)·CARE-Jeju(주황)와 뚜렷이 구분된다. */
     --iea-brand:#6526c9; --iea-brand-dark:#4a1a99; --iea-brand-soft:#efe6ff; --iea-brand-line:#d9cdee;
+    /* EMBER Electricity 카드 전용 로컬 토큰 — 시뮬레이터 본체와 같은 옅은 그레이 + 와인 포인트.
+       카드 면은 아주 연한 와인 톤, 글자·호버 포인트만 와인색을 써서
+       PRAS-DER(파랑)·PRAS-TOU(세이지)·CARE-Jeju(주황)·IEA(보라)와 구분된다. */
+    --ember-brand:#9f1239; --ember-brand-dark:#881337; --ember-brand-soft:#f8eef1; --ember-brand-line:#e8c4cd;
   }
   * { box-sizing:border-box; }
   html { background:var(--canvas); -webkit-text-size-adjust:100%; text-size-adjust:100%; }
@@ -74,13 +78,16 @@
   .workspace { padding:36px 0 8px; flex:1 0 auto; }
   .landing-intro { margin:0 0 22px; display:grid; gap:6px; }
   .landing-intro p { margin:0; color:var(--blue); font-size:10px; font-weight:800; letter-spacing:.1em; }
-  .landing-intro span { color:#68768a; font-size:13px; line-height:1.65; white-space:nowrap; }
+  /* 소개 문장이 길어져(EMBER 설명 추가) 한 줄에 고정하면 1250px 이하에서 잘린다 — 줄바꿈 허용 */
+  .landing-intro span { color:#68768a; font-size:13px; line-height:1.65; white-space:normal; word-break:keep-all; max-width:1100px; }
 
   /* 카드가 2개에서 3개(PRAS-DER·PRAS-TOU·CARE-Jeju)로 늘어 데스크톱 기준
      3열로 배치한다. 화면이 좁아지면(아래 @media) 1열로 자연스럽게 쌓인다. */
   /* 카드가 4개(PRAS-DER·PRAS-TOU·CARE-Jeju·IEA Prices and Taxes)로 늘었다.
      1480px 컨테이너에서 4열(카드 폭 ~345px), 1250px 아래에서 2열, 820px 아래에서 1열. */
-  .landing-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:16px; }
+  /* 카드가 5개(+ EMBER Electricity)로 늘어 4열이면 마지막 줄에 1개만 남는다.
+     데스크톱은 3열(3+2)로 배치하고, 1250px 아래에서 2열, 820px 아래에서 1열로 쌓는다. */
+  .landing-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; }
   .landing-card {
     display:grid; gap:9px; align-content:start; background:var(--surface); border:1px solid var(--line);
     border-radius:18px; box-shadow:0 3px 12px rgba(24,45,72,.025); padding:26px;
@@ -118,6 +125,13 @@
   .landing-card.iea:hover { border-color:#b49ae8; box-shadow:0 6px 20px rgba(74,26,153,.1); }
   .landing-card.iea:hover .landing-card-icon { background:var(--iea-brand); color:#fff; border-color:var(--iea-brand); }
   .landing-card.iea .landing-card-go { color:var(--iea-brand-dark); }
+
+  /* EMBER 카드: 브랜드색만 로컬로 덮어씀(구조·spacing은 동일, 옅은 그레이 + 와인 포인트) */
+  .landing-card.ember .landing-card-tag { background:var(--ember-brand-soft); color:var(--ember-brand-dark); }
+  .landing-card.ember .landing-card-icon { background:var(--ember-brand-soft); color:var(--ember-brand-dark); border-color:var(--ember-brand-line); }
+  .landing-card.ember:hover { border-color:#d9a9b6; box-shadow:0 6px 20px rgba(159,18,57,.1); }
+  .landing-card.ember:hover .landing-card-icon { background:var(--ember-brand); color:#fff; border-color:var(--ember-brand); }
+  .landing-card.ember .landing-card-go { color:var(--ember-brand-dark); }
 
   /* PRAS-TOU 카드: 브랜드색만 로컬로 덮어씀(구조·spacing은 동일, 파스텔 회색+초록) */
   .landing-card.tou .landing-card-tag { background:var(--tou-brand-soft); color:var(--tou-brand-dark); }
@@ -161,14 +175,14 @@
   <div class="page-shell">
     <p class="hero-eyebrow">Electricity Consumption and Price Analysis Simulator</p>
     <h1>전기 사용 및 요금 분석 시뮬레이터</h1>
-    <p>분산에너지자원(DER)·계시별(TOU) 요금·가정용 에너지관리부터 국가별 전기요금 비교까지 — 목적에 맞는 시뮬레이터를 선택하세요.</p>
+    <p>분산에너지자원(DER)·계시별(TOU) 요금·가정용 에너지관리부터 국가별 전기요금·발전설비 비교까지 — 목적에 맞는 시뮬레이터를 선택하세요.</p>
   </div>
 </header>
 
 <div class="page-shell workspace">
   <div class="landing-intro">
     <p>시뮬레이터 선택</p>
-    <span>국내 시뮬레이터 세 종은 시간대별(TOU) 요금체계를 기준으로 분산자원 · 전력판매 매출 · 가정 고객을 분석하고, IEA 시뮬레이터는 국가별 전기요금 수준을 비교합니다.</span>
+    <span>국내 시뮬레이터 세 종은 시간대별(TOU) 요금체계를 기준으로 분산자원 · 전력판매 매출 · 가정 고객을 분석하고, IEA 시뮬레이터는 국가별 전기요금 수준을, EMBER 시뮬레이터는 국가별 발전량·설비용량·배출량을 비교합니다.</span>
   </div>
 
   <div class="landing-grid">
@@ -260,13 +274,34 @@
       <p class="desc">국가별 주택용·산업용 전기요금 비교 시뮬레이터 — IEA 원자료로 연간·분기 단가 순위, 추이, 요금 수준을 OECD·G7 등 그룹별로 비교합니다.</p>
       <span class="landing-card-go" aria-hidden="true">시뮬레이터 열기 →</span>
     </a>
+
+    <a href="/ember-sim/" class="landing-card ember">
+      <span class="landing-card-tag">Global Electricity Data</span>
+      <span class="landing-card-head">
+        <span class="landing-card-icon" aria-hidden="true">
+          <!-- 국가별 발전량·설비·배출을 상징하는 아이콘 — 번개(전력)와 그 아래
+               놓인 전원믹스 막대. 여러 나라의 전원 구성을 나란히 비교한다는
+               시뮬레이터의 성격을 보여준다. -->
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M13.2 2.8 6.4 11.6h4.6l-1 6.2 6.8-8.8h-4.6l1-6.2Z" />
+            <rect x="4" y="19.2" width="16" height="1.8" rx="0.9" fill="currentColor" stroke="none" opacity=".55" />
+          </svg>
+        </span>
+        <span>
+          <strong>EMBER Electricity</strong>
+          <p class="landing-card-sub">Yearly Electricity Data Simulator</p>
+        </span>
+      </span>
+      <p class="desc">국가별 발전량·설비용량·배출량 비교 시뮬레이터 — Ember 연간 전력 데이터로 순위, 추이, 설비 이용률, 전원믹스와 전환 시나리오를 확인합니다.</p>
+      <span class="landing-card-go" aria-hidden="true">시뮬레이터 열기 →</span>
+    </a>
   </div>
 </div>
 
 <footer>
   <div class="page-shell footer-inner">
     <span>전기 사용 및 요금 분석 시뮬레이터</span>
-    <p>분산에너지자원(PRAS-DER) · 계시별 요금제 수익 분석(PRAS-TOU) · 가정용 TOU 요금·에너지관리(CARE-Jeju) · 국가별 전기요금 비교(IEA Prices and Taxes)</p>
+    <p>분산에너지자원(PRAS-DER) · 계시별 요금제 수익 분석(PRAS-TOU) · 가정용 TOU 요금·에너지관리(CARE-Jeju) · 국가별 전기요금 비교(IEA Prices and Taxes) · 국가별 발전·설비 비교(EMBER Electricity)</p>
   </div>
 </footer>
 
