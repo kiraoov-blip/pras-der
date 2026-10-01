@@ -450,6 +450,7 @@ footer{background:#1f2430;color:#aeb4bf}
                 <label for="tMode">값 기준</label>
                 <select id="tMode">
                   <option value="value">실제 값 (선택 단위)</option>
+                  <option value="share">발전량 비중 (총 발전 대비 %)</option>
                   <option value="idx">지수 (기준연도 = 100)</option>
                 </select>
                 <div class="row" id="idxRow" hidden><span class="hint">기준연도 = 100</span><select id="tIdx" style="width:120px" aria-label="지수 기준연도"></select></div>
@@ -804,7 +805,7 @@ function setupControls(){
   $('#rankAgg').addEventListener('change',e=>{S.rankAgg=e.target.checked;renderRank()});
   $('#tFrom').addEventListener('change',e=>{S.tFrom=+e.target.value;if(S.tFrom>=S.tTo){S.tTo=Math.min(Y1,S.tFrom+1);$('#tTo').value=S.tTo}renderTrend()});
   $('#tTo').addEventListener('change',e=>{S.tTo=+e.target.value;if(S.tTo<=S.tFrom){S.tFrom=Math.max(Y0,S.tTo-1);$('#tFrom').value=S.tFrom}renderTrend()});
-  $('#tMode').addEventListener('change',e=>{S.tMode=e.target.value;$('#idxRow').hidden=S.tMode==='value';if(S.yax==='manual'){S.yax='auto';$('#y-auto').checked=true;$('#yManRow').hidden=true}renderTrend()});
+  $('#tMode').addEventListener('change',e=>{S.tMode=e.target.value;$('#idxRow').hidden=S.tMode!=='idx';if(S.yax==='manual'){S.yax='auto';$('#y-auto').checked=true;$('#yManRow').hidden=true}renderTrend()});
   $('#tIdx').addEventListener('change',e=>{S.tIdx=+e.target.value;renderTrend()});
   $$('input[name=yax]').forEach(r=>r.addEventListener('change',()=>{S.yax=r.value;$('#yManRow').hidden=S.yax!=='manual';if(S.yax==='manual'&&lastDomain){$('#yMin').value=+lastDomain[0].toFixed(2);$('#yMax').value=+lastDomain[1].toFixed(2);S.yMin=lastDomain[0];S.yMax=lastDomain[1]}renderTrend()}));
   $('#yApply').addEventListener('click',()=>{const a=parseFloat($('#yMin').value),b=parseFloat($('#yMax').value);if(!(b>a)){toast('최대값은 최소값보다 커야 합니다');return}S.yMin=a;S.yMax=b;renderTrend()});
@@ -835,7 +836,7 @@ function syncControls(){
   $('#metric').value=S.metric; $('#src').value=S.src; $('#year').value=S.year; $('#fallback').checked=S.fallback; fillUnits();
   $('#base').value=S.base; $('#ref').value=S.ref; $('#showBase').checked=S.showBase; $('#showAvg').checked=S.showAvg; $('#tBg').checked=S.tBg;
   $('#rs-'+(S.rsort==='desc'?'d':'a')).checked=true; $('#rm-'+S.rmode).checked=true; $('#rn').value=S.rn; $('#rn').disabled=S.rmode==='all'; $('#rKeep').checked=S.rKeep; $('#rankAgg').checked=S.rankAgg;
-  $('#tFrom').value=S.tFrom;$('#tTo').value=S.tTo;$('#tMode').value=S.tMode;$('#tIdx').value=S.tIdx;$('#idxRow').hidden=S.tMode==='value';
+  $('#tFrom').value=S.tFrom;$('#tTo').value=S.tTo;$('#tMode').value=S.tMode;$('#tIdx').value=S.tIdx;$('#idxRow').hidden=S.tMode!=='idx';
   $('#y-'+({auto:'auto',zero:'zero',manual:'man'}[S.yax])).checked=true; $('#yManRow').hidden=S.yax!=='manual';
   $('#ts-'+S.tsec).checked=true; $('#cfLog').checked=S.cfLog; $('#q').value=S.q;
   $('#scnFrom').value=S.scn.from; $('#scnTo').value=S.scn.to; $('#scnShift').value=S.scn.shift; $('#scnGrow').value=S.scn.grow;
@@ -955,7 +956,7 @@ let lastDomain=null;
 
 /* ---------- trend ---------- */
 function trendPts(iso,src,years){
-  const m=S.metric, f=uf(m);
+  const m=S.tMode==='share'?'share':S.metric, f=S.tMode==='share'?1:uf(m);
   let pts;
   if(iso===AVG){const ms=groupIsos(); pts=years.map(y=>{const r=aggRaw(ms,src,m,y-Y0,false);return r?{y,v:r.v*f,n:r.n}:null})}
   else pts=years.map(y=>{const v=rawv(iso,src,m,y-Y0);return v!=null?{y,v:v*f}:null});
@@ -971,7 +972,8 @@ function renderTrend(){
   const years=YEARS.filter(y=>y>=S.tFrom&&y<=S.tTo);
   const KI={}; years.forEach((y,k)=>KI[y]=k);
   const idx=S.tMode==='idx';
-  const U=idx?`지수 (${S.tIdx}년=100)`:UL();
+  const shr=S.tMode==='share';
+  const U=idx?`지수 (${S.tIdx}년=100)`:shr?'발전 비중 (%)':UL();
   $('#idxRow').hidden=!idx;
   const lines=[], bg=[];
   const mk=(iso,src,color,dash,label,w)=>{const pts=trendPts(iso,src,years);lines.push({iso,src,color,dash,label,pts,w,empty:!pts.some(Boolean)})};
@@ -986,7 +988,7 @@ function renderTrend(){
     [...(baseIn?[S.base]:[]),...S.compare].forEach(i=>mk(i,S.src,colorOf(i),false,ko(i)));
     S.baselines.forEach(a=>mk(a,S.src,tok('--ink-2'),'6 4',ko(a)));
     if(S.showAvg) mk(AVG,S.src,avgCol,'8 3',gavgName(),2.2);
-    $('#trendTitle').textContent=`${metricTitle()} 추이 · ${groupLabel()}`;
+    $('#trendTitle').textContent=`${S.tMode==='share'?SRCN[S.src]+' 발전량 비중':metricTitle()} 추이 · ${groupLabel()}`;
   }
   const HID=window.__hid||(window.__hid=new Set()); const lk=l=>l.iso+'|'+(l.src||l.sec||'');
   const allL=lines.slice(); lines.length=0; allL.filter(l=>!HID.has(lk(l))).forEach(l=>lines.push(l));
@@ -1032,11 +1034,11 @@ function renderTrend(){
     lines.forEach((l,i)=>{const p=l.pts[kk];const c=hov.querySelector(`[data-i="${i}"]`);
       if(p){c.style.display='';c.setAttribute('cx',x(yy));c.setAttribute('cy',yv(p.v));rowsH.push({l,p})}else c.style.display='none'});
     rowsH.sort((a,b)=>b.p.v-a.p.v);
-    showTip(e,`<div class="t">${yy}년</div>`+(rowsH.length?rowsH.map(({l,p})=>`<div class="r"><span class="nmw"><i style="background:${l.color}"></i>${S.tsec==='mix'?'':flag(l.iso)}<span>${esc(l.label)}</span></span><b>${idx?p.v.toFixed(1):fmt(p.v)}</b></div>`).join(''):'<div class="r"><span>자료 없음</span></div>'));
+    showTip(e,`<div class="t">${yy}년</div>`+(rowsH.length?rowsH.map(({l,p})=>`<div class="r"><span class="nmw"><i style="background:${l.color}"></i>${S.tsec==='mix'?'':flag(l.iso)}<span>${esc(l.label)}</span></span><b>${idx||shr?p.v.toFixed(1)+(shr?'%':''):fmt(p.v)}</b></div>`).join(''):'<div class="r"><span>자료 없음</span></div>'));
   };
   const hit=svg.querySelector('#tHit');
   hit.addEventListener('mousemove',move); hit.addEventListener('mouseleave',()=>{hov.style.display='none';hideTip()});
-  $('#trendNote').textContent=`세로 띠는 분석 연도(${S.year}년)입니다.`+(idx?` 지수는 각 계열의 ${S.tIdx}년 값을 100으로 둡니다. ${S.tIdx}년 자료가 없는 계열은 표시되지 않습니다.`:'')
+  $('#trendNote').textContent=`세로 띠는 분석 연도(${S.year}년)입니다.`+(shr?' 총 발전량 대비 해당 전원 발전량의 비중(%)입니다.':'')+(idx?` 지수는 각 계열의 ${S.tIdx}년 값을 100으로 둡니다. ${S.tIdx}년 자료가 없는 계열은 표시되지 않습니다.`:'')
     +(S.showAvg&&S.tsec==='cur'?` ${gavgName()}은 연도마다 자료가 있는 국가만으로 계산하므로 국가 수가 달라질 수 있습니다.`:'');
 }
 
