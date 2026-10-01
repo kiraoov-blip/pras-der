@@ -203,7 +203,7 @@ small.cur{font-size:11px;color:#9196a0;font-weight:700;margin-left:2px}
 .legend{display:flex;flex-wrap:wrap;gap:6px 14px;margin:0 0 10px;font-size:12.5px;color:#555962;font-weight:600}
 .legend span{display:inline-flex;align-items:center;gap:6px}
 .legend i{width:16px;height:3px;border-radius:99px;display:inline-block}
-.legend i.dash{background:none!important;border-top:2px dashed #555962;height:0}
+.legend i.dash{background:none!important;border-top:2px dashed #555962;height:0}.legend span[data-k]{cursor:pointer;user-select:none;padding:1px 4px;border-radius:6px}.legend span[data-k]:hover{background:rgba(0,0,0,.05)}.legend span.off{opacity:.38!important;text-decoration:line-through}
 .tip{position:fixed;z-index:60;pointer-events:none;background:#1f2430;border:1px solid #626771;color:#fff;border-radius:9px;padding:9px 11px;font-size:12.5px;box-shadow:0 6px 18px rgba(48,50,55,.3);min-width:160px;max-width:300px}
 .tip .t{font-weight:800;margin-bottom:5px}
 .tip .r{display:flex;justify-content:space-between;gap:14px;font-variant-numeric:tabular-nums;color:#eeeff1}
@@ -267,6 +267,7 @@ input[type=range]{height:28px}
 .kpis{grid-template-columns:repeat(4,minmax(0,1fr))}
 @media(max-width:980px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:520px){.kpis{grid-template-columns:minmax(0,1fr)}}
+@media(min-width:1101px){.grid-in.top{grid-template-columns:repeat(6,minmax(0,1fr));gap:18px 12px}}
 #scnKpis{grid-template-columns:repeat(auto-fit,minmax(185px,1fr))}
 </style>
 <style>
@@ -278,9 +279,9 @@ input[type=range]{height:28px}
 .site-nav ul a.active{color:var(--accent);background:#fbf3f5;box-shadow:inset 0 0 0 1px #e8c4cd}
 .site-home-btn{color:#4b5563;border-color:var(--line-2)}
 .site-home-btn:hover{color:var(--accent);background:#fbf3f5;border-color:#e8c4cd}
-.hero{color:#fff;background:radial-gradient(circle at 84% 6%,rgba(159,18,57,.30),transparent 34%),radial-gradient(circle at 10% 130%,rgba(148,163,184,.30),transparent 42%),linear-gradient(118deg,#181c25 0%,#2a303c 50%,#3b4352 80%,#4a5363 100%);border-bottom:0}
-.hero h1{color:#fff}
-.hero p{color:#d5d9e0}
+.hero{color:#fff;background:linear-gradient(118deg,#3a404c 0%,#555d6b 45%,#8a919d 80%,#aab0ba 100%);border-bottom:0}
+.hero h1{color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.18)}
+.hero p{color:#f1f3f6}
 footer{background:#1f2430;color:#aeb4bf}
 .footer-inner span{color:#fff}
 @media(max-width:640px){.site-nav ul a{color:#4b5563}}
@@ -341,7 +342,7 @@ footer{background:#1f2430;color:#aeb4bf}
             <div class="field">
               <label for="year" id="yearLab">분석 연도</label>
               <select id="year"></select>
-              <label class="check"><input type="checkbox" id="fallback" checked> 자료가 없으면 최근 5년 내 값으로 대체</label>
+              <label class="check"><input type="checkbox" id="fallback" checked> 자료 없으면 최근 5년 값 대체</label>
             </div>
             <div class="field">
               <label for="unit">표시 단위</label>
@@ -982,6 +983,8 @@ function renderTrend(){
     if(S.showAvg) mk(AVG,S.src,avgCol,'8 3',gavgName(),2.2);
     $('#trendTitle').textContent=`${metricTitle()} 추이 · ${groupLabel()}`;
   }
+  const HID=window.__hid||(window.__hid=new Set()); const lk=l=>l.iso+'|'+(l.src||l.sec||'');
+  const allL=lines.slice(); lines.length=0; allL.filter(l=>!HID.has(lk(l))).forEach(l=>lines.push(l));
   const all=[...lines,...bg].flatMap(l=>l.pts.filter(Boolean).map(p=>p.v));
   let lo=all.length?Math.min(...all):0, hi=all.length?Math.max(...all):1;
   let T;
@@ -1011,7 +1014,8 @@ function renderTrend(){
   EXP.trend={name:`추이_${S.tsec==='mix'?'전원별_':SRCN[S.src]+'_'}${M[S.metric].n}_${S.tFrom}-${S.tTo}`,
     head:['연도',...lines.map(l=>l.label+` (${U})`),...bg.map(b=>ko(b.iso)+` (${U})`)],
     rows:years.map((y,k)=>[y,...lines.map(l=>l.pts[k]?rnd(l.pts[k].v):''),...bg.map(b=>b.pts[k]?rnd(b.pts[k].v):'')])};
-  $('#trendLegend').innerHTML=lines.map(l=>`<span${l.empty?' style="opacity:.5"':''}><i class="${l.dash?'dash':''}" style="background:${l.color}${l.dash?`;border-top-color:${l.color}`:''}"></i>${S.tsec==='mix'?esc(SRCN[l.src]):nm(l.iso)}${l.empty?' (자료 없음)':''}</span>`).join('')
+  $('#trendLegend').onclick=e=>{const sp=e.target.closest('span[data-k]');if(!sp)return;const k=sp.dataset.k;HID.has(k)?HID.delete(k):HID.add(k);renderTrend()};
+  $('#trendLegend').innerHTML=allL.map(l=>`<span data-k="${esc(lk(l))}"${HID.has(lk(l))?' class="off"':''}${l.empty?' style="opacity:.5"':''}><i class="${l.dash?'dash':''}" style="background:${l.color}${l.dash?`;border-top-color:${l.color}`:''}"></i>${S.tsec==='mix'?esc(SRCN[l.src]):nm(l.iso)}${l.empty?' (자료 없음)':''}</span>`).join('')
     +(bg.length?`<span><i style="background:${tok('--bar-hi')};height:1px"></i>그룹 내 기타 ${bg.length}개국</span>`:'');
   const svg=box.querySelector('svg'), hov=svg.querySelector('#tHover');
   const move=e=>{
