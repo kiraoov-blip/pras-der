@@ -204,7 +204,7 @@ small.cur{font-size:11px;color:#9489a8;font-weight:700;margin-left:2px}
 .legend{display:flex;flex-wrap:wrap;gap:6px 14px;margin:0 0 10px;font-size:12.5px;color:#57496e;font-weight:600}
 .legend span{display:inline-flex;align-items:center;gap:6px}
 .legend i{width:16px;height:3px;border-radius:99px;display:inline-block}
-.legend i.dash{background:none!important;border-top:2px dashed #57496e;height:0}
+.legend i.dash{background:none!important;border-top:2px dashed #57496e;height:0}.legend span[data-k]{cursor:pointer;user-select:none;padding:1px 4px;border-radius:6px}.legend span[data-k]:hover{background:rgba(0,0,0,.05)}.legend span.off{opacity:.38!important;text-decoration:line-through}
 .tip{position:fixed;z-index:60;pointer-events:none;background:#2a1552;border:1px solid #5b3a99;color:#fff;border-radius:9px;padding:9px 11px;font-size:12.5px;box-shadow:0 6px 18px rgba(42,21,82,.3);min-width:160px;max-width:300px}
 .tip .t{font-weight:800;margin-bottom:5px}
 .tip .r{display:flex;justify-content:space-between;gap:14px;font-variant-numeric:tabular-nums;color:#ede4fb}
@@ -978,6 +978,8 @@ function renderTrend(){
     if(S.showAvg) mk(AVG,S.sector,avgCol,'8 3',gavgName(),2.2);
   }
   $('#trendTitle').textContent=S.tsec==='both'?`${ko(S.base)} 주택용·산업용 추이`:`${SECN[S.sector]} 단가 추이 · ${groupLabel()}`;
+  const HID=window.__hid||(window.__hid=new Set()); const lk=l=>l.iso+'|'+(l.src||l.sec||'');
+  const allL=lines.slice(); lines.length=0; allL.filter(l=>!HID.has(lk(l))).forEach(l=>lines.push(l));
   const all=[...lines,...bg].flatMap(l=>l.pts.filter(Boolean).map(p=>p.v));
   let lo=all.length?Math.min(...all):0, hi=all.length?Math.max(...all):1;
   let T;
@@ -1009,7 +1011,8 @@ function renderTrend(){
   EXP.trend={name:`추이_${S.tsec==='both'?'주택산업':SECN[S.sector]}_${PS(S.tFrom)}-${PS(S.tTo)}`,
     head:[S.freq==='Q'?'분기':'연도',...lines.map(l=>l.label+(S.tsec==='both'&&l.iso===AVG?' '+SECN[l.sec]:'')+` (${U})`),...bg.map(b=>ko(b.iso)+` (${U})`)],
     rows:years.map((y,k)=>[PS(y),...lines.map(l=>l.pts[k]?rnd(l.pts[k].v):''),...bg.map(b=>b.pts[k]?rnd(b.pts[k].v):'')])};
-  $('#trendLegend').innerHTML=lines.map(l=>`<span${l.empty?' style="opacity:.5"':''}><i class="${l.dash?'dash':''}" style="background:${l.color}${l.dash?`;border-top-color:${l.color}`:''}"></i>${nm(l.iso,l.iso===AVG||S.tsec==='both'?'':'')}${S.tsec==='both'&&l.iso!==AVG?' '+SECN[l.sec]:''}${l.iso===AVG&&S.tsec==='both'?' '+SECN[l.sec]:''}${l.empty?' (자료 없음)':''}</span>`).join('')
+  $('#trendLegend').onclick=e=>{const sp=e.target.closest('span[data-k]');if(!sp)return;const k=sp.dataset.k;HID.has(k)?HID.delete(k):HID.add(k);renderTrend()};
+  $('#trendLegend').innerHTML=allL.map(l=>`<span data-k="${esc(lk(l))}"${HID.has(lk(l))?' class="off"':''}${l.empty?' style="opacity:.5"':''}><i class="${l.dash?'dash':''}" style="background:${l.color}${l.dash?`;border-top-color:${l.color}`:''}"></i>${nm(l.iso,l.iso===AVG||S.tsec==='both'?'':'')}${S.tsec==='both'&&l.iso!==AVG?' '+SECN[l.sec]:''}${l.iso===AVG&&S.tsec==='both'?' '+SECN[l.sec]:''}${l.empty?' (자료 없음)':''}</span>`).join('')
     +(bg.length?`<span><i style="background:${tok('--bar-hi')};height:1px"></i>그룹 내 기타 ${bg.length}개국</span>`:'');
   const svg=box.querySelector('svg'), hov=svg.querySelector('#tHover');
   const move=e=>{
