@@ -206,6 +206,10 @@ small.cur{font-size:11px;color:#9489a8;font-weight:700;margin-left:2px}
 .legend span{display:inline-flex;align-items:center;gap:6px}
 .legend i{width:16px;height:3px;border-radius:99px;display:inline-block}
 .legend i.dash{background:none!important;border-top:2px dashed #57496e;height:0}
+.legend .lg{display:inline-flex;align-items:center;gap:6px;border:1px solid transparent;border-radius:999px;background:transparent;padding:3px 9px 3px 7px;font:inherit;font-size:12.5px;font-weight:600;color:#57496e;cursor:pointer}
+.legend .lg:hover{background:var(--surface-2);border-color:var(--line-2)}
+.legend .lg.off{opacity:.45;text-decoration:line-through;text-decoration-thickness:1px}
+.legend .lg.off i{filter:grayscale(1)}
 .tip{position:fixed;z-index:60;pointer-events:none;background:#2a1552;border:1px solid #5b3a99;color:#fff;border-radius:9px;padding:9px 11px;font-size:12.5px;box-shadow:0 6px 18px rgba(42,21,82,.3);min-width:160px;max-width:300px}
 .tip .t{font-weight:800;margin-bottom:5px}
 .tip .r{display:flex;justify-content:space-between;gap:14px;font-variant-numeric:tabular-nums;color:#ede4fb}
@@ -588,7 +592,7 @@ const GROUPS=[
   {id:'pick',label:'선택 국가만'}
 ];
 const G={}; GROUPS.forEach(g=>G[g.id]=g);
-const DEF={freq:'A',ref:'oecdIEA',tax:'x',sector:'R',year:2025,fallback:true,unit:'USDM',fxMode:'yearly',fx:1422,base:'KOR',compare:['JPN','USA','DEU','FRA','GBR','ITA'],group:'all',showBase:true,showAvg:true,ru:false,
+const DEF={freq:'A',ref:'oecdIEA',tax:'x',tHide:[],sector:'R',year:2025,fallback:true,unit:'USDM',fxMode:'yearly',fx:1422,base:'KOR',compare:['JPN','USA','DEU','FRA','GBR','ITA'],group:'all',showBase:true,showAvg:true,ru:false,
   baselines:['OECDTOT'],usage:{R:300,I:100000},rsort:'desc',rankAgg:true,tFrom:2000,tTo:2025,tMode:'value',tIdx:2015,yax:'auto',yMin:null,yMax:null,tsec:'cur',tBg:true,bper:1,q:'',tsort:{k:'R',d:-1}};
 let S=structuredClone(DEF);
 const USAGE={R:{min:0,max:1000,step:10,hint:'한국 주택용 월평균 약 300kWh 수준'},I:{min:0,max:1000000,step:1000,hint:'중소 산업체 규모 예시 (월 10만 kWh)'}};
@@ -791,6 +795,12 @@ function setupControls(){
   $('#showBase').addEventListener('change',e=>{S.showBase=e.target.checked;render()});
   $('#showAvg').addEventListener('change',e=>{S.showAvg=e.target.checked;render()});
   $('#tBg').addEventListener('change',e=>{S.tBg=e.target.checked;renderTrend()});
+  $('#trendLegend').addEventListener('click',e=>{
+    const b=e.target.closest('[data-key]'); if(!b) return;
+    const k=b.dataset.key;
+    S.tHide=S.tHide.includes(k)?S.tHide.filter(x=>x!==k):[...S.tHide,k];
+    renderTrend();
+  });
   $$('input[name=sector]').forEach(r=>r.addEventListener('change',()=>{S.sector=r.value;syncUsage();render()}));
   $('#year').addEventListener('change',e=>{S.year=+e.target.value;render()});
   $('#fallback').addEventListener('change',e=>{S.fallback=e.target.checked;render()});
@@ -813,7 +823,7 @@ function setupControls(){
   $('#tIdx').addEventListener('change',e=>{S.tIdx=+e.target.value;renderTrend()});
   $$('input[name=yax]').forEach(r=>r.addEventListener('change',()=>{S.yax=r.value;$('#yManRow').hidden=S.yax!=='manual';if(S.yax==='manual'&&lastDomain){$('#yMin').value=+lastDomain[0].toFixed(2);$('#yMax').value=+lastDomain[1].toFixed(2);S.yMin=lastDomain[0];S.yMax=lastDomain[1]}renderTrend()}));
   $('#yApply').addEventListener('click',()=>{const a=parseFloat($('#yMin').value),b=parseFloat($('#yMax').value);if(!(b>a)){toast('최대값은 최소값보다 커야 합니다');return}S.yMin=a;S.yMax=b;renderTrend()});
-  $$('input[name=tsec]').forEach(r=>r.addEventListener('change',()=>{S.tsec=r.value;renderTrend()}));
+  $$('input[name=tsec]').forEach(r=>r.addEventListener('change',()=>{S.tsec=r.value;S.tHide=[];renderTrend()}));
   $$('input[name=bper]').forEach(r=>r.addEventListener('change',()=>{S.bper=+r.value;renderBill()}));
   $('#q').addEventListener('input',e=>{S.q=e.target.value.trim();renderTable()});
   $('#copyTsv').addEventListener('click',copyTable);
@@ -994,7 +1004,7 @@ function renderTrend(){
   const U=valueMode?UL[S.unit]:`지수 (${PS(S.tIdx)}=100${NCM()||S.tMode==='idxNC'?', 자국통화':''})`;
   $('#idxRow').hidden=valueMode;
   const lines=[], bg=[];
-  const mk=(iso,sec,color,dash,label,w)=>{const pts=trendPts(iso,sec,years);lines.push({iso,sec,color,dash,label,pts,w,empty:!pts.some(Boolean)})};
+  const mk=(iso,sec,color,dash,label,w)=>{const pts=trendPts(iso,sec,years);const key=iso+'|'+sec;lines.push({iso,sec,key,color,dash,label,pts,w,empty:!pts.some(Boolean),off:S.tHide.includes(key)})};
   const avgCol=tok('--ink');
   if(S.tsec==='both'){
     mk(S.base,'R',tok('--s1'),false,`${ko(S.base)} 주택용`);
@@ -1003,14 +1013,15 @@ function renderTrend(){
     if(S.showAvg){mk(AVG,'R',avgCol,'8 3',`${gavgName()} 주택용`,2);mk(AVG,'I',avgCol,'2 2',`${gavgName()} 산업용`,2)}
   }else{
     const highlighted=new Set([S.base,...S.compare]);
-    if(S.tBg&&S.group!=='all') groupMembers().forEach(c=>{if(!highlighted.has(c.iso)){const pts=trendPts(c.iso,S.sector,years);if(pts.some(Boolean))bg.push({iso:c.iso,pts})}});
+    if(S.tBg&&S.group!=='all'&&!S.tHide.includes('__bg')) groupMembers().forEach(c=>{if(!highlighted.has(c.iso)){const pts=trendPts(c.iso,S.sector,years);if(pts.some(Boolean))bg.push({iso:c.iso,pts})}});
     const baseIn=S.showBase||memberSet().has(S.base);
     [...(baseIn?[S.base]:[]),...S.compare].forEach(i=>mk(i,S.sector,colorOf(i),false,ko(i)));
     S.baselines.forEach(a=>mk(a,S.sector,tok('--ink-2'),'6 4',ko(a)));
     if(S.showAvg) mk(AVG,S.sector,avgCol,'8 3',gavgName(),2.2);
   }
   $('#trendTitle').textContent=S.tsec==='both'?`${ko(S.base)} 주택용·산업용 추이`:`${SECN[S.sector]} 단가 추이 · ${groupLabel()}`;
-  const all=[...lines,...bg].flatMap(l=>l.pts.filter(Boolean).map(p=>p.v));
+  const shown=lines.filter(l=>!l.off);
+  const all=[...shown,...bg].flatMap(l=>l.pts.filter(Boolean).map(p=>p.v));
   let lo=all.length?Math.min(...all):0, hi=all.length?Math.max(...all):1;
   let T;
   if(S.yax==='manual'&&S.yMin!=null&&S.yMax!=null){ const t=niceTicks(S.yMin,S.yMax); T={ticks:t.ticks.filter(v=>v>=S.yMin-1e-9&&v<=S.yMax+1e-9),lo:S.yMin,hi:S.yMax,step:t.step}; }
@@ -1031,18 +1042,19 @@ function renderTrend(){
   if(KI[S.year]!=null) s+=`<line x1="${x(S.year)}" x2="${x(S.year)}" y1="${m.t}" y2="${H-m.b}" stroke="${tok('--accent')}" stroke-opacity=".35" stroke-width="${S.freq==='Q'?3:6}"/>`;
   s+=`<g clip-path="url(#clipT)">`;
   bg.forEach(l=>{s+=`<path d="${path(l.pts)}" fill="none" stroke="${tok('--bar-hi')}" stroke-opacity=".55" stroke-width="1"/>`});
-  [...lines].reverse().forEach(l=>{
+  [...shown].reverse().forEach(l=>{
     s+=`<path d="${path(l.pts)}" fill="none" stroke="${l.color}" stroke-width="${l.w||(l.dash?1.5:2)}" ${l.dash?`stroke-dasharray="${l.dash}"`:''} stroke-linejoin="round" stroke-linecap="round"/>`;
     l.pts.forEach((p,i)=>{if(p&&!l.pts[i-1]&&!l.pts[i+1])s+=`<circle cx="${x(p.y)}" cy="${yv(p.v)}" r="2.5" fill="${l.color}"/>`});
   });
-  s+=`</g><g id="tHover" style="display:none"><line id="tHL" y1="${m.t}" y2="${H-m.b}" stroke="${tok('--ink-2')}" stroke-width="1"/>${lines.map((l,i)=>`<circle data-i="${i}" r="4" fill="${l.color}" stroke="${tok('--surface')}" stroke-width="2"/>`).join('')}</g>`;
+  s+=`</g><g id="tHover" style="display:none"><line id="tHL" y1="${m.t}" y2="${H-m.b}" stroke="${tok('--ink-2')}" stroke-width="1"/>${lines.map((l,i)=>l.off?'':`<circle data-i="${i}" r="4" fill="${l.color}" stroke="${tok('--surface')}" stroke-width="2"/>`).join('')}</g>`;
   s+=`<rect id="tHit" x="${m.l}" y="${m.t}" width="${W-m.l-m.r}" height="${H-m.t-m.b}" fill="transparent"/></svg>`;
   box.innerHTML=s;
   EXP.trend={name:`추이_${S.tsec==='both'?'주택산업':SECN[S.sector]}_${PS(S.tFrom)}-${PS(S.tTo)}`,
-    head:[S.freq==='Q'?'분기':'연도',...lines.map(l=>l.label+(S.tsec==='both'&&l.iso===AVG?' '+SECN[l.sec]:'')+` (${U})`),...bg.map(b=>ko(b.iso)+` (${U})`)],
-    rows:years.map((y,k)=>[PS(y),...lines.map(l=>l.pts[k]?rnd(l.pts[k].v):''),...bg.map(b=>b.pts[k]?rnd(b.pts[k].v):'')])};
-  $('#trendLegend').innerHTML=lines.map(l=>`<span${l.empty?' style="opacity:.5"':''}><i class="${l.dash?'dash':''}" style="background:${l.color}${l.dash?`;border-top-color:${l.color}`:''}"></i>${nm(l.iso,l.iso===AVG||S.tsec==='both'?'':'')}${S.tsec==='both'&&l.iso!==AVG?' '+SECN[l.sec]:''}${l.iso===AVG&&S.tsec==='both'?' '+SECN[l.sec]:''}${l.empty?' (자료 없음)':''}</span>`).join('')
-    +(bg.length?`<span><i style="background:${tok('--bar-hi')};height:1px"></i>그룹 내 기타 ${bg.length}개국</span>`:'');
+    head:[S.freq==='Q'?'분기':'연도',...shown.map(l=>l.label+(S.tsec==='both'&&l.iso===AVG?' '+SECN[l.sec]:'')+` (${U})`),...bg.map(b=>ko(b.iso)+` (${U})`)],
+    rows:years.map((y,k)=>[PS(y),...shown.map(l=>l.pts[k]?rnd(l.pts[k].v):''),...bg.map(b=>b.pts[k]?rnd(b.pts[k].v):'')])};
+  const bgOff=S.tHide.includes('__bg'), hasBg=S.tBg&&S.group!=='all'&&(bg.length||bgOff);
+  $('#trendLegend').innerHTML=lines.map(l=>`<button type="button" class="lg${l.off?' off':''}" data-key="${esc(l.key)}" aria-pressed="${!l.off}" title="${l.off?'눌러서 다시 표시':'눌러서 숨기기'}"${l.empty?' style="opacity:.5"':''}><i class="${l.dash?'dash':''}" style="background:${l.color}${l.dash?`;border-top-color:${l.color}`:''}"></i>${nm(l.iso)}${S.tsec==='both'?' '+SECN[l.sec]:''}${l.empty?' (자료 없음)':''}</button>`).join('')
+    +(hasBg?`<button type="button" class="lg${bgOff?' off':''}" data-key="__bg" aria-pressed="${!bgOff}" title="${bgOff?'눌러서 다시 표시':'눌러서 숨기기'}"><i style="background:${tok('--bar-hi')};height:1px"></i>그룹 내 기타 ${bgOff?'국가':bg.length+'개국'}</button>`:'');
   const svg=box.querySelector('svg'), hov=svg.querySelector('#tHover');
   const move=e=>{
     const r=svg.getBoundingClientRect(); const px=(e.clientX-r.left)*W/r.width;
@@ -1050,7 +1062,8 @@ function renderTrend(){
     const yy=years[kk];
     hov.style.display=''; hov.querySelector('#tHL').setAttribute('x1',x(yy)); hov.querySelector('#tHL').setAttribute('x2',x(yy));
     const rowsH=[];
-    lines.forEach((l,i)=>{const p=l.pts[kk];const c=hov.querySelector(`[data-i="${i}"]`);
+    lines.forEach((l,i)=>{const c=hov.querySelector(`[data-i="${i}"]`); if(!c) return;
+      const p=l.pts[kk];
       if(p){c.style.display='';c.setAttribute('cx',x(yy));c.setAttribute('cy',yv(p.v));rowsH.push({l,p})}else c.style.display='none'});
     rowsH.sort((a,b)=>b.p.v-a.p.v);
     showTip(e,`<div class="t">${PL(yy)}</div>`+(rowsH.length?rowsH.map(({l,p})=>`<div class="r"><span class="nmw"><i style="background:${l.color}"></i>${flag(l.iso)}<span>${esc(l.label)}</span></span><b>${valueMode?fmt(p.v):p.v.toFixed(1)}${p.q==='I'?' <span style="color:var(--muted);font-weight:400">추정</span>':''}${p.n?` <span style="color:var(--muted);font-weight:400">${p.n}개국</span>`:''}</b></div>`).join(''):'<div style="color:var(--muted)">자료 없음</div>')+`<div style="margin-top:4px;color:var(--muted)">${esc(U)}</div>`);
@@ -1060,7 +1073,7 @@ function renderTrend(){
   const idxNote=(NCM()&&S.tMode==='value'?' 자국통화는 국가마다 통화가 달라 기준시점=100 지수로 비교합니다.':'')+(!valueMode?` 지수는 각 계열의 ${PL(S.tIdx)} 값을 100으로 둡니다. ${PL(S.tIdx)} 자료가 없는 계열은 표시되지 않습니다.`:'');
   const fxNote=valueMode&&S.unit==='KRW'?(S.fxMode==='yearly'?' 원화 값은 연도별 적용환율로 환산해 환율 변동 효과가 포함됩니다.':` 원화 값은 모든 연도에 ${(+S.fx).toLocaleString('ko-KR')}원/USD를 적용했습니다.`):'';
   const avgNote=S.showAvg?` ${gavgName()}은 시점마다 자료가 있는 국가만으로 계산하므로 국가 수가 연도별로 다를 수 있습니다.`:'';
-  $('#trendNote').textContent=`세로 띠는 분석 시점(${PL(S.year)})입니다.`+(S.freq==='Q'?' 분기 원화 값은 분기별 적용환율로 환산합니다.':'')+fxNote+idxNote+avgNote+(S.tsec==='cur'&&S.sector==='I'?` 산업용은 ${secTaxLabel('I')} 가격입니다.`:'');
+  $('#trendNote').textContent=`범례를 누르면 그 계열을 숨기거나 다시 표시합니다${S.tHide.length?` (현재 ${S.tHide.length}개 숨김)`:''}. 세로 띠는 분석 시점(${PL(S.year)})입니다.`+(S.freq==='Q'?' 분기 원화 값은 분기별 적용환율로 환산합니다.':'')+fxNote+idxNote+avgNote+(S.tsec==='cur'&&S.sector==='I'?` 산업용은 ${secTaxLabel('I')} 가격입니다.`:'');
 }
 
 /* ---------- scatter ---------- */
