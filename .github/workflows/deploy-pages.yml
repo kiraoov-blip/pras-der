@@ -117,6 +117,9 @@ jobs:
           # (index.html 한 장 + favicon + vendor 스크립트). 그대로 복사만 하면 된다.
           cp -r iea-price public-root/iea-price
           cp -r ember-sim public-root/ember-sim
+          # kepco-stat도 같은 방식의 정적 폴더다. 배포에는 index.html·favicon·vendor만 싣는다.
+          mkdir -p public-root/kepco-stat
+          cp -r kepco-stat/index.html kepco-stat/favicon.svg kepco-stat/vendor public-root/kepco-stat/
 
       - name: Upload GitHub Pages artifact
         uses: actions/upload-pages-artifact@v4
