@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>KEPCO Statistics Simulator</title>
+<meta name="description" content="한국전력통계 기반 판매·요금·발전·설비 분석 시뮬레이터 — 계약종별 판매수입 시나리오, 전원믹스 전환 시나리오, 시도 비교, 1990–2025 추이">
+<link rel="icon" href="favicon.svg">
+<style>
+  html{-webkit-text-size-adjust:100%}
+  :root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+  img{max-width:100%}
+  [hidden]{display:none!important}
+</style>
+</head>
+<body>
+<style>
+/*__BASECSS__*/
+</style>
+<style>
+/* ── 한전 CI 기반 색상: 네이비(주색) + 레드(강조) ── */
+:root{--navy:#0a2350;--blue:#003b8e;--blue-soft:#eaf1fb;--red:#e60012;--accent:#003b8e;--accent-soft:#eaf1fb;--up:#c2410c;--down:#0f766e}
+.site-nav{background:linear-gradient(90deg,#061a3d 0%,#0a2a63 55%,#003b8e 100%);border-bottom:2px solid var(--red)}
+.site-brand span{color:#ffd9dc;border-color:rgba(255,140,150,.6);background:rgba(230,0,18,.22)}
+.site-nav ul a{color:#d3def1}
+.site-nav ul a.active{color:#fff;background:rgba(255,255,255,.14);box-shadow:inset 0 -2px 0 var(--red)}
+.site-home-btn{color:#e6edf8}
+.hero{background:radial-gradient(circle at 86% 0%,rgba(230,0,18,.30),transparent 34%),linear-gradient(118deg,#061a3d 0%,#0a2a63 48%,#003b8e 100%)}
+.hero p{color:#dbe6f6}
+.eyebrow{color:var(--red)}
+.assumption-strip strong{color:var(--red)}
+.kpi.lead{background:#fff;border-color:var(--card-line);box-shadow:none}
+.kpi.lead .v{color:var(--navy)}
+.kpi-group{font-size:12px;font-weight:800;letter-spacing:.08em;color:#6b7686;margin:4px 2px -6px;display:flex;align-items:center;gap:8px}
+.kpi-group::before{content:"";width:14px;height:3px;border-radius:9px;background:var(--red)}
+footer{background:#061a3d;color:#b9c6dc}
+.mxbar{display:flex;height:100%;width:100%;border-radius:5px;overflow:hidden;background:var(--na-bg)}
+.mxbar span{display:block;height:100%;min-width:0}
+.mxbar span:hover{filter:brightness(1.12)}
+.legend i.sq{width:10px;height:10px;border-radius:3px}
+.kpis{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media(max-width:980px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:520px){.kpis{grid-template-columns:minmax(0,1fr)}}
+@media(min-width:1101px){.grid-in.top{grid-template-columns:repeat(5,minmax(0,1fr));gap:18px 12px}}
+@media(min-width:641px){.brow.mx{grid-template-columns:minmax(110px,170px) minmax(0,1fr) 110px}}
+.brow.mx .dif{display:none}
+table.scn{min-width:820px}
+table.scn td input{width:92px;height:34px;text-align:right;padding:0 8px;border-radius:8px}
+table.scn th,table.scn td{text-align:right}
+table.scn th:first-child,table.scn td:first-child{text-align:left}
+table.scn td:nth-child(2){white-space:nowrap;color:#303338;font-size:13px}
+table.scn td:last-child,table.scn th:last-child{text-align:right}
+table.scn tr.sum td{font-weight:800;background:#f6f8fb;color:var(--navy)}
+table.scn th{cursor:default}
+.dot{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:7px;vertical-align:-1px}
+.chips .chip.toggle i{opacity:.35}
+.chips .chip.toggle[aria-pressed=true] i{opacity:1}
+.rrow{grid-template-columns:30px minmax(90px,150px) minmax(0,1fr) 150px 64px}
+.rrow .nm{align-items:center}
+.rrow.cmp .fill{background:#8fb0de}
+.rrow .fill{background:#c9d6ea}
+@media(max-width:640px){.rrow{grid-template-columns:22px 60px minmax(0,1fr) 92px 44px}}
+.gap-note{font-size:12px;color:#8a6d1a;background:var(--warn-bg);border-radius:8px;padding:6px 10px;margin:0 0 10px;display:inline-block}
+</style>
+
+<nav class="site-nav" aria-label="시뮬레이터">
+  <div class="site-nav-inner">
+    <a href="#top" class="site-brand">KEPCO Statistics<span>SIMULATOR</span></a>
+    <ul id="navList">
+      <li><a href="#s-input" class="active">분석조건</a></li>
+      <li><a href="#s-sales">판매·요금</a></li>
+      <li><a href="#s-rev">판매수입 시나리오</a></li>
+      <li><a href="#s-gen">발전·설비</a></li>
+      <li><a href="#s-mix">전원 전환 시나리오</a></li>
+      <li><a href="#s-region">시도 비교</a></li>
+      <li><a href="#s-data">데이터</a></li>
+    </ul>
+    <a class="site-home-btn" href="/" aria-label="처음 화면으로">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.6 11.4 12 4.4l8.4 7"/><path d="M5.7 10.2v8.6a.8.8 0 0 0 .8.8h3.6v-5.2h3.8v5.2h3.6a.8.8 0 0 0 .8-.8v-8.6"/></svg>
+      <span>처음으로</span>
+    </a>
+  </div>
+</nav>
+
+<main id="top" style="flex:1 0 auto;display:flex;flex-direction:column">
+  <header class="hero">
+    <div class="hero-inner">
+      <h1>KEPCO Statistics Simulator</h1>
+      <p>한국전력통계 기반 판매·요금·발전·설비 분석 시뮬레이터 — 2006년판·2012년판·2025년판 연결, 1990–2025</p>
+    </div>
+  </header>
+
+  <div class="page-shell workspace">
+    <div class="dashboard-layout">
+      <section class="control-rail" aria-label="분석 조건">
+        <section class="sec" id="s-input">
+          <div class="sec-h">
+            <div><p class="eyebrow">01 · Input</p><h2>분석 조건</h2></div>
+            <button class="text-button" id="reset" type="button">기본값으로 초기화</button>
+          </div>
+          <div class="grid-in top">
+            <div class="field"><label for="year">분석 연도</label><select id="year"></select><span class="hint" id="yearHint"></span></div>
+            <div class="field"><label for="base">비교 연도</label><select id="base"></select><span class="hint">핵심 지표·구성비의 비교 기준</span></div>
+            <div class="field"><span class="lab">추이 기간</span>
+              <div class="row"><select id="tFrom" style="flex:1" aria-label="시작 연도"></select><span>–</span><select id="tTo" style="flex:1" aria-label="종료 연도"></select></div></div>
+            <div class="field"><label for="unit">표시 단위</label>
+              <select id="unit"><option value="big">TWh · 조원 · GW</option><option value="small">GWh · 억원 · MW</option></select></div>
+            <div class="field"><span class="lab">세로축</span>
+              <div class="seg" role="radiogroup" aria-label="세로축">
+                <label><input type="radio" name="yax" value="zero" checked><span>0부터</span></label>
+                <label><input type="radio" name="yax" value="auto"><span>자동</span></label>
+              </div></div>
+          </div>
+        </section>
+      </section>
+
+      <div class="results-pane">
+        <div class="kpi-bar"><div class="tools" data-noexport><button class="btn" type="button" data-png="kpiWrap">핵심 지표 저장 <small>PNG</small></button></div></div>
+        <div id="kpiWrap" style="display:flex;flex-direction:column;gap:14px">
+          <p class="kpi-group">판매·요금</p>
+          <section class="kpis" id="kpisS" aria-label="판매·요금 핵심 지표" aria-live="polite"></section>
+          <p class="kpi-group">발전·설비</p>
+          <section class="kpis" id="kpisG" aria-label="발전·설비 핵심 지표" aria-live="polite"></section>
+        </div>
+
+        <section class="sec" id="s-sales">
+          <div class="sec-h">
+            <div><p class="eyebrow">02 · Sales &amp; Tariff</p><h2 id="salesTitle">판매·요금 추이</h2><p class="desc" id="salesDesc"></p></div>
+            <div class="tools" data-noexport><button class="btn" type="button" data-png="s-sales">그림 저장 <small>PNG</small></button><button class="btn" type="button" data-csv="sales">데이터 저장 <small>CSV</small></button></div>
+          </div>
+          <div class="sec-b">
+            <div class="grid-in wide" style="margin-bottom:16px" data-noexport>
+              <div class="field"><label for="sMetric">지표</label>
+                <select id="sMetric">
+                  <option value="sales">판매전력량</option><option value="rev">판매수입</option><option value="price">판매단가</option>
+                  <option value="cust">고객호수</option><option value="kw">요금적용전력</option><option value="percust">호당 판매량</option>
+                </select></div>
+              <div class="field"><span class="lab">분류</span>
+                <div class="seg" role="radiogroup" aria-label="분류">
+                  <label><input type="radio" name="sAxis" value="cls" checked><span>계약종별</span></label>
+                  <label><input type="radio" name="sAxis" value="use"><span>용도별</span></label>
+                </div><span class="hint" id="sAxisHint"></span></div>
+              <div class="field"><label for="sMode">값 기준</label>
+                <select id="sMode"><option value="value">실제 값</option><option value="idx">지수 (시작 연도 = 100)</option><option value="share">구성비 (합계 대비 %)</option></select></div>
+            </div>
+            <div class="chips" id="sChips" style="margin-bottom:12px" data-noexport></div>
+            <div class="legend" id="salesLegend"></div>
+            <div class="chart" id="salesChart"></div>
+            <p class="note" id="salesNote"></p>
+            <p class="note" data-noexport>범례를 누르면 해당 항목이 그래프에서 사라지고, 다시 누르면 나타납니다.</p>
+            <div class="divider"></div>
+            <div class="two">
+              <div>
+                <p class="sub-h" id="shareTitle">구성비</p>
+                <div class="legend" id="shareLegend"></div>
+                <div class="bill" id="shareBars"></div>
+              </div>
+              <div>
+                <p class="sub-h">월별 패턴 <span class="hint" id="monthHint"></span></p>
+                <div class="row" data-noexport style="margin-bottom:8px"><select id="mCls" style="max-width:220px" aria-label="월별 패턴 계약종"></select></div>
+                <div class="legend" id="monthLegend"></div>
+                <div class="chart" id="monthChart"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="sec" id="s-rev">
+          <div class="sec-h">
+            <div><p class="eyebrow">03 · Revenue Scenario</p><h2 id="revTitle">판매수입 시나리오</h2><p class="desc" id="revDesc"></p></div>
+            <div class="tools" data-noexport><button class="btn" type="button" data-png="s-rev">그림 저장 <small>PNG</small></button><button class="btn" type="button" data-csv="rev">데이터 저장 <small>CSV</small></button></div>
+          </div>
+          <div class="sec-b">
+            <div class="grid-in wide" style="margin-bottom:18px" data-noexport>
+              <div class="field"><label for="allDp">전체 단가 조정 <span class="hint" id="allDpV"></span></label>
+                <input type="range" id="allDp" min="-30" max="50" step="0.5" value="0"><span class="hint">모든 계약종에 같은 조정률(%) 적용</span></div>
+              <div class="field"><label for="allDq">전체 판매량 변화 <span class="hint" id="allDqV"></span></label>
+                <input type="range" id="allDq" min="-30" max="50" step="0.5" value="0"><span class="hint">수요 증감(%) 가정</span></div>
+              <div class="field"><label for="elas">가격탄력성</label>
+                <input type="number" id="elas" step="0.05" min="-2" max="0" value="0"><span class="hint">단가 1% 인상 시 판매량 변화(%). 0이면 반응 없음</span></div>
+              <div class="field"><label for="pc">전력구입단가 <span class="hint" id="pcHint"></span></label>
+                <input type="number" id="pc" step="0.1" min="0"><span class="hint">원/kWh · 기본값은 통계의 구입단가</span></div>
+              <div class="field"><label for="lossR">종합손실률 <span class="hint" id="lossHint"></span></label>
+                <input type="number" id="lossR" step="0.01" min="0" max="30"><span class="hint">% · 구입량 = 판매량 ÷ (1 − 손실률)</span></div>
+            </div>
+            <div class="row" style="margin-bottom:14px" data-noexport>
+              <button class="btn primary" type="button" id="neutral">매출중립 단가 조정률 적용</button>
+              <button class="btn" type="button" id="revReset">시나리오 초기화</button>
+              <span class="hint">매출중립: 입력한 판매량 변화에서 총 판매수입이 그대로 유지되는 일괄 단가 조정률</span>
+            </div>
+            <div class="kpis" id="revKpis" style="margin-bottom:18px"></div>
+            <div class="tbl-wrap"><div class="tbl-scroll" style="max-height:none"><table class="scn" id="revTbl"><thead></thead><tbody></tbody></table></div></div>
+            <p class="note" id="revNote"></p>
+          </div>
+        </section>
+
+        <section class="sec" id="s-gen">
+          <div class="sec-h">
+            <div><p class="eyebrow">04 · Generation &amp; Capacity</p><h2 id="genTitle">발전·설비 추이</h2><p class="desc" id="genDesc"></p></div>
+            <div class="tools" data-noexport><button class="btn" type="button" data-png="s-gen">그림 저장 <small>PNG</small></button><button class="btn" type="button" data-csv="gen">데이터 저장 <small>CSV</small></button></div>
+          </div>
+          <div class="sec-b">
+            <div class="grid-in wide" style="margin-bottom:16px" data-noexport>
+              <div class="field"><label for="gMetric">지표</label>
+                <select id="gMetric"><option value="gen">발전량</option><option value="cap">설비용량</option><option value="cf">설비 이용률</option></select></div>
+              <div class="field"><label for="gMode">값 기준</label>
+                <select id="gMode"><option value="value">실제 값</option><option value="idx">지수 (시작 연도 = 100)</option><option value="share">구성비 (합계 대비 %)</option></select></div>
+            </div>
+            <div class="chips" id="gChips" style="margin-bottom:12px" data-noexport></div>
+            <div class="legend" id="genLegend"></div>
+            <div class="chart" id="genChart"></div>
+            <p class="note" id="genNote"></p>
+            <div class="divider"></div>
+            <div class="two">
+              <div>
+                <p class="sub-h">전원 구성비 <span class="hint" id="mixHint"></span></p>
+                <div class="legend" id="mixLegend"></div>
+                <div class="bill" id="mixBars"></div>
+                <p class="sub-h" style="margin-top:18px" id="cfTitle">전원별 설비 이용률</p>
+                <div class="bill" id="cfBars"></div>
+              </div>
+              <div>
+                <p class="sub-h">최대전력과 발전설비</p>
+                <div class="legend" id="peakLegend"></div>
+                <div class="chart" id="peakChart"></div>
+                <p class="note">명목 설비예비율 = (발전설비 − 최대전력) ÷ 최대전력. 발전설비는 사업자 설비의 정격용량 합계라서, 출력이 일정하지 않은 신재생이 늘수록 실제 공급 여력보다 높게 나옵니다.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="sec" id="s-mix">
+          <div class="sec-h">
+            <div><p class="eyebrow">05 · Transition Scenario</p><h2 id="scnTitle">전원 전환 시나리오</h2><p class="desc" id="scnDesc"></p></div>
+            <div class="tools" data-noexport><button class="btn" type="button" data-png="s-mix">그림 저장 <small>PNG</small></button><button class="btn" type="button" data-csv="scn">데이터 저장 <small>CSV</small></button></div>
+          </div>
+          <div class="sec-b">
+            <div class="grid-in wide" style="margin-bottom:18px" data-noexport>
+              <div class="field"><label for="scnFrom">줄이는 전원</label><select id="scnFrom"></select></div>
+              <div class="field"><label for="scnTo">늘리는 전원</label><select id="scnTo"></select></div>
+              <div class="field"><label for="scnShift">전환 규모 <span class="hint" id="scnShiftV"></span></label>
+                <input type="range" id="scnShift" min="0" max="50" step="0.5" value="5"><span class="hint">총 발전량 중 옮기는 비중(%p)</span></div>
+              <div class="field"><label for="scnGrow">총 발전량 변화 <span class="hint" id="scnGrowV"></span></label>
+                <input type="range" id="scnGrow" min="-30" max="100" step="1" value="0"><span class="hint">전력수요 증감을 가정할 때 사용</span></div>
+            </div>
+            <div class="kpis" id="scnKpis" style="margin-bottom:18px"></div>
+            <div class="legend" id="scnLegend"></div>
+            <div class="bill" id="scnBars"></div>
+            <div class="tbl-wrap" style="margin-top:18px"><div class="tbl-scroll" style="max-height:none"><table class="scn" id="scnTbl"><thead></thead><tbody></tbody></table></div></div>
+            <p class="note">전환 후 필요 설비는 분석 연도의 전원별 설비 이용률이 그대로 유지된다고 가정한 단순 계산입니다. 계통 제약, 저장장치, 비용은 반영하지 않습니다.</p>
+          </div>
+        </section>
+
+        <section class="sec" id="s-region">
+          <div class="sec-h">
+            <div><p class="eyebrow">06 · Region</p><h2 id="regTitle">시도 비교</h2><p class="desc" id="regDesc"></p></div>
+            <div class="tools" data-noexport><button class="btn" type="button" data-png="s-region">그림 저장 <small>PNG</small></button><button class="btn" type="button" data-csv="region">데이터 저장 <small>CSV</small></button></div>
+          </div>
+          <div class="sec-b">
+            <div class="grid-in wide" style="margin-bottom:16px" data-noexport>
+              <div class="field"><label for="rMetric">지표</label>
+                <select id="rMetric">
+                  <option value="sales">판매전력량 (분석 연도)</option>
+                  <option value="use">용도별 판매전력량 (2025년)</option>
+                  <option value="gen">발전량 (2025년)</option>
+                  <option value="cap">발전설비 (2025년)</option>
+                  <option value="self">전력자립률 (2025년)</option>
+                </select></div>
+              <div class="field" id="rSubWrap"><label for="rSub">세부 항목</label><select id="rSub"></select></div>
+              <div class="field"><span class="lab">정렬</span>
+                <div class="seg" role="radiogroup" aria-label="정렬">
+                  <label><input type="radio" name="rSort" value="desc" checked><span>높은 순</span></label>
+                  <label><input type="radio" name="rSort" value="asc"><span>낮은 순</span></label>
+                </div></div>
+            </div>
+            <div class="two">
+              <div><div class="rank" id="rank"></div><p class="note" id="rankNote"></p></div>
+              <div>
+                <p class="sub-h">시도별 판매전력량 추이 <span class="hint">순위 막대를 누르면 추가·해제 (최대 8개)</span></p>
+                <div class="legend" id="regLegend"></div>
+                <div class="chart" id="regChart"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="sec" id="s-data">
+          <div class="sec-h">
+            <div><p class="eyebrow">07 · Data</p><h2>연도별 데이터 표</h2><p class="desc" id="dataDesc"></p></div>
+            <div class="tools" data-noexport>
+              <select id="dTable" style="width:230px;height:36px" aria-label="표 선택"></select>
+              <button class="btn" type="button" id="copyTsv">표 복사</button>
+              <button class="btn primary" type="button" data-xlsx="table">엑셀 저장 <small>XLSX</small></button>
+              <button class="btn" type="button" data-csv="table">CSV</button>
+            </div>
+          </div>
+          <div class="sec-b">
+            <div class="tbl-wrap"><div class="tbl-scroll"><table id="tbl"><thead></thead><tbody></tbody></table></div></div>
+            <textarea class="copy" id="copyBox" hidden readonly aria-label="복사용 표 데이터"></textarea>
+          </div>
+        </section>
+
+        <section class="assumption-strip" aria-label="적용 기준">
+          <strong>적용 기준</strong>
+          <ul>
+            <li>원자료: 한국전력공사 「한국전력통계」 2006년판(2005년 실적), 제81호(2011년 실적), 제95호(2025년 실적). 세 판을 이어 <b>1990–2025년</b>을 수록했습니다. 1962–1989년 자료는 없습니다.</li>
+            <li>같은 연도가 여러 판에 있으면 <b>가장 최근 판의 값</b>을 씁니다. 판 사이에 값이 다른 연도는 정제 결과의 audit.json에 기록했습니다.</li>
+            <li><b>계약종별 분류 변경</b>: 1990–1993년은 일반용·교육용·산업용이 합산되어 실려 있어 “일반·교육·산업(합산)”으로 따로 표시합니다(요금적용전력은 주택용도 포함). 1997년까지 주택용에는 심야전력이 포함되어 있습니다. 추이 그래프의 세로 점선이 기준이 바뀐 해입니다.</li>
+            <li><b>판매단가</b>는 판매수입 ÷ 판매전력량이며 원자료의 판매단가 표와 대조했습니다. 판매수입은 전기요금 수입 기준입니다.</li>
+            <li><b>발전량·발전설비</b>는 사업자(한전·자회사 + 타사) 기준이고 상용자가는 총계에만 포함됩니다. 수력 = 일반 + 소수력, 석탄 = 무연탄 + 유연탄, 유류 = 중유 + 내연력, LNG·복합 = 기력 LNG + 복합화력으로 묶었습니다. 2006–2007년 발전량은 집단에너지와 대체에너지가 합산되어 있어 “기타”에 넣었습니다.</li>
+            <li><b>설비 이용률</b> = 발전량 ÷ (연말 설비용량 × 8,760시간). 연중 증설이 큰 해에는 실제보다 낮게 나옵니다.</li>
+            <li><b>판매수입 시나리오</b>의 차익은 판매수입 − 전력구입비만 계산하며, 송배전·판매 등 다른 비용은 포함하지 않습니다. 전력구입단가는 2001–2011년, 2016–2025년만 통계에 있어 그 밖의 연도는 가장 가까운 연도 값을 기본값으로 씁니다.</li>
+            <li>시도별 판매전력량의 2020년 합계는 원자료 합계 칸이 시도 합과 맞지 않아 시도 합으로 바꿨습니다. 세종은 2012년부터, 울산은 1997년부터 수록되어 있습니다.</li>
+            <li>월별 값은 각 판의 마지막 연도(2005·2011·2025년)만 있습니다.</li>
+          </ul>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <div class="footer-inner">
+      <span>KEPCO Statistics Simulator</span>
+      <p>한국전력통계 기반 판매·요금·발전·설비 분석 엔진 · 1990–2025</p>
+    </div>
+  </footer>
+</main>
+<div class="tip" id="tip" hidden></div>
+
+<script async src="vendor/html2canvas.min.js"></script>
+<script async src="vendor/xlsx.full.min.js"></script>
+<script type="application/json" id="data">__DATA__</script>
+<script>
+'use strict';
+const D=JSON.parse(document.getElementById('data').textContent);
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const YEARS=D.years, T=D.tables, YI={}; YEARS.forEach((y,i)=>YI[y]=i);
+const Y0=1990, Y1=YEARS[YEARS.length-1], YR=YEARS.filter(y=>y>=Y0);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ---------- 분류 정의 ---------- */
+const CLS=[['res','주택용','#003b8e'],['gen','일반용','#e60012'],['edu','교육용','#f2a900'],['ind','산업용','#4b5563'],
+  ['agr','농사용','#2e9e6b'],['str','가로등','#8b5cf6'],['night','심야','#0e9aa7'],['gis','일반·교육·산업(합산)','#9aa3af']];
+const USE=[['res','가정용','#003b8e'],['pub','공공용','#f2a900'],['svc','서비스업','#e60012'],['agr','농림어업','#2e9e6b'],['min','광업','#8b5cf6'],['mfg','제조업','#4b5563']];
+const SRC=[['nuc','원자력','#7c3aed'],['coal','석탄','#3f3a47'],['lng','LNG·복합','#e08e2d'],['ren','신재생','#2e9e6b'],['grp','집단에너지','#d9487a'],
+  ['hydro','수력','#2f7fe0'],['pump','양수','#7db7f0'],['oil','유류','#b9a37e'],['etc','기타','#9aa3af']];
+const SRCP={hydro:['h_gen','h_small'],pump:['h_pump'],coal:['anth','bitu'],oil:['heavy','ic'],lng:['lngst','cc'],nuc:['nuc'],ren:['ren'],grp:['grp'],etc:['etc','grpalt']};
+const CLEAN=['nuc','hydro','ren'];
+const NM={}; [...CLS,...USE,...SRC].forEach(([k,n])=>NM[k]=NM[k]||n);
+const SRC82=[['total','합계'],['nuc','원자력'],['bitu','유연탄'],['anth','무연탄'],['lng','LNG'],['ren','신재생'],['oil','유류'],['pump','양수'],['etc','기타']];
+const SM={sales:{n:'판매전력량',t:'sales'},rev:{n:'판매수입',t:'rev'},price:{n:'판매단가',t:'price'},cust:{n:'고객호수',t:'cust'},kw:{n:'요금적용전력',t:'kw'},percust:{n:'호당 판매량'}};
+const GM={gen:{n:'발전량'},cap:{n:'설비용량'},cf:{n:'설비 이용률'}};
+
+const DEF={year:Y1,base:2015,from:Y0,to:Y1,unit:'big',yax:'zero',
+  sMetric:'sales',sAxis:'cls',sMode:'value',sSel:['res','gen','ind','agr'],mCls:'total',
+  gMetric:'gen',gMode:'value',gSel:['nuc','coal','lng','ren'],
+  rev:{dp:{},dq:{},el:0,pc:null,loss:null},
+  scn:{from:'coal',to:'ren',shift:5,grow:0},
+  rMetric:'sales',rSub:'total',rSort:'desc',rSel:['경기','서울','충남','경북'],dTable:'sales'};
+let S=structuredClone(DEF);
+
+/* ---------- 단위·형식 ---------- */
+const big=()=>S.unit==='big';
+const U={ // [표시 단위, 원자료→표시 배율]
+  energy:()=>big()?['TWh',1e-6]:['GWh',1e-3],   // MWh
+  money:()=>big()?['조원',1e-9]:['억원',1e-5],   // 천원
+  power:()=>big()?['GW',1e-6]:['MW',1e-3],       // kW
+};
+function nf(v,d){ if(v==null||!isFinite(v)) return '–'; const a=Math.abs(v);
+  if(d==null) d=a>=1000?0:a>=100?1:a>=10?1:2;
+  return v.toLocaleString('ko-KR',{minimumFractionDigits:d,maximumFractionDigits:d}); }
+const isZero=s=>!/[1-9]/.test(s);
+const sgn=(v,d)=>{ if(v==null||!isFinite(v)) return '–'; const s=nf(Math.abs(v),d); return isZero(s)?s:(v>0?'+':'−')+s; };
+const pf=(v,d=1)=>v==null||!isFinite(v)?'–':sgn(v,d)+'%';
+const chgCls=v=>v==null||Math.abs(v)<1e-6?'':v>0?'up':'down';
+const at=(tab,col,y)=>{const a=T[tab][col]; return a?a[YI[y]]:null};
+const sum=a=>{let s=0,ok=false; a.forEach(v=>{if(v!=null){s+=v;ok=true}}); return ok?s:null};
+function nearest(tab,col,y){ // 값이 없으면 가장 가까운 연도
+  for(let d=0;d<40;d++){ for(const yy of [y-d,y+d]){ if(YI[yy]!=null&&yy>=Y0){const v=at(tab,col,yy); if(v!=null) return {v,y:yy}} } }
+  return {v:null,y:null}; }
+
+/* ---------- 값 접근 ---------- */
+function salesVal(metric,axis,k,y){ // 표시 단위 값
+  if(axis==='use'){ const v=at('use',k,y); return v==null?null:v*U.energy()[1]; }
+  if(metric==='percust'){ const s=at('sales',k,y),c=at('cust',k,y); return s!=null&&c?s/c*1000:null; } // kWh/호
+  if(metric==='price'){ const r=at('rev',k,y),s=at('sales',k,y); return r!=null&&s?r/s:at('price',k,y); }
+  const v=at(SM[metric].t,k,y); if(v==null) return null;
+  if(metric==='sales') return v*U.energy()[1];
+  if(metric==='rev') return v*U.money()[1];
+  if(metric==='kw') return v*U.power()[1];
+  return big()?v/1e4:v; // 고객호수: 만 호 / 호
+}
+function salesUnit(metric,axis){ if(axis==='use'||metric==='sales') return U.energy()[0];
+  return {rev:U.money()[0],price:'원/kWh',cust:big()?'만 호':'호',kw:U.power()[0],percust:'kWh/호'}[metric]; }
+const srcRaw=(tab,s,y)=>s==='total'?at(tab,'pu_total',y):sum(SRCP[s].map(c=>at(tab,c,y)));
+function cfOf(s,y){ const g=srcRaw('gen',s,y),c=srcRaw('cap',s,y); return g!=null&&c?g/(c*8.76)*100:null; }
+function genVal(metric,s,y){ if(metric==='cf') return cfOf(s,y);
+  const v=srcRaw(metric,s,y); return v==null?null:v*(metric==='gen'?U.energy()[1]:U.power()[1]); }
+const genUnit=m=>m==='cf'?'%':m==='gen'?U.energy()[0]:U.power()[0];
+
+/* ---------- 툴팁·토스트 ---------- */
+const tip=$('#tip');
+function showTip(e,html){tip.innerHTML=html;tip.hidden=false;moveTip(e)}
+function moveTip(e){const w=tip.offsetWidth,h=tip.offsetHeight;let x=e.clientX+14,y=e.clientY+14;if(x+w>innerWidth-8)x=e.clientX-w-14;if(y+h>innerHeight-8)y=e.clientY-h-14;tip.style.left=Math.max(4,x)+'px';tip.style.top=Math.max(4,y)+'px'}
+function hideTip(){tip.hidden=true}
+document.addEventListener('mouseover',e=>{const t=e.target.closest('[data-tip]'); if(t) showTip(e,t.dataset.tip)});
+document.addEventListener('mousemove',e=>{if(e.target.closest('[data-tip]')) moveTip(e)});
+document.addEventListener('mouseout',e=>{if(e.target.closest('[data-tip]')) hideTip()});
+function legToggle(t){ const h=hid(t.dataset.leg),k=t.dataset.k; h.has(k)?h.delete(k):h.add(k); render(); }
+document.addEventListener('click',e=>{const t=e.target.closest('.legend [data-leg]'); if(t) legToggle(t)});
+document.addEventListener('keydown',e=>{const t=e.target.closest&&e.target.closest('.legend [data-leg]'); if(t&&(e.key==='Enter'||e.key===' ')){e.preventDefault();const q=`.legend [data-leg="${t.dataset.leg}"][data-k="${t.dataset.k}"]`;legToggle(t);const n=document.querySelector(q);n&&n.focus()}});
+function toast(m){const t=document.createElement('div');t.className='toast';t.textContent=m;document.body.appendChild(t);setTimeout(()=>t.remove(),2200)}
+
+/* ---------- SVG 선그래프 ---------- */
+function niceTicks(lo,hi,n=5){ if(hi<=lo) hi=lo+1; const step0=(hi-lo)/n, mag=Math.pow(10,Math.floor(Math.log10(step0)));
+  const step=[1,2,2.5,5,10].map(m=>m*mag).find(s=>s>=step0);
+  const a=Math.floor(lo/step)*step, b=Math.ceil(hi/step)*step, t=[]; for(let v=a;v<=b+step*1e-6;v+=step) t.push(+v.toFixed(10));
+  return {t,step,lo:a,hi:b}; }
+const tickFmt=(v,step)=>v.toLocaleString('ko-KR',{maximumFractionDigits:step<0.01?3:step<1?2:step<10?1:0});
+const EXP={};
+function lineChart(el,o){
+  const xs=o.x, n=xs.length, W=Math.max(300,el.clientWidth||600), H=o.h||340, m={l:58,r:18,t:20,b:28};
+  const all=o.series.flatMap(s=>s.pts.filter(v=>v!=null));
+  if(!all.length){ el.innerHTML='<div class="empty">표시할 항목이 없습니다. 범례를 눌러 항목을 다시 켜 주세요.</div>'; return; }
+  let lo=Math.min(...all), hi=Math.max(...all); if(o.zero&&lo>0) lo=0; if(o.zero&&hi<0) hi=0;
+  if(lo===hi){lo-=1;hi+=1}
+  const tk=niceTicks(lo,hi), iw=W-m.l-m.r, ih=H-m.t-m.b;
+  const X=i=>m.l+(n>1?iw*i/(n-1):iw/2), Y=v=>m.t+ih*(1-(v-tk.lo)/(tk.hi-tk.lo));
+  let g='';
+  tk.t.forEach(v=>{g+=`<line x1="${m.l}" x2="${W-m.r}" y1="${Y(v)}" y2="${Y(v)}" stroke="${v===0?'#b9bec7':'#eceef1'}"/><text x="${m.l-8}" y="${Y(v)+4}" text-anchor="end">${tickFmt(v,tk.step)}</text>`});
+  const every=Math.ceil(n/(W<520?6:12));
+  xs.forEach((x,i)=>{ if(i===n-1||(i%every===0&&n-1-i>=every)) g+=`<text x="${X(i)}" y="${H-8}" text-anchor="middle">${x}</text>`});
+  (o.marks||[]).forEach(mk=>{const i=xs.indexOf(mk.x); if(i<1) return;
+    g+=`<line x1="${X(i)-iw/(n-1)/2}" x2="${X(i)-iw/(n-1)/2}" y1="${m.t-6}" y2="${m.t+ih}" stroke="#e60012" stroke-dasharray="4 4" stroke-opacity=".55"/><text x="${X(i)-iw/(n-1)/2+4}" y="${m.t+4}" style="fill:#c8303a;font-size:11px">${esc(mk.label)}</text>`});
+  let p='';
+  o.series.forEach(s=>{ let d='',pen=false;
+    s.pts.forEach((v,i)=>{ if(v==null){pen=false;return} d+=(pen?'L':'M')+X(i).toFixed(1)+' '+Y(v).toFixed(1); pen=true;
+      const lone=(i===0||s.pts[i-1]==null)&&(i===n-1||s.pts[i+1]==null);
+      if(lone||n<=14) p+=`<circle cx="${X(i)}" cy="${Y(v)}" r="${lone?3.2:2.6}" fill="${s.color}"/>`; });
+    p+=`<path d="${d}" fill="none" stroke="${s.color}" stroke-width="${s.w||2.2}" ${s.dash?'stroke-dasharray="6 5"':''} stroke-linejoin="round" stroke-linecap="round"/>`; });
+  el.innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(o.title||'추이 그래프')}"><g class="axis">${g}<text x="${m.l}" y="12" style="font-weight:700;fill:#6b7280">${esc(o.unit||'')}</text></g>${p}<line class="cur" y1="${m.t}" y2="${m.t+ih}" stroke="#0a2350" stroke-opacity=".35" visibility="hidden"/><rect x="${m.l}" y="${m.t}" width="${iw}" height="${ih}" fill="transparent"/></svg>`;
+  const svg=el.querySelector('svg'), cur=svg.querySelector('.cur'), rect=svg.querySelector('rect');
+  const move=e=>{ const r=svg.getBoundingClientRect(), px=(e.clientX-r.left)/r.width*W;
+    const i=Math.max(0,Math.min(n-1,Math.round((px-m.l)/(n>1?iw/(n-1):1))));
+    cur.setAttribute('x1',X(i));cur.setAttribute('x2',X(i));cur.setAttribute('visibility','visible');
+    const rows=o.series.filter(s=>s.pts[i]!=null).sort((a,b)=>b.pts[i]-a.pts[i]).map(s=>`<div class="r"><span><i style="background:${s.color}"></i>${esc(s.name)}</span><b>${nf(s.pts[i],o.d)}</b></div>`).join('');
+    showTip(e,`<div class="t">${xs[i]}${o.xsuf||'년'} <span style="font-weight:500;color:#cfd1d5">${esc(o.unit||'')}</span></div>${rows||'<div class="r">자료 없음</div>'}`); };
+  rect.addEventListener('mousemove',move); rect.addEventListener('mouseleave',()=>{cur.setAttribute('visibility','hidden');hideTip()});
+  if(o.key) EXP[o.key]={name:o.title,head:['연도',...o.series.map(s=>`${s.name} (${o.unit})`)],rows:xs.map((x,i)=>[x,...o.series.map(s=>rnd(s.pts[i]))])};
+}
+const HID={}; const hid=id=>HID[id]||(HID[id]=new Set());
+const vis=(id,ss)=>ss.filter(s=>!hid(id).has(s.name));
+const legendHtml=(ss,id)=>ss.map(s=>`<span data-leg="${id}" data-k="${esc(s.name)}" class="${hid(id).has(s.name)?'off':''}" role="button" tabindex="0" title="눌러서 숨기기·다시 보이기"><i class="${s.dash?'dash':''}" style="background:${s.color}"></i>${esc(s.name)}</span>`).join('');
+const sqLegend=(defs,id)=>defs.map(([k,n,c])=>`<span data-leg="${id}" data-k="${n}" class="${hid(id).has(n)?'off':''}" role="button" tabindex="0" title="눌러서 숨기기·다시 보이기"><i class="sq" style="background:${c}"></i>${n}</span>`).join('');
+const rnd=v=>v==null||!isFinite(v)?'':Math.round(v*10000)/10000;
+function stackBar(parts,unit,id){ // parts: [[name,color,value]]
+  if(id) parts=parts.filter(p=>!hid(id).has(p[0]));
+  const tot=parts.reduce((a,p)=>a+Math.max(0,p[2]||0),0); if(!tot) return '<div class="mxbar"></div>';
+  return `<div class="mxbar">${parts.filter(p=>p[2]>0).map(p=>`<span style="width:${(p[2]/tot*100).toFixed(3)}%;background:${p[1]}" data-tip="${esc(`<div class='t'>${p[0]}</div><div class='r'><span>${nf(p[2])} ${unit}</span><b>${nf(p[2]/tot*100,1)}%</b></div>`)}"></span>`).join('')}</div>`;
+}
+const range=()=>YR.filter(y=>y>=S.from&&y<=S.to);
+function transform(pts,mode,totals){ if(mode==='idx'){ const b=pts.find(v=>v!=null); return pts.map(v=>v==null||!b?null:v/b*100); }
+  if(mode==='share') return pts.map((v,i)=>v==null||!totals[i]?null:v/totals[i]*100); return pts; }
+
+/* ---------- 컨트롤 ---------- */
+function fillSel(el,opts,val){ el.innerHTML=opts.map(([v,n])=>`<option value="${v}">${n}</option>`).join(''); if(val!=null) el.value=val; }
+function setupControls(){
+  const yo=YR.slice().reverse().map(y=>[y,y+'년']);
+  fillSel($('#year'),yo); fillSel($('#base'),yo); fillSel($('#tFrom'),YR.map(y=>[y,y])); fillSel($('#tTo'),YR.map(y=>[y,y]));
+  fillSel($('#scnFrom'),SRC.map(([k,n])=>[k,n])); fillSel($('#scnTo'),SRC.map(([k,n])=>[k,n]));
+  fillSel($('#mCls'),[['total','합계'],...CLS.slice(0,7).map(([k,n])=>[k,n])]);
+  fillSel($('#dTable'),DT.map(d=>[d.id,d.n]));
+  const bind=(id,key,num)=>$(id).addEventListener('change',e=>{S[key]=num?+e.target.value:e.target.value;render()});
+  bind('#year','year',1);bind('#base','base',1);bind('#unit','unit');bind('#sMetric','sMetric');bind('#sMode','sMode');bind('#mCls','mCls');
+  bind('#gMetric','gMetric');bind('#gMode','gMode');bind('#rMetric','rMetric');bind('#rSub','rSub');bind('#dTable','dTable');
+  $('#tFrom').addEventListener('change',e=>{S.from=+e.target.value;if(S.from>=S.to)S.to=Math.min(Y1,S.from+1);sync();render()});
+  $('#tTo').addEventListener('change',e=>{S.to=+e.target.value;if(S.to<=S.from)S.from=Math.max(Y0,S.to-1);sync();render()});
+  const radio=(name,key)=>$$(`input[name=${name}]`).forEach(r=>r.addEventListener('change',()=>{S[key]=r.value;render()}));
+  radio('yax','yax');radio('sAxis','sAxis');radio('rSort','rSort');
+  $('#reset').addEventListener('click',()=>{S=structuredClone(DEF);sync();render();toast('기본값으로 초기화했습니다')});
+  $('#allDp').addEventListener('input',e=>{CLS.forEach(([k])=>S.rev.dp[k]=+e.target.value);buildRev();calcRev()});
+  $('#allDq').addEventListener('input',e=>{CLS.forEach(([k])=>S.rev.dq[k]=+e.target.value);buildRev();calcRev()});
+  $('#elas').addEventListener('input',e=>{S.rev.el=+e.target.value||0;calcRev()});
+  $('#pc').addEventListener('input',e=>{S.rev.pc=e.target.value===''?null:+e.target.value;calcRev()});
+  $('#lossR').addEventListener('input',e=>{S.rev.loss=e.target.value===''?null:+e.target.value;calcRev()});
+  $('#revReset').addEventListener('click',()=>{S.rev=structuredClone(DEF.rev);sync();buildRev();calcRev()});
+  $('#neutral').addEventListener('click',neutral);
+  ['scnFrom','scnTo'].forEach(id=>$('#'+id).addEventListener('change',e=>{S.scn[id==='scnFrom'?'from':'to']=e.target.value;renderScn()}));
+  $('#scnShift').addEventListener('input',e=>{S.scn.shift=+e.target.value;renderScn()});
+  $('#scnGrow').addEventListener('input',e=>{S.scn.grow=+e.target.value;renderScn()});
+  $('#copyTsv').addEventListener('click',copyTable);
+  document.addEventListener('click',e=>{const b=e.target.closest('[data-png],[data-csv],[data-xlsx]'); if(!b) return;
+    if(b.dataset.png) savePNG(b.dataset.png,b); else if(b.dataset.csv) saveCSV(b.dataset.csv); else saveXLSX(b.dataset.xlsx); });
+}
+function sync(){
+  $('#year').value=S.year;$('#base').value=S.base;$('#tFrom').value=S.from;$('#tTo').value=S.to;$('#unit').value=S.unit;
+  $('#sMetric').value=S.sMetric;$('#sMode').value=S.sMode;$('#gMetric').value=S.gMetric;$('#gMode').value=S.gMode;$('#mCls').value=S.mCls;
+  $('#rMetric').value=S.rMetric;$('#dTable').value=S.dTable;$('#scnFrom').value=S.scn.from;$('#scnTo').value=S.scn.to;
+  $('#scnShift').value=S.scn.shift;$('#scnGrow').value=S.scn.grow;$('#elas').value=S.rev.el;
+  [['yax',S.yax],['sAxis',S.sAxis],['rSort',S.rSort]].forEach(([n,v])=>$$(`input[name=${n}]`).forEach(r=>r.checked=r.value===v));
+}
+function chips(el,defs,sel,cb){
+  el.innerHTML=defs.map(([k,n,c])=>`<button type="button" class="chip toggle" data-k="${k}" aria-pressed="${sel.includes(k)}"><i style="background:${c}"></i>${n}</button>`).join('');
+  el.querySelectorAll('button').forEach(b=>b.onclick=()=>{const k=b.dataset.k,i=sel.indexOf(k); if(i>=0) sel.splice(i,1); else sel.push(k); cb()});
+}
+
+/* ---------- 핵심 지표 ---------- */
+function kpi(label,val,unit,y,prev,base,opt={}){
+  if(val==null) return `<div class="kpi"><p class="k">${label}</p><div class="v">–</div><div class="n">${S.year}년 자료가 원자료에 없습니다</div></div>`;
+  const yoy=prev!=null&&prev?(opt.pp?val-prev:(val/prev-1)*100):null, vb=base!=null&&base?(opt.pp?val-base:(val/base-1)*100):null;
+  const f=v=>v==null?'–':opt.pp?sgn(v,2)+'%p':pf(v);
+  return `<div class="kpi${opt.lead?' lead':''}"><p class="k">${label}</p><div class="v">${nf(val,opt.d)}<small>${unit}</small></div>
+    <div class="n">전년 대비 <b class="${chgCls(yoy)}">${f(yoy)}</b> · ${S.base}년 대비 <b class="${chgCls(vb)}">${f(vb)}</b></div></div>`;
+}
+function renderKPI(){
+  const y=S.year, b=S.base, p=y-1, has=yy=>YI[yy]!=null&&yy>=Y0;
+  const g3=(fn)=>[fn(y),has(p)?fn(p):null,has(b)?fn(b):null];
+  const [eu,em]=U.energy(),[mu,mm]=U.money(),[pu,pm]=U.power();
+  const sales=g3(yy=>{const v=at('sales','total',yy);return v==null?null:v*em});
+  const rev=g3(yy=>{const v=at('rev','total',yy);return v==null?null:v*mm});
+  const price=g3(yy=>{const r=at('rev','total',yy),s=at('sales','total',yy);return r&&s?r/s:null});
+  const cust=g3(yy=>{const v=at('cust','total',yy);return v==null?null:v/1e4});
+  $('#kpisS').innerHTML=kpi('판매전력량',sales[0],eu,y,sales[1],sales[2],{lead:1})+kpi('판매수입',rev[0],mu,y,rev[1],rev[2])
+    +kpi('평균 판매단가',price[0],'원/kWh',y,price[1],price[2],{d:2})+kpi('고객호수',cust[0],'만 호',y,cust[1],cust[2],{d:0});
+  const gen=g3(yy=>{const v=at('gen','pu_total',yy);return v==null?null:v*em});
+  const cap=g3(yy=>{const v=at('cap','pu_total',yy);return v==null?null:v*pm});
+  const peak=g3(yy=>{const v=at('perf','peak',yy);return v==null?null:v*pm});
+  const loss=g3(yy=>at('loss','or',yy));
+  $('#kpisG').innerHTML=kpi('발전량 (사업자)',gen[0],eu,y,gen[1],gen[2],{lead:1})+kpi('발전설비 (사업자)',cap[0],pu,y,cap[1],cap[2])
+    +kpi('최대전력',peak[0],pu,y,peak[1],peak[2])+kpi('종합손실률',loss[0],'%',y,loss[1],loss[2],{d:2,pp:1});
+  $('#yearHint').textContent=`자료: ${D.meta.editions[D.edition.sales[YI[y]]]||'–'}`;
+}
+
+/* ---------- 02 판매·요금 ---------- */
+function renderSales(){
+  const use=S.sAxis==='use'; if(use&&S.sMetric!=='sales'){S.sMetric='sales';$('#sMetric').value='sales'}
+  $('#sMetric').disabled=use; $('#sAxisHint').textContent=use?'용도별은 판매전력량만 있습니다':'';
+  const metric=S.sMetric, defs=use?USE:CLS, ys=range();
+  if(use) S.sSel=S.sSel.filter(k=>USE.some(d=>d[0]===k)); else S.sSel=S.sSel.filter(k=>CLS.some(d=>d[0]===k));
+  if(!S.sSel.length) S.sSel=use?['res','svc','mfg']:['res','gen','ind','agr'];
+  chips($('#sChips'),[...defs,['total','합계','#0a2350']],S.sSel,renderSales);
+  const additive=!['price','percust'].includes(metric);
+  let mode=S.sMode; if(!additive&&mode==='share') mode='value';
+  $('#sMode').querySelector('[value=share]').disabled=!additive;
+  const tot=ys.map(y=>salesVal(metric,S.sAxis,'total',y));
+  const series=S.sSel.map(k=>{const d=[...defs,['total','합계','#0a2350']].find(x=>x[0]===k);
+    return {name:d[1],color:d[2],dash:k==='total',pts:transform(ys.map(y=>salesVal(metric,S.sAxis,k,y)),mode,tot)}});
+  const unit=mode==='idx'?`지수 (${ys[0]}=100)`:mode==='share'?'%':salesUnit(metric,S.sAxis);
+  const title=`${use?'용도별':'계약종별'} ${SM[metric].n} 추이`;
+  $('#salesTitle').textContent=title;
+  $('#salesDesc').textContent=`${ys[0]}–${ys[ys.length-1]}년 · ${unit}. 자료가 없는 연도는 선을 끊어 표시합니다.`;
+  $('#salesLegend').innerHTML=legendHtml(series,'sales');
+  const marks=use?[]:[{x:1994,label:'일반·교육·산업 분리'},{x:1998,label:'심야 분리'}];
+  lineChart($('#salesChart'),{x:ys,series:vis('sales',series),unit,zero:S.yax==='zero',marks,title,key:'sales',d:metric==='cust'&&!big()?0:null});
+  $('#salesNote').textContent=use?'용도별 분류는 계약종별과 다른 기준이므로 두 분류의 항목을 서로 합치거나 비교하지 않습니다.'
+    :'세로 점선은 분류 기준이 바뀐 해입니다. 1993년까지 일반용·교육용·산업용은 합산값만 있고, 1997년까지 주택용에는 심야전력이 포함됩니다.';
+  // 구성비
+  const sm=use?'sales':(additive?metric:'sales');
+  $('#shareTitle').textContent=`${use?'용도별':'계약종별'} ${SM[sm].n} 구성비`;
+  $('#shareLegend').innerHTML=sqLegend(defs,'share');
+  const u=salesUnit(sm,S.sAxis);
+  $('#shareBars').innerHTML=[...new Set([S.year,S.base,2005,1995])].sort((a,b)=>b-a).map(y=>{
+    const parts=defs.map(([k,n,c])=>[n,c,salesVal(sm,S.sAxis,k,y)]), t=salesVal(sm,S.sAxis,'total',y);
+    return `<div class="brow mx"><span class="nm">${y}년</span><span class="track" style="height:24px">${stackBar(parts,u,'share')}</span><span class="amt">${nf(t)} <small style="font-weight:600;color:#717782">${u}</small></span></div>`}).join('');
+  // 월별
+  const mt=['sales','rev','price'].includes(metric)&&!use?metric:'sales', MC=['#9aa3af','#003b8e','#e60012'];
+  const mys=Object.keys(D.monthly[mt]).sort();
+  const mseries=mys.map((yy,i)=>{const a=D.monthly[mt][yy][S.mCls]||[]; const f=mt==='sales'?1e-3:mt==='rev'?1e-5:1;
+    return {name:yy+'년',color:MC[i%3],pts:Array.from({length:12},(_,j)=>a[j]==null?null:a[j]*f)}});
+  const mu=mt==='sales'?'GWh':mt==='rev'?'억원':'원/kWh';
+  $('#monthHint').textContent=`${SM[mt].n} · ${mu}`;
+  $('#monthLegend').innerHTML=legendHtml(mseries,'month');
+  lineChart($('#monthChart'),{x:[1,2,3,4,5,6,7,8,9,10,11,12],series:vis('month',mseries),unit:mu,zero:S.yax==='zero',h:270,xsuf:'월',title:'월별 패턴'});
+}
+
+/* ---------- 03 판매수입 시나리오 ---------- */
+const revCls=()=>CLS.filter(([k])=>at('sales',k,S.year)!=null&&at('rev',k,S.year)!=null);
+function buildRev(){
+  const y=S.year, [eu]=U.energy(),[mu]=U.money();
+  $('#revTitle').textContent=`${y}년 판매수입 시나리오`;
+  $('#revDesc').textContent=`${y}년 계약종별 판매전력량과 판매단가를 출발점으로, 단가 조정과 판매량 변화가 판매수입과 전력구입비에 주는 영향을 계산합니다.`;
+  $('#revTbl thead').innerHTML=`<tr><th>계약종</th><th>판매량 (${eu})</th><th>현행 단가 (원/kWh)</th><th>단가 조정 (%)</th><th>판매량 변화 (%)</th><th>조정 후 단가</th><th>조정 후 판매량 (${eu})</th><th>현행 수입 (${mu})</th><th>조정 후 수입 (${mu})</th><th>증감 (${mu})</th></tr>`;
+  $('#revTbl tbody').innerHTML=revCls().map(([k,n,c])=>`<tr data-k="${k}"><td><i class="dot" style="background:${c}"></i>${n}</td><td class="q0"></td><td class="p0"></td>
+    <td><input type="number" step="0.1" class="dp" value="${S.rev.dp[k]||0}" aria-label="${n} 단가 조정률"></td>
+    <td><input type="number" step="0.1" class="dq" value="${S.rev.dq[k]||0}" aria-label="${n} 판매량 변화율"></td>
+    <td class="p1"></td><td class="q1"></td><td class="r0"></td><td class="r1"></td><td class="dr"></td></tr>`).join('')
+    +`<tr class="sum" data-k="total"><td>합계</td><td class="q0"></td><td class="p0"></td><td></td><td></td><td class="p1"></td><td class="q1"></td><td class="r0"></td><td class="r1"></td><td class="dr"></td></tr>`;
+  $$('#revTbl input').forEach(i=>i.addEventListener('input',()=>{const k=i.closest('tr').dataset.k; S.rev[i.className][k]=+i.value||0; calcRev()}));
+  const pc=nearest('pur','tp',y), ls=nearest('loss','or',y);
+  $('#pc').value=S.rev.pc!=null?S.rev.pc:(pc.v!=null?pc.v.toFixed(2):'');
+  $('#lossR').value=S.rev.loss!=null?S.rev.loss:(ls.v!=null?ls.v.toFixed(2):'');
+  $('#pcHint').textContent=pc.y===y?'':`${pc.y}년 값`; $('#lossHint').textContent=ls.y===y?'':`${ls.y}년 값`;
+  const a=v=>Object.values(v).length&&Object.values(v).every(x=>x===Object.values(v)[0])?Object.values(v)[0]:0;
+  $('#allDpV').textContent=pf(a(S.rev.dp)); $('#allDqV').textContent=pf(a(S.rev.dq)); $('#allDp').value=a(S.rev.dp); $('#allDq').value=a(S.rev.dq);
+}
+function revModel(dpOverride){
+  const y=S.year, rows=revCls().map(([k,n])=>{ const q0=at('sales',k,y), r0=at('rev',k,y), p0=r0/q0;
+    const dp=dpOverride!=null?dpOverride:(S.rev.dp[k]||0), dq=S.rev.dq[k]||0;
+    const q1=q0*(1+dq/100)*Math.max(0,1+S.rev.el*dp/100), p1=p0*(1+dp/100);
+    return {k,n,q0,r0,p0,q1,p1,r1:q1*p1}; });
+  const t={k:'total',n:'합계',q0:0,r0:0,q1:0,r1:0}; rows.forEach(r=>{t.q0+=r.q0;t.r0+=r.r0;t.q1+=r.q1;t.r1+=r.r1}); t.p0=t.r0/t.q0; t.p1=t.r1/t.q1;
+  const pc=+$('#pc').value||0, loss=Math.min(90,+$('#lossR').value||0)/100;
+  const c0=t.q0/(1-loss)*pc, c1=t.q1/(1-loss)*pc; // MWh×원/kWh = 천원
+  return {rows,t,pc,loss,c0,c1};
+}
+function calcRev(){
+  const M=revModel(), [eu,em]=U.energy(),[mu,mm]=U.money();
+  [...M.rows,M.t].forEach(r=>{ const tr=$(`#revTbl tr[data-k="${r.k}"]`); if(!tr) return; const set=(c,v)=>tr.querySelector('.'+c).innerHTML=v;
+    set('q0',nf(r.q0*em));set('p0',nf(r.p0,2));set('p1',nf(r.p1,2));set('q1',nf(r.q1*em));set('r0',nf(r.r0*mm));set('r1',nf(r.r1*mm));
+    const d=(r.r1-r.r0)*mm; set('dr',`<b class="${chgCls(d)}">${sgn(d)}</b>`); });
+  const dR=M.t.r1-M.t.r0, dC=M.c1-M.c0, m0=M.t.r0-M.c0, m1=M.t.r1-M.c1;
+  const card=(l,v,u,n,lead)=>`<div class="kpi${lead?' lead':''}"><p class="k">${l}</p><div class="v">${v}<small>${u}</small></div><div class="n">${n}</div></div>`;
+  $('#revKpis').innerHTML=card('판매수입 변화',sgn(dR*mm),mu,`${nf(M.t.r0*mm)} → ${nf(M.t.r1*mm)} ${mu} (<b class="${chgCls(dR)}">${pf(dR/M.t.r0*100,2)}</b>)`,1)
+    +card('평균 판매단가',nf(M.t.p1,2),'원/kWh',`현행 ${nf(M.t.p0,2)}원/kWh 대비 <b class="${chgCls(M.t.p1-M.t.p0)}">${sgn(M.t.p1-M.t.p0,2)}원</b>`)
+    +card('전력구입비 변화',sgn(dC*mm),mu,`구입량 ${nf(M.t.q0/(1-M.loss)*em)} → ${nf(M.t.q1/(1-M.loss)*em)} ${eu} × ${nf(M.pc,2)}원/kWh`)
+    +card('판매수입 − 구입비',sgn((m1-m0)*mm),mu,`${nf(m0*mm)} → ${nf(m1*mm)} ${mu} · kWh당 ${nf(m1/M.t.q1,2)}원`);
+  $('#revNote').textContent=`현행 단가는 ${S.year}년 판매수입 ÷ 판매전력량입니다. 조정 후 판매량 = 현행 판매량 × (1 + 판매량 변화) × (1 + 가격탄력성 × 단가 조정). 구입비는 판매량을 종합손실률로 역산한 구입량에 구입단가를 곱한 값이며, 그 밖의 비용은 포함하지 않습니다.`;
+  EXP.rev={name:`${S.year}년 판매수입 시나리오`,head:['계약종','현행 판매량(MWh)','현행 단가(원/kWh)','조정 후 판매량(MWh)','조정 후 단가(원/kWh)','현행 수입(천원)','조정 후 수입(천원)','증감(천원)'],
+    rows:[...M.rows,M.t].map(r=>[r.n,rnd(r.q0),rnd(r.p0),rnd(r.q1),rnd(r.p1),rnd(r.r0),rnd(r.r1),rnd(r.r1-r.r0)])};
+}
+function neutral(){ // 총수입이 유지되는 일괄 단가 조정률(이분법)
+  const r0=revModel().t.r0; let lo=-60,hi=150;
+  for(let i=0;i<60;i++){const mid=(lo+hi)/2; if(revModel(mid).t.r1<r0) lo=mid; else hi=mid}
+  const x=Math.round((lo+hi)/2*1000)/1000; CLS.forEach(([k])=>S.rev.dp[k]=x); buildRev(); calcRev();
+  toast(`매출중립 단가 조정률 ${pf(x,2)} 를 적용했습니다`);
+}
+
+/* ---------- 04 발전·설비 ---------- */
+function renderGen(){
+  const metric=S.gMetric, ys=range(); let mode=S.gMode; if(metric==='cf'&&mode==='share') mode='value';
+  $('#gMode').querySelector('[value=share]').disabled=metric==='cf';
+  if(!S.gSel.length) S.gSel=['nuc','coal','lng','ren'];
+  const defs=[...SRC,['total','합계','#0a2350']];
+  chips($('#gChips'),defs,S.gSel,renderGen);
+  const tot=ys.map(y=>genVal(metric,'total',y));
+  const series=S.gSel.map(k=>{const d=defs.find(x=>x[0]===k); return {name:d[1],color:d[2],dash:k==='total',pts:transform(ys.map(y=>genVal(metric,k,y)),mode,tot)}});
+  const unit=mode==='idx'?`지수 (${ys[0]}=100)`:mode==='share'?'%':genUnit(metric);
+  const title=`전원별 ${GM[metric].n} 추이`;
+  $('#genTitle').textContent=title; $('#genDesc').textContent=`${ys[0]}–${ys[ys.length-1]}년 · ${unit} · 사업자(한전·자회사 + 타사) 기준`;
+  $('#genLegend').innerHTML=legendHtml(series,'gen');
+  lineChart($('#genChart'),{x:ys,series:vis('gen',series),unit,zero:S.yax==='zero',title,key:'gen'});
+  $('#genNote').textContent='신재생·집단에너지는 2004년(설비는 2003년)부터 따로 집계됩니다. 2006–2007년 발전량은 집단·대체에너지 합산값만 있어 “기타”에 들어 있습니다.';
+  const [eu]=U.energy(),[pu]=U.power();
+  $('#mixHint').textContent=`${S.year}년 · ${S.base}년`;
+  $('#mixLegend').innerHTML=sqLegend(SRC,'mix');
+  const bar=(m,y,lab,u)=>`<div class="brow mx"><span class="nm">${lab}</span><span class="track" style="height:24px">${stackBar(SRC.map(([k,n,c])=>[n,c,genVal(m,k,y)]),u,'mix')}</span><span class="amt">${nf(genVal(m,'total',y))} <small style="font-weight:600;color:#717782">${u}</small></span></div>`;
+  const yy=[...new Set([S.year,S.base])];
+  $('#mixBars').innerHTML=yy.map(y=>bar('gen',y,`${y} 발전량`,eu)).join('')+yy.map(y=>bar('cap',y,`${y} 설비`,pu)).join('');
+  $('#cfTitle').textContent=`${S.year}년 전원별 설비 이용률`;
+  $('#cfBars').innerHTML=[...SRC,['total','전체','#0a2350']].map(([k,n,c])=>{const v=cfOf(k,S.year); if(v==null) return '';
+    return `<div class="brow mx"><span class="nm">${n}</span><span class="track" style="height:16px"><span class="fill" style="position:absolute;left:0;top:0;bottom:0;width:${Math.min(100,Math.max(0,v))}%;background:${c};border-radius:0 5px 5px 0"></span></span><span class="amt">${nf(v,1)}%</span></div>`}).join('');
+  const P=U.power()[1], ps=[{name:'발전설비',color:'#003b8e',pts:ys.map(y=>{const v=at('perf','cap',y);return v==null?null:v*P})},
+    {name:'최대전력',color:'#e60012',pts:ys.map(y=>{const v=at('perf','peak',y);return v==null?null:v*P})}];
+  const rm=(()=>{const c=at('perf','cap',S.year),p=at('perf','peak',S.year);return c&&p?(c-p)/p*100:null})();
+  $('#peakLegend').innerHTML=legendHtml(ps,'peak')+`<span>${S.year}년 명목 설비예비율 <b style="color:#0a2350;margin-left:4px">${nf(rm,1)}%</b></span>`;
+  lineChart($('#peakChart'),{x:ys,series:vis('peak',ps),unit:pu,zero:true,h:300,title:'최대전력과 발전설비',key:'peak'});
+}
+
+/* ---------- 05 전원 전환 시나리오 ---------- */
+function renderScn(){
+  const y=S.year, sc=S.scn, [eu,em]=U.energy(),[pu,pm]=U.power();
+  $('#scnTitle').textContent=`${y}년 전원 전환 시나리오`;
+  const g0={}; let G0=0; SRC.forEach(([k])=>{g0[k]=Math.max(0,srcRaw('gen',k,y)||0);G0+=g0[k]});
+  const maxShift=g0[sc.from]/G0*100, shift=Math.min(sc.shift,maxShift), G1=G0*(1+sc.grow/100);
+  const sh0={}; SRC.forEach(([k])=>sh0[k]=g0[k]/G0*100);
+  const sh1={...sh0}; if(sc.from!==sc.to){sh1[sc.from]-=shift;sh1[sc.to]+=shift}
+  const g1={}; SRC.forEach(([k])=>g1[k]=G1*sh1[k]/100);
+  $('#scnShiftV').textContent=`${nf(shift,1)}%p`+(sc.shift>maxShift?' (상한)':''); $('#scnGrowV').textContent=pf(sc.grow,0);
+  $('#scnDesc').textContent=`${NM[sc.from]} 발전 비중 ${nf(shift,1)}%p를 ${NM[sc.to]}(으)로 옮기고 총 발전량을 ${pf(sc.grow,0)} 바꿨을 때의 전원 구성과 필요 설비입니다.`;
+  const cl=s=>CLEAN.reduce((a,k)=>a+s[k],0);
+  const rows=SRC.map(([k,n,c])=>{const cf=cfOf(k,y), c0=srcRaw('cap',k,y)||0, need=cf?g1[k]/(cf/100*8.76):null; return {k,n,c,g0:g0[k],g1:g1[k],s0:sh0[k],s1:sh1[k],cf,c0,need,dc:need==null?null:need-c0}});
+  const rt=rows.find(r=>r.k===sc.to), dcTot=rows.reduce((a,r)=>a+(r.dc||0),0);
+  const card=(l,v,u,n,lead)=>`<div class="kpi${lead?' lead':''}"><p class="k">${l}</p><div class="v">${v}<small>${u}</small></div><div class="n">${n}</div></div>`;
+  $('#scnKpis').innerHTML=card('무탄소 발전 비중',nf(cl(sh1),1),'%',`현재 ${nf(cl(sh0),1)}% → <b class="${chgCls(cl(sh1)-cl(sh0))}">${sgn(cl(sh1)-cl(sh0),1)}%p</b> (원자력·수력·신재생)`,1)
+    +card('석탄 발전 비중',nf(sh1.coal,1),'%',`현재 ${nf(sh0.coal,1)}% → <b class="${chgCls(sh1.coal-sh0.coal)}">${sgn(sh1.coal-sh0.coal,1)}%p</b>`)
+    +card(`${NM[sc.to]} 필요 설비`,rt.need==null?'–':nf(rt.need*pm),pu,rt.need==null?'설비 이용률 자료 없음':`현재 ${nf(rt.c0*pm)} ${pu} 대비 <b class="${chgCls(rt.dc)}">${sgn(rt.dc*pm)} ${pu}</b> · 이용률 ${nf(rt.cf,1)}%`)
+    +card('총 발전량',nf(G1*em),eu,`현재 ${nf(G0*em)} ${eu} · 전체 설비 증감 <b class="${chgCls(dcTot)}">${sgn(dcTot*pm)} ${pu}</b>`);
+  $('#scnLegend').innerHTML=sqLegend(SRC,'scn');
+  const bar=(lab,g,t)=>`<div class="brow mx"><span class="nm">${lab}</span><span class="track" style="height:26px">${stackBar(SRC.map(([k,n,c])=>[n,c,g[k]*em]),eu,'scn')}</span><span class="amt">${nf(t*em)} <small style="font-weight:600;color:#717782">${eu}</small></span></div>`;
+  $('#scnBars').innerHTML=bar('현재',g0,G0)+bar('전환 후',g1,G1);
+  $('#scnTbl thead').innerHTML=`<tr><th>전원</th><th>현재 발전량 (${eu})</th><th>현재 비중 (%)</th><th>전환 후 발전량 (${eu})</th><th>전환 후 비중 (%)</th><th>설비 이용률 (%)</th><th>현재 설비 (${pu})</th><th>필요 설비 (${pu})</th><th>설비 증감 (${pu})</th></tr>`;
+  $('#scnTbl tbody').innerHTML=rows.map(r=>`<tr><td><i class="dot" style="background:${r.c}"></i>${r.n}</td><td>${nf(r.g0*em)}</td><td>${nf(r.s0,1)}</td><td>${nf(r.g1*em)}</td><td>${nf(r.s1,1)}</td><td>${nf(r.cf,1)}</td><td>${nf(r.c0*pm)}</td><td>${r.need==null?'–':nf(r.need*pm)}</td><td><b class="${chgCls(r.dc)}">${r.dc==null?'–':sgn(r.dc*pm)}</b></td></tr>`).join('');
+  EXP.scn={name:`${y}년 전원 전환 시나리오`,head:['전원','현재 발전량(MWh)','현재 비중(%)','전환 후 발전량(MWh)','전환 후 비중(%)','설비 이용률(%)','현재 설비(kW)','필요 설비(kW)','설비 증감(kW)'],
+    rows:rows.map(r=>[r.n,rnd(r.g0),rnd(r.s0),rnd(r.g1),rnd(r.s1),rnd(r.cf),rnd(r.c0),rnd(r.need),rnd(r.dc)])};
+}
+
+/* ---------- 06 시도 비교 ---------- */
+const RCOL=['#003b8e','#e60012','#f2a900','#2e9e6b','#8b5cf6','#0e9aa7','#4b5563','#d9487a'];
+function regVal(reg){ const m=S.rMetric;
+  if(m==='sales') return T.region[reg]?T.region[reg][YI[S.year]]:null;
+  if(m==='use') return (D.reg_use[S.rSub]||{})[reg];
+  if(m==='gen') return (D.reg_gen[reg]||{})[S.rSub];
+  if(m==='cap') return (D.reg_cap[reg]||{})[S.rSub];
+  const g=(D.reg_gen[reg]||{}).total, s=D.reg_use.total[reg]; return g!=null&&s?g/s*100:null; }
+function renderRegion(){
+  const m=S.rMetric, subs=m==='use'?[['total','합계'],...USE.map(([k,n])=>[k,n])]:(m==='gen'||m==='cap')?SRC82:null;
+  $('#rSubWrap').hidden=!subs;
+  if(subs){ if(!subs.some(s=>s[0]===S.rSub)) S.rSub='total'; fillSel($('#rSub'),subs,S.rSub); }
+  const [eu,em]=U.energy(),[pu,pm]=U.power();
+  const unit=m==='self'?'%':m==='cap'?pu:eu, f=m==='self'?1:m==='cap'?pm:em;
+  const subN=subs?subs.find(s=>s[0]===S.rSub)[1]:'';
+  const title={sales:`${S.year}년 시도별 판매전력량`,use:`2025년 시도별 판매전력량 · ${subN}`,gen:`2025년 시도별 발전량 · ${subN}`,cap:`2025년 시도별 발전설비 · ${subN}`,self:'2025년 시도별 전력자립률'}[m];
+  $('#regTitle').textContent=title;
+  $('#regDesc').textContent=m==='self'?'전력자립률 = 시도 내 발전량 ÷ 시도 내 판매전력량. 100%를 넘으면 쓰는 것보다 많이 발전하는 지역입니다.':`단위 ${unit} · 오른쪽 비율은 전국 합계 대비 비중입니다.`;
+  let list=D.regions.map(r=>({r,v:regVal(r)})).filter(x=>x.v!=null);
+  list.sort((a,b)=>S.rSort==='desc'?b.v-a.v:a.v-b.v);
+  const total=m==='self'?null:list.reduce((a,x)=>a+x.v,0), max=Math.max(...list.map(x=>x.v),1e-9);
+  $('#rank').innerHTML=list.map((x,i)=>{const on=S.rSel.includes(x.r), col=on?RCOL[S.rSel.indexOf(x.r)%8]:'';
+    return `<div class="rrow${on?' cmp':''}" data-r="${x.r}"><span class="no">${i+1}</span><span class="nm">${on?`<i class="dot" style="background:${col}"></i>`:''}${x.r}</span>
+      <span class="track"><span class="fill" style="width:${(Math.max(0,x.v)/max*100).toFixed(2)}%${on?`;background:${col}`:''}"></span>${m==='self'?`<span class="vline" style="left:${Math.min(100,100/max*100)}%"></span>`:''}</span>
+      <span class="val">${nf(x.v*f,m==='self'?1:null)} <small style="color:#828893;font-weight:600">${unit}</small></span><span class="pc">${total?nf(x.v/total*100,1)+'%':''}</span></div>`}).join('')||'<div class="empty">자료가 없습니다.</div>';
+  $$('#rank .rrow').forEach(el=>el.onclick=()=>{const r=el.dataset.r,i=S.rSel.indexOf(r); if(i>=0) S.rSel.splice(i,1); else if(S.rSel.length<8) S.rSel.push(r); else return toast('최대 8개까지 선택할 수 있습니다'); renderRegion()});
+  $('#rankNote').textContent=m==='self'?'세로 점선은 자립률 100%입니다. 발전량은 사업자 기준입니다.':m==='sales'?'':'발전설비·발전량·용도별 판매량의 시도별 자료는 2025년판에만 있습니다.';
+  EXP.region={name:title,head:['순위','시도',`값 (${unit})`,'비중(%)'],rows:list.map((x,i)=>[i+1,x.r,rnd(x.v*f),total?rnd(x.v/total*100):''])};
+  const ys=range(), series=S.rSel.map((r,i)=>({name:r,color:RCOL[i%8],pts:ys.map(y=>{const v=T.region[r][YI[y]];return v==null?null:v*em})}));
+  $('#regLegend').innerHTML=legendHtml(series,'reg');
+  lineChart($('#regChart'),{x:ys,series:vis('reg',series),unit:eu,zero:S.yax==='zero',h:360,title:'시도별 판매전력량 추이'});
+}
+
+/* ---------- 07 데이터 표 ---------- */
+const C8=[...CLS.map(([k,n])=>[k,n]),['total','합계']];
+const DT=[
+ {id:'sales',n:'판매전력량 (MWh)',t:'sales',cols:C8},{id:'rev',n:'판매수입 (천원)',t:'rev',cols:C8},{id:'price',n:'판매단가 (원/kWh)',t:'price',cols:C8},
+ {id:'cust',n:'고객호수 (호)',t:'cust',cols:C8},{id:'kw',n:'요금적용전력 (kW)',t:'kw',cols:C8},
+ {id:'use',n:'용도별 판매전력량 (MWh)',t:'use',cols:[...USE.map(([k,n])=>[k,n]),['total','합계']]},
+ {id:'region',n:'시도별 판매전력량 (MWh)',t:'region',cols:[...D.regions.map(r=>[r,r]),['개성','개성'],['합계','합계']]},
+ {id:'gen',n:'전원별 발전량 (MWh)',src:'gen'},{id:'cap',n:'전원별 발전설비 (kW)',src:'cap'},
+ {id:'perf',n:'발전실적',t:'perf',cols:[['cap','시설용량 (kW)'],['gen','발전량 (MWh)'],['avg','평균전력 (kW)'],['peak','최대전력 (kW)'],['lf','부하율 (%)'],['pf','이용률 (%)'],['auxr','소내전력률 (%)']]},
+ {id:'loss',n:'전력손실',t:'loss',cols:[['net','송전단전력량 (MWh)'],['dist','배분전력량 (MWh)'],['tr','송변전손실률 (%)'],['sold','판매량 (MWh)'],['dr','배전손실률 (%)'],['ol','종합손실량 (MWh)'],['or','종합손실률 (%)']]},
+ {id:'pur',n:'전력구입실적',t:'pur',cols:[['mv','전력시장 구입량 (MWh)'],['ma','전력시장 금액 (백만원)'],['mp','전력시장 단가 (원/kWh)'],['pv','PPA 구입량 (MWh)'],['pa','PPA 금액 (백만원)'],['pp','PPA 단가 (원/kWh)'],['tv','합계 구입량 (MWh)'],['ta','합계 금액 (백만원)'],['tp','합계 단가 (원/kWh)']]}];
+function tableData(){
+  const d=DT.find(x=>x.id===S.dTable), cols=d.src?[...SRC.map(([k,n])=>[k,n]),['total','사업자 계'],['_nu','상용자가'],['_tot','총계']]:d.cols, tab=d.src||d.t;
+  const get=(c,y)=>d.src?(c==='_nu'?at(tab,'nonutil',y):c==='_tot'?at(tab,'tot',y):srcRaw(tab,c,y)):at(tab,c,y);
+  const rows=YEARS.slice().reverse().map(y=>[y,D.edition[tab][YI[y]]?D.edition[tab][YI[y]]+'년판':'',...cols.map(([c])=>get(c,y))]).filter(r=>r.slice(2).some(v=>v!=null));
+  return {name:d.n,head:['연도','자료',...cols.map(c=>c[1])],rows};
+}
+function renderTable(){
+  const t=tableData();
+  $('#dataDesc').textContent=`${t.name} · 원자료 단위 그대로 · ${t.rows.length}개 연도 (1961년은 참고값)`;
+  $('#tbl thead').innerHTML='<tr>'+t.head.map(h=>`<th>${esc(h)}</th>`).join('')+'</tr>';
+  $('#tbl tbody').innerHTML=t.rows.map(r=>`<tr class="${r[0]===S.year?'base':''}">`+r.map((v,i)=>`<td>${i<2?v:(v==null?'–':nf(v,Math.abs(v)<1000&&!Number.isInteger(v)?2:0))}</td>`).join('')+'</tr>').join('');
+}
+function copyTable(){ const t=tableData(), txt=[t.head,...t.rows.map(r=>r.map(v=>v==null?'':v))].map(r=>r.join('\t')).join('\n'), box=$('#copyBox');
+  const fb=()=>{box.hidden=false;box.value=txt;box.focus();box.select();toast('자동 복사가 막혀 아래 상자에 표시했습니다. Ctrl+C로 복사하세요')};
+  if(navigator.clipboard&&window.isSecureContext) navigator.clipboard.writeText(txt).then(()=>toast('표를 복사했습니다'),fb); else fb(); }
+
+/* ---------- 내려받기 ---------- */
+const stamp=()=>{const d=new Date();return `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`};
+const fname=(b,ext)=>`KEPCO-Statistics_${b}_${stamp()}.${ext}`.replace(/[\\/:*?"<>|]/g,'_').replace(/\s+/g,'');
+function save(name,blob){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),2000)}
+const getExp=k=>k==='table'?tableData():EXP[k];
+function saveCSV(k){const t=getExp(k); if(!t) return toast('저장할 데이터가 없습니다');
+  const cell=v=>{v=v==null?'':String(v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
+  save(fname(t.name,'csv'),new Blob(['﻿'+[t.head,...t.rows].map(r=>r.map(cell).join(',')).join('\r\n')],{type:'text/csv;charset=utf-8'}))}
+function saveXLSX(k){const t=getExp(k); if(!window.XLSX) return toast('엑셀 모듈을 불러오는 중입니다. 잠시 후 다시 눌러 주세요');
+  const ws=XLSX.utils.aoa_to_sheet([t.head,...t.rows]), wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'data'); XLSX.writeFile(wb,fname(t.name,'xlsx'))}
+async function savePNG(id,btn){ if(!window.html2canvas) return toast('그림 저장 모듈을 불러오는 중입니다. 잠시 후 다시 눌러 주세요');
+  const el=document.getElementById(id); btn.disabled=true;
+  try{const c=await html2canvas(el,{scale:2,backgroundColor:id==='kpiWrap'?'#f1f2f4':'#ffffff',ignoreElements:e=>e.hasAttribute&&e.hasAttribute('data-noexport')});
+    c.toBlob(b=>save(fname((el.querySelector('h2')||{}).textContent||'핵심지표','png'),b));}catch(e){toast('그림 저장에 실패했습니다')} btn.disabled=false; }
+
+/* ---------- 실행 ---------- */
+function render(){renderKPI();renderSales();buildRev();calcRev();renderGen();renderScn();renderRegion();renderTable()}
+setupControls();sync();render();
+let rt;addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(render,150)});
+(()=>{const links=$$('#navList a'), secs=links.map(a=>$(a.getAttribute('href')));
+  const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){links.forEach(a=>a.classList.toggle('active',a.getAttribute('href')==='#'+e.target.id))}})},{rootMargin:'-20% 0px -70% 0px'});
+  secs.forEach(s=>s&&io.observe(s));})();
+</script>
+</body>
+</html>

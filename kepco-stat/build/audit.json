@@ -1,0 +1,912 @@
+{
+ "overlap": [
+  {
+   "table": "cust",
+   "col": "res",
+   "year": 1998,
+   "used_ed": "2012",
+   "used": 10916576,
+   "other_ed": "2006",
+   "other": 11160467,
+   "diff_pct": 2.23
+  },
+  {
+   "table": "cust",
+   "col": "res",
+   "year": 1999,
+   "used_ed": "2012",
+   "used": 10976648,
+   "other_ed": "2006",
+   "other": 11269741,
+   "diff_pct": 2.67
+  },
+  {
+   "table": "cust",
+   "col": "res",
+   "year": 2000,
+   "used_ed": "2012",
+   "used": 11084153,
+   "other_ed": "2006",
+   "other": 11510731,
+   "diff_pct": 3.85
+  },
+  {
+   "table": "cust",
+   "col": "res",
+   "year": 2001,
+   "used_ed": "2012",
+   "used": 11354801,
+   "other_ed": "2006",
+   "other": 11904058,
+   "diff_pct": 4.84
+  },
+  {
+   "table": "cust",
+   "col": "res",
+   "year": 2002,
+   "used_ed": "2012",
+   "used": 11800049,
+   "other_ed": "2006",
+   "other": 12427392,
+   "diff_pct": 5.32
+  },
+  {
+   "table": "cust",
+   "col": "res",
+   "year": 2003,
+   "used_ed": "2012",
+   "used": 12039941,
+   "other_ed": "2006",
+   "other": 12704193,
+   "diff_pct": 5.52
+  },
+  {
+   "table": "cust",
+   "col": "res",
+   "year": 2004,
+   "used_ed": "2012",
+   "used": 12156544,
+   "other_ed": "2006",
+   "other": 12853035,
+   "diff_pct": 5.73
+  },
+  {
+   "table": "cust",
+   "col": "res",
+   "year": 2005,
+   "used_ed": "2012",
+   "used": 12224192,
+   "other_ed": "2006",
+   "other": 12980980,
+   "diff_pct": 6.19
+  },
+  {
+   "table": "kw",
+   "col": "res",
+   "year": 1998,
+   "used_ed": "2012",
+   "used": 2030474,
+   "other_ed": "2006",
+   "other": 2153768,
+   "diff_pct": 6.07
+  },
+  {
+   "table": "kw",
+   "col": "res",
+   "year": 1999,
+   "used_ed": "2012",
+   "used": 2422332,
+   "other_ed": "2006",
+   "other": 2570464,
+   "diff_pct": 6.12
+  },
+  {
+   "table": "kw",
+   "col": "res",
+   "year": 2000,
+   "used_ed": "2012",
+   "used": 2665975,
+   "other_ed": "2006",
+   "other": 2843215,
+   "diff_pct": 6.65
+  },
+  {
+   "table": "kw",
+   "col": "res",
+   "year": 2001,
+   "used_ed": "2012",
+   "used": 2865202,
+   "other_ed": "2006",
+   "other": 3082893,
+   "diff_pct": 7.6
+  },
+  {
+   "table": "kw",
+   "col": "res",
+   "year": 2002,
+   "used_ed": "2012",
+   "used": 3384863,
+   "other_ed": "2006",
+   "other": 3682825,
+   "diff_pct": 8.8
+  },
+  {
+   "table": "kw",
+   "col": "res",
+   "year": 2003,
+   "used_ed": "2012",
+   "used": 3217776,
+   "other_ed": "2006",
+   "other": 3840808,
+   "diff_pct": 19.36
+  },
+  {
+   "table": "kw",
+   "col": "total",
+   "year": 2003,
+   "used_ed": "2012",
+   "used": 78665464,
+   "other_ed": "2006",
+   "other": 78984865,
+   "diff_pct": 0.41
+  },
+  {
+   "table": "kw",
+   "col": "res",
+   "year": 2004,
+   "used_ed": "2012",
+   "used": 4368673,
+   "other_ed": "2006",
+   "other": 4715809,
+   "diff_pct": 7.95
+  },
+  {
+   "table": "kw",
+   "col": "res",
+   "year": 2005,
+   "used_ed": "2012",
+   "used": 5046597,
+   "other_ed": "2006",
+   "other": 5440227,
+   "diff_pct": 7.8
+  },
+  {
+   "table": "sales",
+   "col": "res",
+   "year": 1998,
+   "used_ed": "2012",
+   "used": 33455486,
+   "other_ed": "2006",
+   "other": 35352823,
+   "diff_pct": 5.67
+  },
+  {
+   "table": "sales",
+   "col": "res",
+   "year": 1999,
+   "used_ed": "2012",
+   "used": 35140014,
+   "other_ed": "2006",
+   "other": 38432579,
+   "diff_pct": 9.37
+  },
+  {
+   "table": "sales",
+   "col": "res",
+   "year": 2000,
+   "used_ed": "2012",
+   "used": 38134528,
+   "other_ed": "2006",
+   "other": 44968217,
+   "diff_pct": 17.92
+  },
+  {
+   "table": "sales",
+   "col": "res",
+   "year": 2001,
+   "used_ed": "2012",
+   "used": 40269734,
+   "other_ed": "2006",
+   "other": 52289303,
+   "diff_pct": 29.85
+  },
+  {
+   "table": "sales",
+   "col": "res",
+   "year": 2002,
+   "used_ed": "2012",
+   "used": 43452142,
+   "other_ed": "2006",
+   "other": 58469488,
+   "diff_pct": 34.56
+  },
+  {
+   "table": "sales",
+   "col": "res",
+   "year": 2003,
+   "used_ed": "2012",
+   "used": 46505348,
+   "other_ed": "2006",
+   "other": 62432397,
+   "diff_pct": 34.25
+  },
+  {
+   "table": "sales",
+   "col": "res",
+   "year": 2004,
+   "used_ed": "2012",
+   "used": 49513298,
+   "other_ed": "2006",
+   "other": 65489683,
+   "diff_pct": 32.27
+  },
+  {
+   "table": "sales",
+   "col": "res",
+   "year": 2005,
+   "used_ed": "2012",
+   "used": 52044462,
+   "other_ed": "2006",
+   "other": 69555370,
+   "diff_pct": 33.65
+  },
+  {
+   "table": "rev",
+   "col": "res",
+   "year": 1998,
+   "used_ed": "2012",
+   "used": 3366301295,
+   "other_ed": "2006",
+   "other": 3415238117,
+   "diff_pct": 1.45
+  },
+  {
+   "table": "rev",
+   "col": "res",
+   "year": 1999,
+   "used_ed": "2012",
+   "used": 3621966258,
+   "other_ed": "2006",
+   "other": 3705145616,
+   "diff_pct": 2.3
+  },
+  {
+   "table": "rev",
+   "col": "res",
+   "year": 2000,
+   "used_ed": "2012",
+   "used": 4091828987,
+   "other_ed": "2006",
+   "other": 4259408738,
+   "diff_pct": 4.1
+  },
+  {
+   "table": "rev",
+   "col": "res",
+   "year": 2001,
+   "used_ed": "2012",
+   "used": 4498641441,
+   "other_ed": "2006",
+   "other": 4787877902,
+   "diff_pct": 6.43
+  },
+  {
+   "table": "rev",
+   "col": "res",
+   "year": 2002,
+   "used_ed": "2012",
+   "used": 4793300235,
+   "other_ed": "2006",
+   "other": 5087499863,
+   "diff_pct": 6.14
+  },
+  {
+   "table": "rev",
+   "col": "gen",
+   "year": 2002,
+   "used_ed": "2012",
+   "used": 5996351593,
+   "other_ed": "2006",
+   "other": 5895479854,
+   "diff_pct": -1.68
+  },
+  {
+   "table": "rev",
+   "col": "edu",
+   "year": 2002,
+   "used_ed": "2012",
+   "used": 268118671,
+   "other_ed": "2006",
+   "other": 263626492,
+   "diff_pct": -1.68
+  },
+  {
+   "table": "rev",
+   "col": "ind",
+   "year": 2002,
+   "used_ed": "2012",
+   "used": 9084046914,
+   "other_ed": "2006",
+   "other": 8922986905,
+   "diff_pct": -1.77
+  },
+  {
+   "table": "rev",
+   "col": "agr",
+   "year": 2002,
+   "used_ed": "2012",
+   "used": 273119653,
+   "other_ed": "2006",
+   "other": 268130481,
+   "diff_pct": -1.83
+  },
+  {
+   "table": "rev",
+   "col": "str",
+   "year": 2002,
+   "used_ed": "2012",
+   "used": 137459416,
+   "other_ed": "2006",
+   "other": 134891633,
+   "diff_pct": -1.87
+  },
+  {
+   "table": "rev",
+   "col": "total",
+   "year": 2002,
+   "used_ed": "2012",
+   "used": 20943327071,
+   "other_ed": "2006",
+   "other": 20572615228,
+   "diff_pct": -1.77
+  },
+  {
+   "table": "rev",
+   "col": "res",
+   "year": 2003,
+   "used_ed": "2012",
+   "used": 5020911856,
+   "other_ed": "2006",
+   "other": 5494326608,
+   "diff_pct": 9.43
+  },
+  {
+   "table": "rev",
+   "col": "res",
+   "year": 2004,
+   "used_ed": "2012",
+   "used": 5466721140,
+   "other_ed": "2006",
+   "other": 5955735555,
+   "diff_pct": 8.95
+  },
+  {
+   "table": "rev",
+   "col": "res",
+   "year": 2005,
+   "used_ed": "2012",
+   "used": 5767493514,
+   "other_ed": "2006",
+   "other": 6334662382,
+   "diff_pct": 9.83
+  },
+  {
+   "table": "price",
+   "col": "res",
+   "year": 1998,
+   "used_ed": "2012",
+   "used": 100.62,
+   "other_ed": "2006",
+   "other": 96.6,
+   "diff_pct": -4.0
+  },
+  {
+   "table": "price",
+   "col": "res",
+   "year": 1999,
+   "used_ed": "2012",
+   "used": 103.07,
+   "other_ed": "2006",
+   "other": 96.41,
+   "diff_pct": -6.46
+  },
+  {
+   "table": "price",
+   "col": "res",
+   "year": 2000,
+   "used_ed": "2012",
+   "used": 107.3,
+   "other_ed": "2006",
+   "other": 94.72,
+   "diff_pct": -11.72
+  },
+  {
+   "table": "price",
+   "col": "res",
+   "year": 2001,
+   "used_ed": "2012",
+   "used": 111.71,
+   "other_ed": "2006",
+   "other": 91.57,
+   "diff_pct": -18.03
+  },
+  {
+   "table": "price",
+   "col": "res",
+   "year": 2002,
+   "used_ed": "2012",
+   "used": 110.31,
+   "other_ed": "2006",
+   "other": 87.01,
+   "diff_pct": -21.12
+  },
+  {
+   "table": "price",
+   "col": "gen",
+   "year": 2002,
+   "used_ed": "2012",
+   "used": 104.42,
+   "other_ed": "2006",
+   "other": 102.66,
+   "diff_pct": -1.69
+  },
+  {
+   "table": "price",
+   "col": "edu",
+   "year": 2002,
+   "used_ed": "2012",
+   "used": 90.78,
+   "other_ed": "2006",
+   "other": 89.26,
+   "diff_pct": -1.67
+  },
+  {
+   "table": "price",
+   "col": "ind",
+   "year": 2002,
+   "used_ed": "2012",
+   "used": 60.08,
+   "other_ed": "2006",
+   "other": 59.02,
+   "diff_pct": -1.76
+  },
+  {
+   "table": "price",
+   "col": "agr",
+   "year": 2002,
+   "used_ed": "2012",
+   "used": 43.16,
+   "other_ed": "2006",
+   "other": 42.37,
+   "diff_pct": -1.83
+  },
+  {
+   "table": "price",
+   "col": "str",
+   "year": 2002,
+   "used_ed": "2012",
+   "used": 66.22,
+   "other_ed": "2006",
+   "other": 64.98,
+   "diff_pct": -1.87
+  },
+  {
+   "table": "price",
+   "col": "total",
+   "year": 2002,
+   "used_ed": "2012",
+   "used": 75.21,
+   "other_ed": "2006",
+   "other": 73.88,
+   "diff_pct": -1.77
+  },
+  {
+   "table": "price",
+   "col": "res",
+   "year": 2003,
+   "used_ed": "2012",
+   "used": 107.96,
+   "other_ed": "2006",
+   "other": 88.0,
+   "diff_pct": -18.49
+  },
+  {
+   "table": "price",
+   "col": "res",
+   "year": 2004,
+   "used_ed": "2012",
+   "used": 110.41,
+   "other_ed": "2006",
+   "other": 90.94,
+   "diff_pct": -17.63
+  },
+  {
+   "table": "price",
+   "col": "res",
+   "year": 2005,
+   "used_ed": "2012",
+   "used": 110.82,
+   "other_ed": "2006",
+   "other": 91.07,
+   "diff_pct": -17.82
+  },
+  {
+   "table": "perf",
+   "col": "auxr",
+   "year": 2008,
+   "used_ed": "2025",
+   "used": 4.12,
+   "other_ed": "2012",
+   "other": 4.19,
+   "diff_pct": 1.7
+  },
+  {
+   "table": "perf",
+   "col": "auxr",
+   "year": 2009,
+   "used_ed": "2025",
+   "used": 4.21,
+   "other_ed": "2012",
+   "other": 4.3,
+   "diff_pct": 2.14
+  },
+  {
+   "table": "perf",
+   "col": "pf",
+   "year": 2010,
+   "used_ed": "2025",
+   "used": 73.34531958,
+   "other_ed": "2012",
+   "other": 73.3,
+   "diff_pct": -0.06
+  },
+  {
+   "table": "perf",
+   "col": "auxr",
+   "year": 2010,
+   "used_ed": "2025",
+   "used": 4.08,
+   "other_ed": "2012",
+   "other": 4.2,
+   "diff_pct": 2.94
+  },
+  {
+   "table": "perf",
+   "col": "lf",
+   "year": 2011,
+   "used_ed": "2025",
+   "used": 77.55716936531607,
+   "other_ed": "2012",
+   "other": 77.6,
+   "diff_pct": 0.06
+  },
+  {
+   "table": "perf",
+   "col": "auxr",
+   "year": 2011,
+   "used_ed": "2025",
+   "used": 3.96,
+   "other_ed": "2012",
+   "other": 4.14,
+   "diff_pct": 4.55
+  },
+  {
+   "table": "gen",
+   "col": "selfc",
+   "year": 2005,
+   "used_ed": "2012",
+   "used": 24840181,
+   "other_ed": "2006",
+   "other": 26896657,
+   "diff_pct": 8.28
+  },
+  {
+   "table": "gen",
+   "col": "nonutil",
+   "year": 2005,
+   "used_ed": "2012",
+   "used": 25109522,
+   "other_ed": "2006",
+   "other": 27165998,
+   "diff_pct": 8.19
+  },
+  {
+   "table": "gen",
+   "col": "tot",
+   "year": 2005,
+   "used_ed": "2012",
+   "used": 389479512,
+   "other_ed": "2006",
+   "other": 391535988,
+   "diff_pct": 0.53
+  },
+  {
+   "table": "gen",
+   "col": "selfc",
+   "year": 2011,
+   "used_ed": "2025",
+   "used": 21274450,
+   "other_ed": "2012",
+   "other": 21217163,
+   "diff_pct": -0.27
+  },
+  {
+   "table": "gen",
+   "col": "nonutil",
+   "year": 2011,
+   "used_ed": "2025",
+   "used": 22087883.5806859,
+   "other_ed": "2012",
+   "other": 22030597,
+   "diff_pct": -0.26
+  },
+  {
+   "table": "cap",
+   "col": "nonutil",
+   "year": 2005,
+   "used_ed": "2012",
+   "used": 4817043,
+   "other_ed": "2006",
+   "other": 4408823,
+   "diff_pct": -8.47
+  },
+  {
+   "table": "cap",
+   "col": "tot",
+   "year": 2005,
+   "used_ed": "2012",
+   "used": 67075240,
+   "other_ed": "2006",
+   "other": 66667020,
+   "diff_pct": -0.61
+  },
+  {
+   "table": "cap",
+   "col": "h_gen",
+   "year": 2008,
+   "used_ed": "2025",
+   "used": 1529940,
+   "other_ed": "2012",
+   "other": 1551085,
+   "diff_pct": 1.38
+  },
+  {
+   "table": "cap",
+   "col": "h_small",
+   "year": 2008,
+   "used_ed": "2025",
+   "used": 75197,
+   "other_ed": "2012",
+   "other": 54052,
+   "diff_pct": -28.12
+  },
+  {
+   "table": "cap",
+   "col": "h_gen",
+   "year": 2009,
+   "used_ed": "2025",
+   "used": 1529940,
+   "other_ed": "2012",
+   "other": 1557860,
+   "diff_pct": 1.82
+  },
+  {
+   "table": "cap",
+   "col": "h_small",
+   "year": 2009,
+   "used_ed": "2025",
+   "used": 84632,
+   "other_ed": "2012",
+   "other": 56712,
+   "diff_pct": -32.99
+  },
+  {
+   "table": "cap",
+   "col": "h_gen",
+   "year": 2010,
+   "used_ed": "2025",
+   "used": 1529940,
+   "other_ed": "2012",
+   "other": 1562918,
+   "diff_pct": 2.16
+  },
+  {
+   "table": "cap",
+   "col": "h_small",
+   "year": 2010,
+   "used_ed": "2025",
+   "used": 94600,
+   "other_ed": "2012",
+   "other": 61622,
+   "diff_pct": -34.86
+  },
+  {
+   "table": "cap",
+   "col": "h_gen",
+   "year": 2011,
+   "used_ed": "2025",
+   "used": 1592280,
+   "other_ed": "2012",
+   "other": 1630452,
+   "diff_pct": 2.4
+  },
+  {
+   "table": "cap",
+   "col": "h_small",
+   "year": 2011,
+   "used_ed": "2025",
+   "used": 126109,
+   "other_ed": "2012",
+   "other": 87937,
+   "diff_pct": -30.27
+  },
+  {
+   "table": "cap",
+   "col": "nonutil",
+   "year": 2011,
+   "used_ed": "2025",
+   "used": 3921279,
+   "other_ed": "2012",
+   "other": 3968605,
+   "diff_pct": 1.21
+  },
+  {
+   "table": "cap",
+   "col": "tot",
+   "year": 2011,
+   "used_ed": "2025",
+   "used": 83263146.266,
+   "other_ed": "2012",
+   "other": 83310472,
+   "diff_pct": 0.06
+  }
+ ],
+ "short_rows": [
+  "2006판 p91 1961: 5/7칸",
+  "2006판 p91 1990: 5/7칸",
+  "2006판 p91 1991: 5/7칸",
+  "2006판 p91 1992: 5/7칸",
+  "2006판 p91 1993: 5/7칸",
+  "2012판 p113 1961: 5/8칸",
+  "2006판 p92 1961: 4/7칸",
+  "2006판 p92 1990: 4/7칸",
+  "2006판 p92 1991: 4/7칸",
+  "2006판 p92 1992: 4/7칸",
+  "2006판 p92 1993: 4/7칸",
+  "2012판 p114 1961: 4/8칸",
+  "2006판 p93 1961: 2/4칸",
+  "2006판 p93 1990: 2/4칸",
+  "2006판 p93 1991: 2/4칸",
+  "2006판 p93 1992: 2/4칸",
+  "2006판 p93 1993: 2/4칸",
+  "2012판 p115 1961: 2/4칸",
+  "2012판 p116 1961: 3/4칸",
+  "2006판 p115 1961: 2/4칸",
+  "2006판 p115 1990: 2/4칸",
+  "2006판 p115 1991: 2/4칸",
+  "2006판 p115 1992: 2/4칸",
+  "2006판 p115 1993: 2/4칸",
+  "2006판 p116 1961: 3/4칸",
+  "2006판 p116 1: 3/4칸",
+  "2006판 p116 2: 3/4칸",
+  "2006판 p116 3: 3/4칸",
+  "2006판 p116 4: 3/4칸",
+  "2006판 p116 5: 3/4칸",
+  "2006판 p116 6: 3/4칸",
+  "2006판 p116 7: 3/4칸",
+  "2006판 p116 8: 3/4칸",
+  "2006판 p116 9: 3/4칸",
+  "2006판 p116 10: 3/4칸",
+  "2006판 p116 11: 3/4칸",
+  "2006판 p116 12: 3/4칸",
+  "2012판 p137 1961: 2/4칸",
+  "2012판 p138 1961: 3/4칸",
+  "2006판 p117 1961: 5/7칸",
+  "2006판 p117 1990: 5/7칸",
+  "2006판 p117 1991: 5/7칸",
+  "2006판 p117 1992: 5/7칸",
+  "2006판 p117 1993: 5/7칸",
+  "2012판 p139 1961: 5/8칸",
+  "2006판 p12 1961: 6/8칸",
+  "2006판 p12 1990: 6/8칸",
+  "2006판 p12 1991: 6/8칸",
+  "2006판 p12 1992: 6/8칸",
+  "2006판 p12 1993: 6/8칸",
+  "2006판 p12 1994: 6/8칸",
+  "2006판 p12 1995: 6/8칸",
+  "2006판 p12 1996: 6/8칸",
+  "2006판 p12 1997: 6/8칸",
+  "2006판 p12 1998: 6/8칸",
+  "2006판 p12 1999: 6/8칸",
+  "2006판 p12 2000: 6/8칸",
+  "2006판 p12 2001: 6/8칸",
+  "2006판 p12 2002: 6/8칸",
+  "2006판 p12 2003: 6/8칸",
+  "2012판 p24 1961: 6/7칸",
+  "2012판 p24 1996: 6/7칸",
+  "2012판 p24 1997: 6/7칸",
+  "2012판 p24 1998: 6/7칸",
+  "2012판 p24 1999: 6/7칸",
+  "2012판 p24 2000: 6/7칸",
+  "2012판 p24 2001: 6/7칸",
+  "2012판 p24 2002: 6/7칸",
+  "2012판 p24 2003: 6/7칸"
+ ],
+ "checks": [
+  {
+   "check": "cust: 항목 합 = 합계",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "kw: 항목 합 = 합계",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "sales: 항목 합 = 합계",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "rev: 항목 합 = 합계",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "use: 항목 합 = 합계",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "region: 항목 합 = 합계",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "gen: 항목 합 = 합계",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "cap: 항목 합 = 합계",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "price: 판매수입÷판매량 = 판매단가",
+   "ok": false,
+   "detail": "1994 total: 60.22 vs 59.39"
+  },
+  {
+   "check": "region 합계 = sales 합계",
+   "ok": false,
+   "detail": "2002"
+  }
+ ],
+ "fixes": [
+  "시도별 판매량 2020년 합계: 원자료 384,580,752 → 시도 합 509,269,715 MWh 로 대체"
+ ],
+ "missing_years": {
+  "loss": [
+   2012
+  ],
+  "pur": [
+   1990,
+   1991,
+   1992,
+   1993,
+   1994,
+   1995,
+   1996,
+   1997,
+   1998,
+   1999,
+   2000,
+   2012,
+   2013,
+   2014,
+   2015
+  ]
+ }
+}
