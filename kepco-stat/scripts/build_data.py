@@ -22,8 +22,9 @@ import openpyxl
 
 SRC, OUT = Path(sys.argv[1]), Path(sys.argv[2])
 EDN = {'69': '제69호(1999년 실적)', '75': '2006년판(2005년 실적)', '81': '제81호(2011년 실적)', '82': '제82호(2012년 실적)',
-       '86': '제86호(2016년 실적)', '87': '제87호(2017년 실적)', '95': '제95호(2025년 실적)'}
-ORDER = ['95', '87', '86', '82', '81', '75', '69']  # 최신 판 우선
+       '86': '제86호(2016년 실적)', '87': '제87호(2017년 실적)', '95': '제95호(2025년 실적)',
+       '53': '제53호(1983년 실적) 스캔본 판독 — 제52·54호와 교차검증'}
+ORDER = ['95', '87', '86', '82', '81', '75', '69', '53']  # 최신 판 우선(스캔본 판독값은 맨 뒤)
 LAST_YEAR = {'69': 1999, '75': 2005, '81': 2011, '82': 2012, '86': 2016, '87': 2017, '95': 2025}
 
 # ───────────────────────── PDF 표 읽기 ─────────────────────────
@@ -420,6 +421,101 @@ for r in range(4, ws.max_row + 1):
 put('mfg', '95', (m_old, {}))
 put('mfg11', '95', (m_new, {}))
 
+# ── 스캔본(제53호) 판독값: 교차검증을 통과한 칸만(scripts/scan/*.accepted.json) ──
+SCAN = Path(__file__).resolve().parent / 'scan'
+def scan(name):
+    return {int(y): d for y, d in json.loads((SCAN / f'{name}.csv.accepted.json').read_text(encoding='utf-8')).items()}
+for name in ('cust', 'sales', 'rev'):
+    rows = {}
+    for y, d in scan(name).items():
+        if y == 1961 or not d:
+            continue
+        r = {k: d[k] for k in ('res', 'str', 'agr', 'total') if k in d}
+        if 'small' in d and 'large' in d:          # 소동력 + 대동력 = 일반·교육·산업 합산(1984–1989년과 같은 처리)
+            r['gis'] = d['small'] + d['large']
+        rows[y] = r
+    put(name, '53', (rows, {}))
+for name in ('gen', 'cap'):
+    rows = {}
+    for y, d in scan(name).items():
+        if y == 1961 or not d:
+            continue
+        r = {}
+        if 'hydro' in d: r['h_tot'] = d['hydro']
+        if 'nuc' in d: r['nuc'] = d['nuc']
+        if 'steam' in d and 'ic' in d: r['steam_old'] = d['steam'] + d['ic']   # 기력·내연력(연료별로 나뉘지 않음)
+        if 'total' in d: r['pu_total'] = d['total']
+        rows[y] = r
+    put(name, '53', (rows, {}))
+# 1971년 발전설비: 원자료 안에서 기력+내연력+수력(2,641,045)이 합계(2,628,045)와 맞지 않는다.
+# 합계는 발전설비·발전실적 두 표와 두 판(제52·53호)에 모두 같으므로 합계를 쓰고 화력 = 합계 − 수력 으로 둔다(표시).
+FLAGS, FLAGCOLS = {}, {}
+def flag(table, y, note, cols=None):
+    FLAGS.setdefault(table, {})[str(y)] = note
+    if cols:
+        FLAGCOLS.setdefault(table, {})[str(y)] = cols
+EDS['cap']['53'][0][1971] = {'h_tot': 341280, 'nuc': 0, 'steam_old': 2628045 - 341280, 'pu_total': 2628045}
+flag('cap', 1971, cols=['steam_old', 'total', 'pu_total'], note='원자료 불일치 — 합계 기준: 기력 2,034,500 + 내연력 265,265 + 수력 341,280 = 2,641,045 kW 이지만 합계는 2,628,045 kW(두 판·두 표 모두). 합계를 쓰고 화력은 합계 − 수력으로 둠')
+
+def scan_rows(name, fn, skip1961=True):
+    rows = {}
+    for y, d in scan(name).items():
+        if (skip1961 and y == 1961) or not d:
+            continue
+        r = {k: v for k, v in fn(d).items() if v is not None}
+        if r:
+            rows[y] = r
+    return rows
+def pick(d, keys):
+    return {k: d[k] for k in keys if k in d}
+def both(d, a, b):
+    return d[a] + d[b] if a in d and b in d else None
+
+put('kw', '53', (scan_rows('kw', lambda d: {**pick(d, ('str', 'agr', 'total')), 'gis': both(d, 'small', 'large')}), {}))
+put('perf', '53', (scan_rows('perf', lambda d: d), {}))
+def loss_fn(d):
+    r = {'net': d.get('A'), 'tl': d.get('D'), 'sold': d.get('E'), 'dl': d.get('CE'), 'ol': d.get('AE')}
+    if r['net']:
+        for k, v in (('tr', 'tl'), ('dr', 'dl'), ('or', 'ol')):
+            if r[v] is not None:
+                r[k] = round(r[v] / r['net'] * 100, 2)
+    return r
+put('loss', '53', (scan_rows('loss_core', loss_fn), {}))
+put('use', '53', (scan_rows('use', lambda d: d), {}))
+REG_OLD = '1961–62년 부산은 경남, 1961–82년 인천은 경기, 대구는 경북에 포함(옛 행정구역)'
+def reg_fn(d):  # 옛 행정구역에서 따로 없던 시·도('-')는 0 이 아니라 빈칸
+    return {k: (None if v == 0 and k != '합계' else v) for k, v in d.items()}
+put('region', '53', (scan_rows('region', reg_fn), {}))
+put('regcust', '53', (scan_rows('regcust', reg_fn), {}))
+put('fuel', '53', (scan_rows('fuel', lambda d: d), {}))
+put('eff', '53', (scan_rows('eff', lambda d: d), {}))
+put('trans', '53', (scan_rows('trans', lambda d: d), {}))
+put('subst', '53', (scan_rows('subst', lambda d: d), {}))
+put('distf', '53', (scan_rows('distf', lambda d: d), {}))
+put('emp', '53', (scan_rows('emp', lambda d: d), {}))
+put('prod', '53', (scan_rows('prod', lambda d: d), {}))
+put('fin', '53', (scan_rows('fin', lambda d: pick(d, ('rev', 'opinc', 'net', 'cost', 'retire', 'fuel', 'pp', 'labor', 'maint', 'dep'))), {}))
+put('bal', '53', (scan_rows('bal', lambda d: {'assets': d.get('total'), 'liab': d.get('liab'), 'equity': d.get('equity')}), {}))
+put('ratio', '53', (scan_rows('ratio', lambda d: d), {}))
+# 원자료 안의 불일치(제52·53·54호 가운데 두 판 이상에 같은 값으로 인쇄됨) — 인쇄값을 그대로 쓰고 표시한다
+U = '원자료 불일치 — '
+for t, y, cols, note in (
+    ('use', 1969, ['total'], '용도별 합 6,357,797 MWh, 인쇄된 합계 6,357,800 MWh(단수 차이)'),
+    ('use', 1977, ['total'], '용도별 합 22,833,092 MWh, 인쇄된 합계 22,833,097 MWh(단수 차이)'),
+    ('region', 1980, ['합계'], '시·도 합 32,733,418 MWh, 인쇄된 합계 32,734,418 MWh'),
+    ('regcust', 1964, ['합계'], '시·도 합 1,067,689 호, 인쇄된 합계 1,069,689 호'),
+    ('regcust', 1970, ['합계'], '시·도 합 2,024,170 호, 인쇄된 합계 2,025,170 호'),
+    ('subst', 1963, ['ttot'], '전압별 변전용량 합 1,538,115 kVA, 인쇄된 계 1,538,075 kVA'),
+    ('distf', 1972, ['stot'], '배전 지지물 종류별 합 595,056 기, 인쇄된 계 595,086 기'),
+    ('trans', 1966, ['ctot'], '전압별 회선긍장 합 6,077,259, 인쇄된 계 6,007,259'),
+    ('trans', 1976, ['ctot'], '전압별 회선긍장 합 9,312,479, 인쇄된 계 9,442,489'),
+    ('loss', 1964, ['ol', 'or'], '송전단 − 판매량 = 508,552 MWh, 인쇄된 종합손실 508,522 MWh'),
+    ('loss', 1966, ['sold'], '손실표의 판매량 3,008,472 MWh, 판매전력량 표 3,008,482 MWh'),
+    ('prod', 1969, ['psold'], '1인당 판매량 인쇄값 514 MWh, 판매량 ÷ 평균인원 = 519 MWh(전년대비 증가율 21.5%는 514 기준)'),
+):
+    flag(t, y, U + note + ' — 인쇄값 그대로', cols)
+AUDIT_PRE = ['fin 1983 opinc: 제53호 요소별 손익계산서에 627,730 으로 인쇄 → 672,730 (제54호, 제53호 기능별 손익계산서, 영업수익 − 영업비용)']
+
 # ───────────────────────── 판별 보정(잇기 전에) ─────────────────────────
 for name in ('cust', 'kw', 'sales', 'rev', 'price'):
     for y, d in EDS[name]['69'][0].items():  # 구 요금체계: 소동력+대동력 = 일반·교육·산업 합산
@@ -433,9 +529,9 @@ for name in ('cust', 'kw', 'sales', 'rev', 'price'):
             d.setdefault('gis', None)
 
 # ───────────────────────── 여러 판 잇기 ─────────────────────────
-AUDIT = {'overlap': [], 'short_rows': SHORT, 'extra_token_rows': EXTRA, 'checks': [], 'fixes': []}
-Y0, Y1 = 1979, 2025
-YEARS = [1961] + list(range(Y0, Y1 + 1))
+AUDIT = {'overlap': [], 'short_rows': SHORT, 'extra_token_rows': EXTRA, 'checks': [], 'fixes': list(AUDIT_PRE)}
+Y0, Y1 = 1961, 2025
+YEARS = list(range(Y0, Y1 + 1))
 TABLES, EDITION, MONTHLY = {}, {}, {}
 
 for name, eds in EDS.items():
@@ -476,6 +572,14 @@ for name, eds in EDS.items():
     if mo:
         MONTHLY[name] = mo
 
+i80 = YEARS.index(1980)  # 제69호 1980년 154kV 변전용량 8,789,200 은 오식: 전압별 합 = 계(19,107,800)가 되는 값은 9,789,200(제52·53·54호 같음)
+if TABLES['subst']['t154'][i80] == 8789200:
+    TABLES['subst']['t154'][i80] = 9789200
+    AUDIT['fixes'].append('subst 1980 t154: 제69호 8,789,200 → 9,789,200 (제52·53·54호, 전압별 합 = 계)')
+i84 = YEARS.index(1984)  # 제69호 1984년 주택용 8,856,564 는 오식: 제54호 두 표(용도별·지역용도별) 모두 8,756,564, 이 값이면 용도 합 = 합계
+if TABLES['use']['res'][i84] == 8856564:
+    TABLES['use']['res'][i84] = 8756564
+    AUDIT['fixes'].append('use 1984 res: 제69호 8,856,564 → 8,756,564 (제54호, 용도 합 = 합계)')
 for i, y in enumerate(YEARS):  # 1996년부터 인건비는 판매비와관리비 안의 일부만 실려 잇지 않는다
     if y >= 1996:
         TABLES['fin']['labor'][i] = None
@@ -548,8 +652,8 @@ for n in ('cust', 'kw', 'sales', 'rev'):
     sumcheck(n, CLS8[:-1] + ['gis'], 'total')
 sumcheck('use', ['res', 'pub', 'svc', 'agr', 'min', 'mfg'], 'total')
 sumcheck('region', REG17 + ['개성'], '합계')
-sumcheck('gen', ['h_tot', 'steam_tot', 'cc', 'ic', 'nuc', 'grp', 'ren', 'grpalt', 'etc'], 'pu_total')
-sumcheck('cap', ['h_tot', 'steam_tot', 'cc', 'ic', 'nuc', 'grp', 'ren', 'etc'], 'pu_total')
+sumcheck('gen', ['h_tot', 'steam_tot', 'cc', 'ic', 'nuc', 'grp', 'ren', 'grpalt', 'etc', 'steam_old'], 'pu_total')
+sumcheck('cap', ['h_tot', 'steam_tot', 'cc', 'ic', 'nuc', 'grp', 'ren', 'etc', 'steam_old'], 'pu_total')
 sumcheck('trans', ['c765', 'c345', 'c154', 'c66', 'c22', 'cdc', 'cdc500', 'cdc250', 'cdc150'], 'ctot', tol=0.01)
 sumcheck('subst', ['t765', 't345', 't154', 't66', 't22'], 'ttot', tol=0.01)
 sumcheck('distf', ['rh', 'rl'], 'rtot')
@@ -597,6 +701,7 @@ DATA = {
     'edition': EDITION,
     'monthly': {n: {str(y): {k: [rnd(v) for v in vs] for k, vs in d.items()} for y, d in m.items()} for n, m in MONTHLY.items()},
     'regions': REG17, 'reg_use': REG_USE, 'reg_cap': REG_CAP, 'reg_gen': REG_GEN,
+    'flags': FLAGS, 'flagcols': FLAGCOLS, 'notes': {'region': REG_OLD, 'regcust': REG_OLD},
 }
 OUT.mkdir(parents=True, exist_ok=True)
 (OUT / 'data.json').write_text(json.dumps(DATA, ensure_ascii=False, separators=(',', ':')), encoding='utf-8')
