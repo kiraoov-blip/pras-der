@@ -45,6 +45,8 @@ footer{background:#061a3d;color:#b9c6dc}
 @media(min-width:641px){.brow.mx{grid-template-columns:minmax(110px,170px) minmax(0,1fr) 110px}}
 .brow.mx .dif{display:none}
 table.scn{min-width:820px}
+table.scn.mini{min-width:0}
+table.scn.mini td,table.scn.mini th{padding:8px 10px}
 table.scn td input{width:92px;height:34px;text-align:right;padding:0 8px;border-radius:8px}
 table.scn th,table.scn td{text-align:right}
 table.scn th:first-child,table.scn td:first-child{text-align:left}
@@ -60,6 +62,17 @@ table.scn th{cursor:default}
 .rrow.cmp .fill{background:#8fb0de}
 .rrow .fill{background:#c9d6ea}
 @media(max-width:640px){.rrow{grid-template-columns:22px 60px minmax(0,1fr) 92px 44px}}
+.sub-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 10px;min-height:36px}
+.sub-row .sub-h{margin:0;white-space:nowrap}
+.sub-row select{width:auto;min-width:120px;max-width:55%;height:36px;flex:none}
+.fill-col{display:flex;flex-direction:column}
+.fill-col>.sub-h{min-height:36px;display:flex;align-items:center;margin:0 0 10px}
+#shareBars{flex:1;gap:0;justify-content:space-between;padding-bottom:26px}
+#shareBars .brow{flex:1;min-height:30px;max-height:52px;padding:4px 0}
+#shareBars .brow .track{height:100%!important;min-height:22px}
+#kpisMain .kpi .n{display:flex;flex-direction:column;gap:1px}
+#kpisMain .kpi .n span{white-space:nowrap}
+
 .gap-note{font-size:12px;color:#8a6d1a;background:var(--warn-bg);border-radius:8px;padding:6px 10px;margin:0 0 10px;display:inline-block}
 </style>
 
@@ -72,6 +85,9 @@ table.scn th{cursor:default}
       <li><a href="#s-rev">판매수입 시나리오</a></li>
       <li><a href="#s-gen">발전·설비</a></li>
       <li><a href="#s-mix">전원 전환 시나리오</a></li>
+      <li><a href="#s-fac">연료·설비</a></li>
+      <li><a href="#s-fin">경영·인력</a></li>
+      <li><a href="#s-ind">제조업종</a></li>
       <li><a href="#s-region">시도 비교</a></li>
       <li><a href="#s-data">데이터</a></li>
     </ul>
@@ -116,11 +132,8 @@ table.scn th{cursor:default}
 
       <div class="results-pane">
         <div class="kpi-bar"><div class="tools" data-noexport><button class="btn" type="button" data-png="kpiWrap">핵심 지표 저장 <small>PNG</small></button></div></div>
-        <div id="kpiWrap" style="display:flex;flex-direction:column;gap:14px">
-          <p class="kpi-group">판매·요금</p>
-          <section class="kpis" id="kpisS" aria-label="판매·요금 핵심 지표" aria-live="polite"></section>
-          <p class="kpi-group">발전·설비</p>
-          <section class="kpis" id="kpisG" aria-label="발전·설비 핵심 지표" aria-live="polite"></section>
+        <div id="kpiWrap">
+          <section class="kpis" id="kpisMain" aria-label="핵심 지표" aria-live="polite"></section>
         </div>
 
         <section class="sec" id="s-sales">
@@ -150,14 +163,13 @@ table.scn th{cursor:default}
             <p class="note" data-noexport>범례를 누르면 해당 항목이 그래프에서 사라지고, 다시 누르면 나타납니다.</p>
             <div class="divider"></div>
             <div class="two">
-              <div>
+              <div class="fill-col">
                 <p class="sub-h" id="shareTitle">구성비</p>
                 <div class="legend" id="shareLegend"></div>
                 <div class="bill" id="shareBars"></div>
               </div>
               <div>
-                <p class="sub-h">월별 패턴 <span class="hint" id="monthHint"></span></p>
-                <div class="row" data-noexport style="margin-bottom:8px"><select id="mCls" style="max-width:220px" aria-label="월별 패턴 계약종"></select></div>
+                <div class="sub-row"><p class="sub-h">월별 패턴 <span class="hint" id="monthHint"></span></p><select id="mCls" aria-label="월별 패턴 계약종"></select></div>
                 <div class="legend" id="monthLegend"></div>
                 <div class="chart" id="monthChart"></div>
               </div>
@@ -251,9 +263,84 @@ table.scn th{cursor:default}
           </div>
         </section>
 
+        <section class="sec" id="s-fac">
+          <div class="sec-h">
+            <div><p class="eyebrow">06 · Fuel &amp; Facilities</p><h2 id="facTitle"></h2><p class="desc" id="facDesc"></p></div>
+            <div class="tools" data-noexport><button class="btn" type="button" data-png="s-fac">그림 저장 <small>PNG</small></button><button class="btn" type="button" data-csv="fac">데이터 저장 <small>CSV</small></button></div>
+          </div>
+          <div class="sec-b">
+            <div class="grid-in wide" style="margin-bottom:16px" data-noexport>
+              <div class="field"><label for="facGroup">지표 묶음</label><select id="facGroup"></select></div>
+              <div class="field"><label for="facMode">값 기준</label>
+                <select id="facMode"><option value="value">실제 값</option><option value="idx">지수 (시작 연도 = 100)</option></select></div>
+            </div>
+            <div class="two">
+              <div>
+                <div class="legend" id="facLegend"></div>
+                <div class="chart" id="facChart"></div>
+                <p class="note" id="facNote"></p>
+              </div>
+              <div>
+                <p class="sub-h" id="facTblTitle"></p>
+                <div class="tbl-wrap"><table class="scn mini" id="facTbl"><thead></thead><tbody></tbody></table></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="sec" id="s-fin">
+          <div class="sec-h">
+            <div><p class="eyebrow">07 · Finance &amp; Workforce</p><h2 id="finTitle"></h2><p class="desc" id="finDesc"></p></div>
+            <div class="tools" data-noexport><button class="btn" type="button" data-png="s-fin">그림 저장 <small>PNG</small></button><button class="btn" type="button" data-csv="fin">데이터 저장 <small>CSV</small></button></div>
+          </div>
+          <div class="sec-b">
+            <div class="grid-in wide" style="margin-bottom:16px" data-noexport>
+              <div class="field"><label for="finGroup">지표 묶음</label><select id="finGroup"></select></div>
+              <div class="field"><label for="finMode">값 기준</label>
+                <select id="finMode"><option value="value">실제 값</option><option value="idx">지수 (시작 연도 = 100)</option></select></div>
+            </div>
+            <div class="two">
+              <div>
+                <div class="legend" id="finLegend"></div>
+                <div class="chart" id="finChart"></div>
+                <p class="note" id="finNote"></p>
+              </div>
+              <div>
+                <p class="sub-h" id="finTblTitle"></p>
+                <div class="tbl-wrap"><table class="scn mini" id="finTbl"><thead></thead><tbody></tbody></table></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="sec" id="s-ind">
+          <div class="sec-h">
+            <div><p class="eyebrow">08 · Manufacturing</p><h2 id="indTitle"></h2><p class="desc" id="indDesc"></p></div>
+            <div class="tools" data-noexport><button class="btn" type="button" data-png="s-ind">그림 저장 <small>PNG</small></button><button class="btn" type="button" data-csv="ind">데이터 저장 <small>CSV</small></button></div>
+          </div>
+          <div class="sec-b">
+            <div class="grid-in wide" style="margin-bottom:16px" data-noexport>
+              <div class="field"><label for="indGroup">지표 묶음</label><select id="indGroup"></select></div>
+              <div class="field"><label for="indMode">값 기준</label>
+                <select id="indMode"><option value="value">실제 값</option><option value="idx">지수 (시작 연도 = 100)</option></select></div>
+            </div>
+            <div class="two">
+              <div>
+                <div class="legend" id="indLegend"></div>
+                <div class="chart" id="indChart"></div>
+                <p class="note" id="indNote"></p>
+              </div>
+              <div>
+                <p class="sub-h" id="indTblTitle"></p>
+                <div class="tbl-wrap"><table class="scn mini" id="indTbl"><thead></thead><tbody></tbody></table></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
         <section class="sec" id="s-region">
           <div class="sec-h">
-            <div><p class="eyebrow">06 · Region</p><h2 id="regTitle">시도 비교</h2><p class="desc" id="regDesc"></p></div>
+            <div><p class="eyebrow">09 · Region</p><h2 id="regTitle">시도 비교</h2><p class="desc" id="regDesc"></p></div>
             <div class="tools" data-noexport><button class="btn" type="button" data-png="s-region">그림 저장 <small>PNG</small></button><button class="btn" type="button" data-csv="region">데이터 저장 <small>CSV</small></button></div>
           </div>
           <div class="sec-b">
@@ -261,6 +348,8 @@ table.scn th{cursor:default}
               <div class="field"><label for="rMetric">지표</label>
                 <select id="rMetric">
                   <option value="sales">판매전력량 (분석 연도)</option>
+                  <option value="cust">고객호수 (분석 연도)</option>
+                  <option value="pc">호당 판매량 (분석 연도)</option>
                   <option value="use">용도별 판매전력량 (2025년)</option>
                   <option value="gen">발전량 (2025년)</option>
                   <option value="cap">발전설비 (2025년)</option>
@@ -286,7 +375,7 @@ table.scn th{cursor:default}
 
         <section class="sec" id="s-data">
           <div class="sec-h">
-            <div><p class="eyebrow">07 · Data</p><h2>연도별 데이터 표</h2><p class="desc" id="dataDesc"></p></div>
+            <div><p class="eyebrow">10 · Data</p><h2>연도별 데이터 표</h2><p class="desc" id="dataDesc"></p></div>
             <div class="tools" data-noexport>
               <select id="dTable" style="width:230px;height:36px" aria-label="표 선택"></select>
               <button class="btn" type="button" id="copyTsv">표 복사</button>
@@ -303,14 +392,19 @@ table.scn th{cursor:default}
         <section class="assumption-strip" aria-label="적용 기준">
           <strong>적용 기준</strong>
           <ul>
-            <li>원자료: 한국전력공사 「한국전력통계」 2006년판(2005년 실적), 제81호(2011년 실적), 제95호(2025년 실적). 세 판을 이어 <b>1990–2025년</b>을 수록했습니다. 1962–1989년 자료는 없습니다.</li>
+            <li>원자료: 한국전력공사 「한국전력통계」 제69호(1999년 실적), 2006년판(2005년 실적), 제81호·제82호·제86호·제87호(2011·2012·2016·2017년 실적), 제95호(2025년 실적). 글자를 읽을 수 있는 판을 이어 <b>1984–2025년</b>을 수록했습니다(송전·변전·배전 설비는 1979년부터, 손익은 1986년부터, 전력구입실적은 2001년부터). 1962–1983년은 스캔본만 있어 아직 넣지 않았습니다.</li>
             <li>같은 연도가 여러 판에 있으면 <b>가장 최근 판의 값</b>을 씁니다. 판 사이에 값이 다른 연도는 정제 결과의 audit.json에 기록했습니다.</li>
-            <li><b>계약종별 분류 변경</b>: 1990–1993년은 일반용·교육용·산업용이 합산되어 실려 있어 “일반·교육·산업(합산)”으로 따로 표시합니다(요금적용전력은 주택용도 포함). 1997년까지 주택용에는 심야전력이 포함되어 있습니다. 추이 그래프의 세로 점선이 기준이 바뀐 해입니다.</li>
+            <li><b>계약종별 분류 변경</b>: 1984–1989년은 옛 요금체계(전등·소동력·대동력)라 소동력과 대동력을 더해, 1990–1993년은 일반용·교육용·산업용이 합산되어 실려 있어 “일반·교육·산업(합산)”으로 따로 표시합니다(요금적용전력은 주택용도 포함). 1997년까지 주택용에는 심야전력이 포함되어 있습니다. 추이 그래프의 세로 점선이 기준이 바뀐 해입니다.</li>
             <li><b>판매단가</b>는 판매수입 ÷ 판매전력량이며 원자료의 판매단가 표와 대조했습니다. 판매수입은 전기요금 수입 기준입니다.</li>
             <li><b>발전량·발전설비</b>는 사업자(한전·자회사 + 타사) 기준이고 상용자가는 총계에만 포함됩니다. 수력 = 일반 + 소수력, 석탄 = 무연탄 + 유연탄, 유류 = 중유 + 내연력, LNG·복합 = 기력 LNG + 복합화력으로 묶었습니다. 2006–2007년 발전량은 집단에너지와 대체에너지가 합산되어 있어 “기타”에 넣었습니다.</li>
             <li><b>설비 이용률</b> = 발전량 ÷ (연말 설비용량 × 8,760시간). 연중 증설이 큰 해에는 실제보다 낮게 나옵니다.</li>
-            <li><b>판매수입 시나리오</b>의 차익은 판매수입 − 전력구입비만 계산하며, 송배전·판매 등 다른 비용은 포함하지 않습니다. 전력구입단가는 2001–2011년, 2016–2025년만 통계에 있어 그 밖의 연도는 가장 가까운 연도 값을 기본값으로 씁니다.</li>
-            <li>시도별 판매전력량의 2020년 합계는 원자료 합계 칸이 시도 합과 맞지 않아 시도 합으로 바꿨습니다. 세종은 2012년부터, 울산은 1997년부터 수록되어 있습니다.</li>
+            <li>핵심 지표의 <b>전력구입비</b>는 전력구입실적 표의 구입금액 합계(전력시장 + PPA)로 2001년부터 있습니다. 2000년까지는 한전이 직접 발전했기 때문에 같은 항목이 없고, 손익계산서의 <b>구입전력비</b>(타사에서 사 온 전력값, 1986–1996년)만 있어 이름을 바꿔 따로 표시합니다. 두 값은 범위가 달라 서로 비교하지 않습니다.</li>
+            <li><b>손익</b>은 손익계산서의 매출액(영업수익), 영업비용(매출원가 + 판매비와관리비), 영업이익, 당기순이익입니다. 2001년 발전부문 분리로 비용 구조가 바뀌고, 2010년부터는 연결재무제표 기준이라 앞뒤 수준을 그대로 비교하기 어렵습니다. 2010–2013년 영업이익은 당시 기준에 따라 기타손익이 포함된 값입니다. 영업비용 구성(연료비 등)은 1986–1996년만 실려 있습니다.</li>
+            <li><b>연료 사용량</b>은 발전용 연료이며 석탄·LNG는 톤, 유류는 kl 단위입니다. <b>열효율</b>은 발전단 기준이 기본입니다. 변전·배전 변압기 용량은 kVA를 MVA로 바꿔 표시합니다.</li>
+            <li><b>제조업종별 판매량</b>은 산업분류가 바뀌어 1995–2017년(18개 업종)과 2018년 이후(25개 업종)를 따로 실었습니다. 1994년 이전 구분류는 넣지 않았습니다. <b>재무상태·경영분석비율</b>은 2010년대부터 연결 기준입니다.</li>
+            <li>원자료 자체의 불일치 3건은 고치지 않고 그대로 두었습니다: 1984년 용도별 판매량 합계(항목 합과 10만 MWh 차이), 1980년 변전 변압기 용량 합계(100만 kVA 차이), 1988년 판매단가 합계(표 65.49원, 수입 ÷ 판매량 59.49원).</li>
+            <li><b>판매수입 시나리오</b>의 차익은 판매수입 − 전력구입비만 계산하며, 송배전·판매 등 다른 비용은 포함하지 않습니다. 전력구입단가는 2001년부터 통계에 있어 그 전 연도는 2001년 값을 기본값으로 씁니다.</li>
+            <li>시도별 판매전력량의 2020년 합계는 원자료 합계 칸이 시도 합과 맞지 않아 시도 합으로 바꿨습니다. 세종은 2012년부터, 울산은 1997년부터, 광주는 1987년부터, 대전은 1989년부터 수록되어 있습니다.</li>
             <li>월별 값은 각 판의 마지막 연도(2005·2011·2025년)만 있습니다.</li>
           </ul>
         </section>
@@ -321,7 +415,7 @@ table.scn th{cursor:default}
   <footer>
     <div class="footer-inner">
       <span>KEPCO Statistics Simulator</span>
-      <p>한국전력통계 기반 판매·요금·발전·설비 분석 엔진 · 1990–2025</p>
+      <p>한국전력통계 기반 판매·요금·발전·설비 분석 엔진 · 1984–2025</p>
     </div>
   </footer>
 </main>
@@ -335,7 +429,8 @@ table.scn th{cursor:default}
 const D=JSON.parse(document.getElementById('data').textContent);
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const YEARS=D.years, T=D.tables, YI={}; YEARS.forEach((y,i)=>YI[y]=i);
-const Y0=1990, Y1=YEARS[YEARS.length-1], YR=YEARS.filter(y=>y>=Y0);
+const Y0=1979, YA=1984, Y1=YEARS[YEARS.length-1], YR=YEARS.filter(y=>y>=Y0);
+const EDS={69:'제69호',75:'2006년판',81:'제81호',82:'제82호',86:'제86호',87:'제87호',95:'제95호'};
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
 /* ---------- 분류 정의 ---------- */
@@ -351,11 +446,12 @@ const SRC82=[['total','합계'],['nuc','원자력'],['bitu','유연탄'],['anth'
 const SM={sales:{n:'판매전력량',t:'sales'},rev:{n:'판매수입',t:'rev'},price:{n:'판매단가',t:'price'},cust:{n:'고객호수',t:'cust'},kw:{n:'요금적용전력',t:'kw'},percust:{n:'호당 판매량'}};
 const GM={gen:{n:'발전량'},cap:{n:'설비용량'},cf:{n:'설비 이용률'}};
 
-const DEF={year:Y1,base:2015,from:Y0,to:Y1,unit:'big',yax:'zero',
+const DEF={year:Y1,base:2015,from:YA,to:Y1,unit:'big',yax:'zero',
   sMetric:'sales',sAxis:'cls',sMode:'value',sSel:['res','gen','ind','agr'],mCls:'total',
   gMetric:'gen',gMode:'value',gSel:['nuc','coal','lng','ren'],
   rev:{dp:{},dq:{},el:0,pc:null,loss:null},
   scn:{from:'coal',to:'ren',shift:5,grow:0},
+  facG:'fuel',facM:'value',finG:'pl',finM:'value',indG:'mfg11',indM:'value',
   rMetric:'sales',rSub:'total',rSort:'desc',rSel:['경기','서울','충남','경북'],dTable:'sales'};
 let S=structuredClone(DEF);
 
@@ -465,7 +561,7 @@ function transform(pts,mode,totals){ if(mode==='idx'){ const b=pts.find(v=>v!=nu
 /* ---------- 컨트롤 ---------- */
 function fillSel(el,opts,val){ el.innerHTML=opts.map(([v,n])=>`<option value="${v}">${n}</option>`).join(''); if(val!=null) el.value=val; }
 function setupControls(){
-  const yo=YR.slice().reverse().map(y=>[y,y+'년']);
+  const yo=YR.filter(y=>y>=YA).reverse().map(y=>[y,y+'년']);
   fillSel($('#year'),yo); fillSel($('#base'),yo); fillSel($('#tFrom'),YR.map(y=>[y,y])); fillSel($('#tTo'),YR.map(y=>[y,y]));
   fillSel($('#scnFrom'),SRC.map(([k,n])=>[k,n])); fillSel($('#scnTo'),SRC.map(([k,n])=>[k,n]));
   fillSel($('#mCls'),[['total','합계'],...CLS.slice(0,7).map(([k,n])=>[k,n])]);
@@ -510,24 +606,26 @@ function kpi(label,val,unit,y,prev,base,opt={}){
   const yoy=prev!=null&&prev?(opt.pp?val-prev:(val/prev-1)*100):null, vb=base!=null&&base?(opt.pp?val-base:(val/base-1)*100):null;
   const f=v=>v==null?'–':opt.pp?sgn(v,2)+'%p':pf(v);
   return `<div class="kpi${opt.lead?' lead':''}"><p class="k">${label}</p><div class="v">${nf(val,opt.d)}<small>${unit}</small></div>
-    <div class="n">전년 대비 <b class="${chgCls(yoy)}">${f(yoy)}</b> · ${S.base}년 대비 <b class="${chgCls(vb)}">${f(vb)}</b></div></div>`;
+    <div class="n"><span>전년 대비 <b class="${chgCls(yoy)}">${f(yoy)}</b></span><span>${S.base}년 대비 <b class="${chgCls(vb)}">${f(vb)}</b></span></div></div>`;
 }
 function renderKPI(){
-  const y=S.year, b=S.base, p=y-1, has=yy=>YI[yy]!=null&&yy>=Y0;
+  const y=S.year, b=S.base, p=y-1, has=yy=>YI[yy]!=null&&yy>=YA;
   const g3=(fn)=>[fn(y),has(p)?fn(p):null,has(b)?fn(b):null];
   const [eu,em]=U.energy(),[mu,mm]=U.money(),[pu,pm]=U.power();
   const sales=g3(yy=>{const v=at('sales','total',yy);return v==null?null:v*em});
   const rev=g3(yy=>{const v=at('rev','total',yy);return v==null?null:v*mm});
-  const price=g3(yy=>{const r=at('rev','total',yy),s=at('sales','total',yy);return r&&s?r/s:null});
   const cust=g3(yy=>{const v=at('cust','total',yy);return v==null?null:v/1e4});
-  $('#kpisS').innerHTML=kpi('판매전력량',sales[0],eu,y,sales[1],sales[2],{lead:1})+kpi('판매수입',rev[0],mu,y,rev[1],rev[2],{lead:1})
-    +kpi('평균 판매단가',price[0],'원/kWh',y,price[1],price[2],{d:2})+kpi('고객호수',cust[0],'만 호',y,cust[1],cust[2],{d:0});
-  const gen=g3(yy=>{const v=at('gen','pu_total',yy);return v==null?null:v*em});
+  const old=y<2001; // 2001년 발전부문 분리 전에는 손익계산서의 구입전력비(타사 구입분)만 있다
+  const cost=g3(yy=>{ if((yy<2001)!==old) return null; const v=old?at('fin','pp',yy):at('pur','ta',yy); return v==null?null:v*1000*mm }); // 백만원 → 천원
+  const price=g3(yy=>{const r=at('rev','total',yy),q=at('sales','total',yy);return r&&q?r/q:null});
   const cap=g3(yy=>{const v=at('cap','pu_total',yy);return v==null?null:v*pm});
   const peak=g3(yy=>{const v=at('perf','peak',yy);return v==null?null:v*pm});
   const loss=g3(yy=>at('loss','or',yy));
-  $('#kpisG').innerHTML=kpi('발전량 (사업자)',gen[0],eu,y,gen[1],gen[2])+kpi('발전설비 (사업자)',cap[0],pu,y,cap[1],cap[2])
-    +kpi('최대전력',peak[0],pu,y,peak[1],peak[2],{lead:1})+kpi('종합손실률',loss[0],'%',y,loss[1],loss[2],{d:2,pp:1});
+  $('#kpisMain').innerHTML=kpi('판매전력량',sales[0],eu,y,sales[1],sales[2],{lead:1})+kpi('판매수입',rev[0],mu,y,rev[1],rev[2],{lead:1})
+    +kpi(old?'구입전력비 (타사 구입분)':'전력구입비',cost[0],mu,y,cost[1],cost[2],{lead:1})+kpi('평균 판매단가',price[0],'원/kWh',y,price[1],price[2],{d:2})
+    +kpi('발전설비 (사업자)',cap[0],pu,y,cap[1],cap[2])
+    +kpi('최대전력',peak[0],pu,y,peak[1],peak[2],{lead:1})+kpi('고객호수',cust[0],'만 호',y,cust[1],cust[2],{d:0})
+    +kpi('종합손실률',loss[0],'%',y,loss[1],loss[2],{d:2,pp:1});
   $('#yearHint').textContent=`자료: ${D.meta.editions[D.edition.sales[YI[y]]]||'–'}`;
 }
 
@@ -684,10 +782,72 @@ function renderScn(){
     rows:rows.map(r=>[r.n,rnd(r.g0),rnd(r.s0),rnd(r.g1),rnd(r.s1),rnd(r.cf),rnd(r.c0),rnd(r.need),rnd(r.dc)])};
 }
 
-/* ---------- 06 시도 비교 ---------- */
+/* ---------- 06·07 지표 탐색기 (연료·설비 / 경영·인력) ---------- */
+const C=['#003b8e','#e60012','#f2a900','#2e9e6b','#8b5cf6','#0e9aa7','#4b5563','#d9487a'];
+const sr=(t,c,n,f)=>({n,get:y=>{const v=at(t,c,y);return v==null?null:v*(f||1)}});
+const GROUPS={
+ fac:[
+  {id:'fuel',n:'발전연료 사용량',u:'만 t (유류는 만 kl)',s:[sr('fuel','bitu','유연탄',1e-4),sr('fuel','lng','LNG',1e-4),sr('fuel','anth','무연탄',1e-4),sr('fuel','heavy','중유',1e-4),sr('fuel','diesel','경유',1e-4)],note:'발전에 쓴 연료의 양입니다. 석탄과 LNG는 톤, 중유와 경유는 kl 단위라 같은 축에 놓고 보되 서로 더하지 않습니다.'},
+  {id:'heat',n:'연료 사용열량',u:'조 kcal',s:[sr('fuel','heat','사용열량 합계',1e-3)],note:'연료별 사용량에 발열량을 곱해 더한 값입니다.'},
+  {id:'cal',n:'연료 발열량',u:'kcal/kg',s:[sr('fuel','lcal','LNG'),sr('fuel','bcal','유연탄'),sr('fuel','acal','무연탄')],note:'연료 1kg이 내는 열량입니다. 유연탄 발열량이 낮아질수록 같은 전기를 만드는 데 석탄이 더 듭니다.'},
+  {id:'eff',n:'화력 열효율 (연료별)',u:'%',s:[sr('eff','tg','화력 합계'),sr('eff','ccg','복합화력'),sr('eff','bg','유연탄'),sr('eff','ag','무연탄'),sr('eff','hg','중유'),sr('eff','lg','가스(기력)'),sr('eff','icg','내연력')],note:'발전단 기준 열효율입니다. 연료가 가진 열량 중 전기로 바뀐 비율입니다.'},
+  {id:'effn',n:'화력 열효율 (발전단·송전단)',u:'%',s:[sr('eff','tg','합계 발전단'),sr('eff','tn','합계 송전단'),sr('eff','kg','한전·자회사 발전단'),sr('eff','og','타사 발전단')],note:'송전단은 발전소 안에서 쓴 전력을 뺀 뒤의 효율입니다.'},
+  {id:'perf',n:'부하율·이용률·소내전력률',u:'%',s:[sr('perf','lf','부하율'),sr('perf','pf','이용률'),sr('perf','auxr','소내전력률')],note:'부하율 = 평균전력 ÷ 최대전력, 이용률 = 평균전력 ÷ 시설용량입니다.'},
+  {id:'loss',n:'송배전 손실률',u:'%',s:[sr('loss','or','종합손실률'),sr('loss','tr','송변전손실률'),sr('loss','dr','배전손실률')],note:'2012년 송변전·배전 손실률은 제82호 값입니다.'},
+  {id:'trans',n:'송전 회선길이',u:'km',s:[sr('trans','ctot','합계',1e-3),sr('trans','c154','154kV',1e-3),sr('trans','c345','345kV',1e-3),sr('trans','c765','765kV',1e-3),sr('trans','c66','66kV',1e-3)],note:'회선길이(c-m)를 km로 바꿨습니다. 1979년부터 있습니다.'},
+  {id:'subn',n:'변전소 수',u:'개',d:0,s:[sr('subst','ntot','합계'),sr('subst','n154','154kV'),sr('subst','n345','345kV'),sr('subst','n66','66kV'),sr('subst','n22','22kV'),sr('subst','n765','765kV')],note:'전압별 변전소 수입니다. 66kV·22kV는 154kV로 승압되며 줄었습니다.'},
+  {id:'subt',n:'변전 변압기 용량',u:'MVA',d:0,s:[sr('subst','ttot','합계',1e-3),sr('subst','t154','154kV',1e-3),sr('subst','t345','345kV',1e-3),sr('subst','t765','765kV',1e-3)],note:'kVA를 MVA로 바꿨습니다.'},
+  {id:'dist',n:'배전 선로길이',u:'km',d:0,s:[sr('distf','rtot','합계',1e-3),sr('distf','rl','저압',1e-3),sr('distf','rh','고압',1e-3)],note:'선로길이(c-m)를 km로 바꿨습니다.'},
+  {id:'distt',n:'배전 변압기·지지물',u:'만 대 · 만 기 · GVA',s:[sr('distf','stot','지지물 (만 기)',1e-4),sr('distf','trn','변압기 대수 (만 대)',1e-4),sr('distf','trcap','변압기 용량 (GVA)',1e-6)],note:'단위가 서로 다른 세 지표입니다. 증가 속도를 비교하려면 값 기준을 지수로 바꿔 보세요.'},
+ ],
+ fin:[
+  {id:'pl',n:'손익 (매출·영업비용·이익)',u:'조원',s:[sr('fin','rev','매출액',1e-6),sr('fin','cost','영업비용',1e-6),sr('fin','opinc','영업이익',1e-6),sr('fin','net','당기순이익',1e-6)],marks:[{x:2001,label:'발전부문 분리'},{x:2010,label:'연결 기준'}],zero:1,note:'손익계산서 기준입니다. 2001년 발전부문 분리와 2010년 연결재무제표 적용으로 앞뒤 수준이 달라집니다.'},
+  {id:'bal',n:'자산·부채·자본',u:'조원',s:[sr('bal','assets','자산총계',1e-6),sr('bal','liab','부채',1e-6),sr('bal','equity','자본',1e-6)],marks:[{x:2001,label:'발전부문 분리'},{x:2010,label:'연결 기준'}],note:'재무상태표 기준입니다. 2010년부터 연결재무제표라 자회사 자산·부채가 포함됩니다.'},
+  {id:'ratio',n:'경영분석비율 (안정성)',u:'%',s:[sr('ratio','debt','부채비율'),sr('ratio','eqr','자기자본비율'),sr('ratio','cur','유동비율'),sr('ratio','quick','당좌비율')],note:'부채비율 = 부채 ÷ 자본. 1988년부터 있고 2012년부터 연결 기준입니다.'},
+  {id:'ratio2',n:'경영분석비율 (수익성)',u:'%',s:[sr('ratio','npm','매출액순이익률'),sr('ratio','roe','자기자본순이익률'),sr('ratio','roa','총자본순이익률'),sr('ratio','expr','수지비율')],note:'수지비율은 수익 대비 비용의 비율로, 100%를 넘으면 적자입니다.'},
+  {id:'vs',n:'판매수입과 전력구입비',u:'조원',s:[{n:'판매수입',get:y=>{const v=at('rev','total',y);return v==null?null:v*1e-9}},sr('pur','ta','전력구입비',1e-6),{n:'판매수입 − 구입비',get:y=>{const r=at('rev','total',y),c=at('pur','ta',y);return r==null||c==null?null:r*1e-9-c*1e-6}}],zero:1,note:'전기 판매수입과 전력을 사 오는 데 든 금액입니다. 전력구입비는 발전부문이 분리된 2001년부터 있습니다.'},
+  {id:'unit',n:'판매단가와 구입단가',u:'원/kWh',s:[{n:'평균 판매단가',get:y=>{const r=at('rev','total',y),q=at('sales','total',y);return r&&q?r/q:null}},sr('pur','tp','구입단가 (합계)'),sr('pur','mp','전력시장 구입단가'),sr('pur','pp','PPA 구입단가')],note:'kWh당 판 값과 사 온 값입니다. 구입단가가 판매단가를 넘는 해에는 팔수록 손해가 납니다. 손실률은 반영하지 않은 단순 비교입니다.'},
+  {id:'cost',n:'영업비용 구성 (1986–1996)',u:'조원',s:[sr('fin','fuel','연료비',1e-6),sr('fin','dep','감가상각비',1e-6),sr('fin','maint','수선유지비',1e-6),sr('fin','labor','인건비',1e-6),sr('fin','pp','구입전력비',1e-6)],note:'요소별 손익계산서가 실린 1986–1996년만 있습니다(인건비는 1991년까지). 이 시기에는 한전이 직접 발전해 연료비가 가장 큰 비용이었습니다.'},
+  {id:'pur',n:'전력구입량',u:'TWh',s:[sr('pur','tv','합계',1e-6),sr('pur','mv','전력시장',1e-6),sr('pur','pv','PPA',1e-6)],note:'전력시장과 PPA(전력구매계약)로 사 온 전력량입니다.'},
+  {id:'emp',n:'종업원 수',u:'명',d:0,s:[sr('emp','total','합계'),sr('emp','eng','기술'),sr('emp','office','사무'),sr('emp','skilled','기능')],marks:[{x:2001,label:'발전부문 분리'}],note:'한전 본사 기준입니다. 2001년 발전자회사 분리로 크게 줄었고, 판에 따라 집계 범위가 조금 다릅니다.'},
+  {id:'prod',n:'노동생산성',u:'MWh/인',d:0,s:[sr('prod','psold','1인당 판매량'),sr('prod','pgen','1인당 발전량')],marks:[{x:2001,label:'발전부문 분리'}],note:'판매량(발전량) ÷ 경상평균인원입니다.'},
+ ],
+ ind:[
+  {id:'mfg11',n:'업종별 판매량 (2018년~, 25개 업종 중 상위 8개)',u:'TWh',top:['mfg11',2025]},
+  {id:'mfg',n:'업종별 판매량 (1995–2017년, 18개 업종 중 상위 8개)',u:'TWh',top:['mfg',2017]},
+  {id:'mfgt',n:'제조업 판매량 합계',u:'TWh',s:[{n:'제조업 합계',get:y=>{const a=at('mfg','합계',y),b=at('mfg11','합계',y);return (b!=null?b:a)==null?null:(b!=null?b:a)*1e-6}},sr('use','total','전체 판매량',1e-6)],note:'제조업종별 표의 합계와 전체 판매전력량입니다.'},
+ ]};
+GROUPS.ind.filter(g=>g.top).forEach(g=>{const [t,y]=g.top; g.s=Object.keys(T[t]).filter(k=>k!=='합계').sort((a,b)=>(at(t,b,y)||0)-(at(t,a,y)||0)).slice(0,8).map(k=>sr(t,k,k,1e-6));
+  g.note=t==='mfg'?'1995–2017년은 18개 업종 분류입니다. 2018년부터는 한국표준산업분류 개정으로 25개 업종으로 바뀌어 이 계열과 이어 붙이지 않았습니다. 나머지 업종은 데이터 표에 있습니다.':'2018년부터 쓰는 25개 업종 분류(제11차 한국표준산업분류)입니다. 이전 18개 업종 분류와 항목이 달라 따로 보여 줍니다. 나머지 업종은 데이터 표에 있습니다.'});
+const XT={fac:'연료·효율·전력설비',fin:'경영·인력',ind:'제조업종별 판매'};
+function renderExplorer(pre){
+  const gs=GROUPS[pre], sel=$(`#${pre}Group`), mode=$(`#${pre}Mode`);
+  if(!sel.options.length){ fillSel(sel,gs.map(g=>[g.id,g.n]),S[pre+'G']); mode.value=S[pre+'M'];
+    sel.addEventListener('change',()=>{S[pre+'G']=sel.value;renderExplorer(pre)}); mode.addEventListener('change',()=>{S[pre+'M']=mode.value;renderExplorer(pre)}); }
+  sel.value=S[pre+'G']; mode.value=S[pre+'M'];
+  const g=gs.find(x=>x.id===S[pre+'G'])||gs[0], idx=S[pre+'M']==='idx';
+  const first=YR.find(y=>g.s.some(d=>d.get(y)!=null)), last=[...YR].reverse().find(y=>g.s.some(d=>d.get(y)!=null));
+  let ys=range().filter(y=>y>=first&&y<=last); if(ys.length<2) ys=YR.filter(y=>y>=first&&y<=last); // 자료가 있는 구간만 그린다
+  const series=g.s.map((d,i)=>({name:d.n,color:C[i%8],pts:transform(ys.map(d.get),idx?'idx':'value')}));
+  const unit=idx?`지수 (${ys[0]}=100)`:g.u, has=series.some(x=>x.pts.some(v=>v!=null));
+  $(`#${pre}Title`).textContent=`${XT[pre]} — ${g.n}`;
+  $(`#${pre}Desc`).textContent=`${unit} · 자료 ${first}–${last}년`;
+  $(`#${pre}Legend`).innerHTML=legendHtml(series,pre+g.id);
+  lineChart($(`#${pre}Chart`),{x:ys,series:vis(pre+g.id,series),unit,zero:S.yax==='zero'||g.zero,marks:g.marks,title:`${XT[pre]}_${g.n}`,key:pre,d:idx?1:g.d,h:360});
+  $(`#${pre}Note`).textContent=g.note||'';
+  const y=S.year,b=S.base;
+  $(`#${pre}TblTitle`).textContent=`${y}년과 ${b}년 (${g.u})`;
+  $(`#${pre}Tbl thead`).innerHTML=`<tr><th>항목</th><th>${y}년</th><th>${b}년</th><th>증감률</th></tr>`;
+  $(`#${pre}Tbl tbody`).innerHTML=g.s.map((d,i)=>{const v=d.get(y),w=d.get(b),ch=v!=null&&w?(g.u==='%'?v-w:(v/w-1)*100):null;
+    return `<tr><td><i class="dot" style="background:${C[i%8]}"></i>${d.n}</td><td>${nf(v,g.d)}</td><td>${nf(w,g.d)}</td><td><b class="${chgCls(ch)}">${ch==null?'–':g.u==='%'?sgn(ch,2)+'%p':pf(ch)}</b></td></tr>`}).join('');
+}
+
+/* ---------- 08 시도 비교 ---------- */
 const RCOL=['#003b8e','#e60012','#f2a900','#2e9e6b','#8b5cf6','#0e9aa7','#4b5563','#d9487a'];
 function regVal(reg){ const m=S.rMetric;
   if(m==='sales') return T.region[reg]?T.region[reg][YI[S.year]]:null;
+  if(m==='cust') return T.regcust[reg]?T.regcust[reg][YI[S.year]]:null;
+  if(m==='pc'){ const q=T.region[reg]&&T.region[reg][YI[S.year]], c=T.regcust[reg]&&T.regcust[reg][YI[S.year]]; return q!=null&&c?q/c*1000:null; }
   if(m==='use') return (D.reg_use[S.rSub]||{})[reg];
   if(m==='gen') return (D.reg_gen[reg]||{})[S.rSub];
   if(m==='cap') return (D.reg_cap[reg]||{})[S.rSub];
@@ -697,18 +857,18 @@ function renderRegion(){
   $('#rSubWrap').hidden=!subs;
   if(subs){ if(!subs.some(s=>s[0]===S.rSub)) S.rSub='total'; fillSel($('#rSub'),subs,S.rSub); }
   const [eu,em]=U.energy(),[pu,pm]=U.power();
-  const unit=m==='self'?'%':m==='cap'?pu:eu, f=m==='self'?1:m==='cap'?pm:em;
+  const unit=m==='self'?'%':m==='cap'?pu:m==='cust'?'만 호':m==='pc'?'kWh/호':eu, f=m==='self'||m==='pc'?1:m==='cap'?pm:m==='cust'?1e-4:em;
   const subN=subs?subs.find(s=>s[0]===S.rSub)[1]:'';
-  const title={sales:`${S.year}년 시도별 판매전력량`,use:`2025년 시도별 판매전력량 · ${subN}`,gen:`2025년 시도별 발전량 · ${subN}`,cap:`2025년 시도별 발전설비 · ${subN}`,self:'2025년 시도별 전력자립률'}[m];
+  const title={sales:`${S.year}년 시도별 판매전력량`,cust:`${S.year}년 시도별 고객호수`,pc:`${S.year}년 시도별 호당 판매량`,use:`2025년 시도별 판매전력량 · ${subN}`,gen:`2025년 시도별 발전량 · ${subN}`,cap:`2025년 시도별 발전설비 · ${subN}`,self:'2025년 시도별 전력자립률'}[m];
   $('#regTitle').textContent=title;
-  $('#regDesc').textContent=m==='self'?'전력자립률 = 시도 내 발전량 ÷ 시도 내 판매전력량. 100%를 넘으면 쓰는 것보다 많이 발전하는 지역입니다.':`단위 ${unit} · 오른쪽 비율은 전국 합계 대비 비중입니다.`;
+  $('#regDesc').textContent=m==='pc'?'호당 판매량 = 시도 판매전력량 ÷ 시도 고객호수. 산업용 대용량 고객이 많은 지역일수록 높게 나옵니다.':m==='self'?'전력자립률 = 시도 내 발전량 ÷ 시도 내 판매전력량. 100%를 넘으면 쓰는 것보다 많이 발전하는 지역입니다.':`단위 ${unit} · 오른쪽 비율은 전국 합계 대비 비중입니다.`;
   let list=D.regions.map(r=>({r,v:regVal(r)})).filter(x=>x.v!=null);
   list.sort((a,b)=>S.rSort==='desc'?b.v-a.v:a.v-b.v);
-  const total=m==='self'?null:list.reduce((a,x)=>a+x.v,0), max=Math.max(...list.map(x=>x.v),1e-9);
+  const total=m==='self'||m==='pc'?null:list.reduce((a,x)=>a+x.v,0), max=Math.max(...list.map(x=>x.v),1e-9);
   $('#rank').innerHTML=list.map((x,i)=>{const on=S.rSel.includes(x.r), col=on?RCOL[S.rSel.indexOf(x.r)%8]:'';
     return `<div class="rrow${on?' cmp':''}" data-r="${x.r}"><span class="no">${i+1}</span><span class="nm">${on?`<i class="dot" style="background:${col}"></i>`:''}${x.r}</span>
       <span class="track"><span class="fill" style="width:${(Math.max(0,x.v)/max*100).toFixed(2)}%${on?`;background:${col}`:''}"></span>${m==='self'?`<span class="vline" style="left:${Math.min(100,100/max*100)}%"></span>`:''}</span>
-      <span class="val">${nf(x.v*f,m==='self'?1:null)} <small style="color:#828893;font-weight:600">${unit}</small></span><span class="pc">${total?nf(x.v/total*100,1)+'%':''}</span></div>`}).join('')||'<div class="empty">자료가 없습니다.</div>';
+      <span class="val">${nf(x.v*f,m==='self'?1:m==='pc'?0:null)} <small style="color:#828893;font-weight:600">${unit}</small></span><span class="pc">${total?nf(x.v/total*100,1)+'%':''}</span></div>`}).join('')||'<div class="empty">자료가 없습니다.</div>';
   $$('#rank .rrow').forEach(el=>el.onclick=()=>{const r=el.dataset.r,i=S.rSel.indexOf(r); if(i>=0) S.rSel.splice(i,1); else if(S.rSel.length<8) S.rSel.push(r); else return toast('최대 8개까지 선택할 수 있습니다'); renderRegion()});
   $('#rankNote').textContent=m==='self'?'세로 점선은 자립률 100%입니다. 발전량은 사업자 기준입니다.':m==='sales'?'':'발전설비·발전량·용도별 판매량의 시도별 자료는 2025년판에만 있습니다.';
   EXP.region={name:title,head:['순위','시도',`값 (${unit})`,'비중(%)'],rows:list.map((x,i)=>[i+1,x.r,rnd(x.v*f),total?rnd(x.v/total*100):''])};
@@ -727,16 +887,28 @@ const DT=[
  {id:'gen',n:'전원별 발전량 (MWh)',src:'gen'},{id:'cap',n:'전원별 발전설비 (kW)',src:'cap'},
  {id:'perf',n:'발전실적',t:'perf',cols:[['cap','시설용량 (kW)'],['gen','발전량 (MWh)'],['avg','평균전력 (kW)'],['peak','최대전력 (kW)'],['lf','부하율 (%)'],['pf','이용률 (%)'],['auxr','소내전력률 (%)']]},
  {id:'loss',n:'전력손실',t:'loss',cols:[['net','송전단전력량 (MWh)'],['dist','배분전력량 (MWh)'],['tr','송변전손실률 (%)'],['sold','판매량 (MWh)'],['dr','배전손실률 (%)'],['ol','종합손실량 (MWh)'],['or','종합손실률 (%)']]},
+ {id:'fin',n:'손익 (백만원)',t:'fin',cols:[['rev','매출액'],['cost','영업비용'],['opinc','영업이익'],['net','당기순이익'],['fuel','연료비'],['pp','구입전력비'],['dep','감가상각비'],['maint','수선유지비'],['labor','인건비']]},
+ {id:'fuel',n:'발전연료 사용량',t:'fuel',cols:[['bitu','유연탄 (t)'],['anth','무연탄 (t)'],['lng','LNG (t)'],['heavy','중유 (kl)'],['diesel','경유 (kl)'],['heat','사용열량 (10⁹kcal)'],['bcal','유연탄 발열량 (kcal/kg)'],['acal','무연탄 발열량 (kcal/kg)'],['lcal','LNG 발열량 (kcal/kg)'],['hcal','중유 발열량 (kcal/l)']]},
+ {id:'eff',n:'화력 열효율 (%)',t:'eff',cols:[['tg','합계 발전단'],['tn','합계 송전단'],['ag','무연탄'],['bg','유연탄'],['hg','중유'],['lg','가스(기력)'],['ccg','복합화력'],['icg','내연력'],['kg','한전·자회사'],['og','타사']]},
+ {id:'trans',n:'송전설비',t:'trans',cols:[['c765','765kV 회선길이 (c-m)'],['c345','345kV'],['c154','154kV'],['c66','66kV'],['ctot','회선길이 계'],['ltot','전선 전체길이 (m)'],['tower','철탑 (기)']]},
+ {id:'subst',n:'변전설비',t:'subst',cols:[['n765','765kV 변전소 (개)'],['n345','345kV'],['n154','154kV'],['n66','66kV'],['n22','22kV'],['ntot','변전소 계'],['ttot','변압기 용량 (kVA)'],['cond','전력용콘덴서 (kVAR)']]},
+ {id:'distf',n:'배전설비',t:'distf',cols:[['rh','고압 선로길이 (c-m)'],['rl','저압'],['rtot','선로길이 계'],['ltot','전선 전체길이 (m)'],['stot','지지물 (기)'],['trn','변압기 (대)'],['trcap','변압기 용량 (kVA)']]},
+ {id:'emp',n:'종업원·노동생산성',t:'emp',cols:[['total','종업원 계 (명)'],['office','사무'],['eng','기술'],['skilled','기능']]},
+ {id:'bal',n:'재무상태 (백만원)',t:'bal',cols:[['assets','자산총계'],['liab','부채'],['equity','자본']]},
+ {id:'ratio',n:'경영분석비율 (%)',t:'ratio',cols:[['eqr','자기자본비율'],['debt','부채비율'],['fixr','비유동비율'],['fixl','비유동장기적합률'],['cur','유동비율'],['quick','당좌비율'],['roa','총자본순이익률'],['roe','자기자본순이익률'],['npm','매출액순이익률'],['expr','수지비율']]},
+ {id:'regcust',n:'시도별 고객호수 (호)',t:'regcust',cols:[...D.regions.map(r=>[r,r]),['개성','개성'],['합계','합계']]},
+ {id:'mfg',n:'제조업종별 판매량 1995–2017 (MWh)',t:'mfg',cols:Object.keys(T.mfg).map(k=>[k,k])},
+ {id:'mfg11',n:'제조업종별 판매량 2018– (MWh)',t:'mfg11',cols:Object.keys(T.mfg11).map(k=>[k,k])},
  {id:'pur',n:'전력구입실적',t:'pur',cols:[['mv','전력시장 구입량 (MWh)'],['ma','전력시장 금액 (백만원)'],['mp','전력시장 단가 (원/kWh)'],['pv','PPA 구입량 (MWh)'],['pa','PPA 금액 (백만원)'],['pp','PPA 단가 (원/kWh)'],['tv','합계 구입량 (MWh)'],['ta','합계 금액 (백만원)'],['tp','합계 단가 (원/kWh)']]}];
 function tableData(){
   const d=DT.find(x=>x.id===S.dTable), cols=d.src?[...SRC.map(([k,n])=>[k,n]),['total','사업자 계'],['_nu','상용자가'],['_tot','총계']]:d.cols, tab=d.src||d.t;
   const get=(c,y)=>d.src?(c==='_nu'?at(tab,'nonutil',y):c==='_tot'?at(tab,'tot',y):srcRaw(tab,c,y)):at(tab,c,y);
-  const rows=YEARS.slice().reverse().map(y=>[y,D.edition[tab][YI[y]]?D.edition[tab][YI[y]]+'년판':'',...cols.map(([c])=>get(c,y))]).filter(r=>r.slice(2).some(v=>v!=null));
+  const rows=YEARS.slice().reverse().map(y=>[y,EDS[D.edition[tab][YI[y]]]||'',...cols.map(([c])=>get(c,y))]).filter(r=>r.slice(2).some(v=>v!=null));
   return {name:d.n,head:['연도','자료',...cols.map(c=>c[1])],rows};
 }
 function renderTable(){
   const t=tableData();
-  $('#dataDesc').textContent=`${t.name} · 원자료 단위 그대로 · ${t.rows.length}개 연도 (1961년은 참고값)`;
+  $('#dataDesc').textContent=`${t.name} · 원자료 단위 그대로 · ${t.rows.length}개 연도 (1961년은 참고값, 자료 열은 값을 가져온 판)`;
   $('#tbl thead').innerHTML='<tr>'+t.head.map(h=>`<th>${esc(h)}</th>`).join('')+'</tr>';
   $('#tbl tbody').innerHTML=t.rows.map(r=>`<tr class="${r[0]===S.year?'base':''}">`+r.map((v,i)=>`<td>${i<2?v:(v==null?'–':nf(v,Math.abs(v)<1000&&!Number.isInteger(v)?2:0))}</td>`).join('')+'</tr>').join('');
 }
@@ -760,7 +932,7 @@ async function savePNG(id,btn){ if(!window.html2canvas) return toast('그림 저
     c.toBlob(b=>save(fname((el.querySelector('h2')||{}).textContent||'핵심지표','png'),b));}catch(e){toast('그림 저장에 실패했습니다')} btn.disabled=false; }
 
 /* ---------- 실행 ---------- */
-function render(){renderKPI();renderSales();buildRev();calcRev();renderGen();renderScn();renderRegion();renderTable()}
+function render(){renderKPI();renderSales();buildRev();calcRev();renderGen();renderScn();renderExplorer('fac');renderExplorer('fin');renderExplorer('ind');renderRegion();renderTable()}
 setupControls();sync();render();
 let rt;addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(render,150)});
 (()=>{const links=$$('#navList a'), secs=links.map(a=>$(a.getAttribute('href')));
