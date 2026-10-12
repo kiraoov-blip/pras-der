@@ -55,10 +55,10 @@
     --ember-brand:#9f1239; --ember-brand-dark:#881337; --ember-brand-soft:#f8eef1; --ember-brand-line:#e8c4cd;
     /* KEPCO Statistics 카드 전용 로컬 토큰 — 시뮬레이터 본체와 같은 한전 CI 계열(네이비 + 레드 포인트). */
     --kepco-brand:#003b8e; --kepco-brand-dark:#0a2350; --kepco-brand-soft:#eaf1fb; --kepco-brand-line:#c5d8f0; --kepco-red:#e60012;
-    /* BPLE 카드 전용 로컬 토큰 — 시뮬레이터 본체와 같은 그레이(그래파이트) 계열.
+    /* BPLE 카드 전용 로컬 토큰 — 시뮬레이터 본체와 같은 그래파이트 바탕 + 틸 포인트.
        PRAS-DER(파랑)·PRAS-TOU(세이지)·CARE-Jeju(주황)·IEA(보라)·EMBER(와인)·
-       KEPCO(네이비)와 겹치지 않는 유일한 무채색 자리다. */
-    --bple-brand:#4d5862; --bple-brand-dark:#2c343b; --bple-brand-soft:#eceef1; --bple-brand-line:#ccd2d8;
+       KEPCO(네이비)와 겹치지 않는 자리로, 시뮬레이터 본체와 같은 틸(청록)을 쓴다. */
+    --bple-brand:#0e7a8a; --bple-brand-dark:#0a5a66; --bple-brand-soft:#e7f3f5; --bple-brand-line:#bcdde2;
   }
   * { box-sizing:border-box; }
   html { background:var(--canvas); -webkit-text-size-adjust:100%; text-size-adjust:100%; }
@@ -151,10 +151,10 @@
   .landing-card.kepco:hover .landing-card-icon { background:var(--kepco-brand); color:#fff; border-color:var(--kepco-brand); }
   .landing-card.kepco .landing-card-go { color:var(--kepco-brand); }
 
-  /* BPLE 카드: 브랜드색만 로컬로 덮어씀(구조·spacing은 동일, 그래파이트 계열) */
+  /* BPLE 카드: 브랜드색만 로컬로 덮어씀(구조·spacing은 동일, 그래파이트 + 틸 포인트) */
   .landing-card.bple .landing-card-tag { background:var(--bple-brand-soft); color:var(--bple-brand-dark); }
   .landing-card.bple .landing-card-icon { background:var(--bple-brand-soft); color:var(--bple-brand-dark); border-color:var(--bple-brand-line); }
-  .landing-card.bple:hover { border-color:#a8b2bb; box-shadow:0 6px 20px rgba(44,52,59,.12); }
+  .landing-card.bple:hover { border-color:#8ec3cb; box-shadow:0 6px 20px rgba(14,122,138,.12); }
   .landing-card.bple:hover .landing-card-icon { background:var(--bple-brand); color:#fff; border-color:var(--bple-brand); }
   .landing-card.bple .landing-card-go { color:var(--bple-brand-dark); }
 
