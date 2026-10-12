@@ -389,3 +389,22 @@ table.sens td.dn{color:var(--down);font-weight:750}
 .bs-sum dt{margin:0 0 5px;font-size:11.5px;font-weight:750;color:var(--muted)}
 .bs-sum dd{margin:0;font-size:15px;font-weight:800;color:var(--navy);font-variant-numeric:tabular-nums;display:flex;flex-direction:column;gap:2px}
 .bs-sum dd span{font-size:11.5px;font-weight:700;color:var(--blue)}
+
+/* 계산 과정 */
+.calc{margin-top:16px;border:1px solid var(--card-line);border-radius:13px;background:var(--surface-2);overflow:hidden}
+.calc>summary{cursor:pointer;padding:12px 15px;font-size:12.5px;font-weight:800;color:var(--navy);list-style:none;user-select:none}
+.calc>summary::-webkit-details-marker{display:none}
+.calc>summary::before{content:"▸";display:inline-block;margin-right:7px;color:var(--blue);transition:transform .15s}
+.calc[open]>summary::before{transform:rotate(90deg)}
+.calc>summary:hover{background:var(--surface-3)}
+.calc-steps{counter-reset:cs;list-style:none;margin:0;padding:0 15px 6px}
+.calc-steps li{counter-increment:cs;display:grid;gap:3px;padding:12px 0 13px 34px;position:relative;border-top:1px solid var(--line)}
+.calc-steps li::before{content:counter(cs);position:absolute;left:0;top:12px;width:22px;height:22px;border-radius:50%;
+  background:var(--blue);color:#fff;font:800 11.5px/22px var(--sans);text-align:center}
+.calc-steps .ct{font-size:12.5px;font-weight:800;color:var(--navy)}
+.calc-steps .cd{font-size:12.5px;line-height:1.75;color:var(--ink-2);font-variant-numeric:tabular-nums;word-break:keep-all}
+.calc-steps .cd b{color:var(--navy);font-weight:800}
+.calc-steps .cn{font-size:11.5px;line-height:1.6;color:var(--muted);word-break:keep-all}
+.calc-steps sup{font-size:.7em}
+.calc-alt{margin:0;padding:12px 15px 14px;border-top:1px solid var(--line);font-size:12px;line-height:1.7;color:var(--ink-2);word-break:keep-all}
+.calc-alt b{color:var(--blue)}

@@ -322,15 +322,17 @@ function backsolve(r) {
               `다른 레버를 함께 고르거나 무탄소 전원을 늘려야 합니다.`;
   }
 
-  /* 연료별 목표 배출 → 순발전량 배율 β */
+  /* 기여도 비례 분담은 결국 '선택 연료의 배출 합계를 β배로 줄인다'와 같다.
+     share_f = need × E_f/pool 이므로 β_f = (E_f − share_f)/E_f = 1 − need/pool 로 모든 연료가 동일하다. */
+  const beta = clamp(1 - need / pool, 0, 10);
   const c2 = cloneState();
+  const per = {};
   ['coal', 'lng'].forEach(f => {
     if (!n[f]) return;
-    const share = Math.min(E[f], need * (E[f] / pool));   /* 기여도 비례 분담 */
-    const beta = E[f] > 0 ? Math.max(0, (E[f] - share) / E[f]) : 1;
-    const per = Math.pow(beta, 1 / n[f]);                 /* 같은 연료 안에서 균등 분담 */
-    sel.filter(l => l.fuel === f).forEach(l => applyLever(c2, l, per));
+    per[f] = Math.pow(beta, 1 / n[f]);                    /* 같은 연료 안에서 균등 분담 */
+    sel.filter(l => l.fuel === f).forEach(l => applyLever(c2, l, per[f]));
   });
+  out.beta = beta; out.per = per; out.need = need; out.pool = pool; out.E = E; out.n = n;
 
   const after = compute(c2);
   out.rows = sel.map(l => ({ label: l.label, unit: l.unit,
@@ -341,9 +343,62 @@ function backsolve(r) {
   out.state = c2;
   if (!out.meet && out.feasible)
     out.msg = `현재 배출량 ${fmt(r.co2, 1)}백만톤이 ${ty}년 감축경로 ${fmt(lim, 1)}백만톤을 ` +
-              `${fmt(need, 1)}백만톤 넘습니다. 선택한 ${sel.length}개 레버가 현재 배출 기여도에 비례해 ` +
-              `나눠 감당하면 아래 값이 됩니다.`;
+              `${fmt(need, 1)}백만톤 넘습니다. 선택한 ${sel.length}개 레버가 아래와 같이 나눠 감당합니다.`;
+  out.steps = buildSteps(out, r, sel, lim);
+  /* 혼소만으로 발전량 손실 없이 해결 가능한지 — 선택 여부와 무관하게 짚어준다 */
+  const freePool = (r.gen.coal - r.genNet.coal >= 0 ? r.genNet.coal * EF.coal * K : 0) + r.genNet.lng * EF.lng * K;
+  out.freeOnly = need > 0 && need <= freePool + 1e-9;
   return out;
+}
+
+/* 화면에 뜬 숫자가 어떻게 나왔는지 단계로 풀어쓴다 */
+function buildSteps(out, r, sel, lim) {
+  if (!out.feasible || out.meet || !sel.length) return [];
+  const pct = v => fmt(v * 100, 1) + '%';
+  const st = [];
+
+  st.push({ t: '줄여야 할 양을 구합니다',
+    d: `현재 배출 <b>${fmt(r.co2, 1)}</b> − 감축경로 <b>${fmt(lim, 1)}</b> = <b>${fmt(out.need, 1)}백만톤</b>`,
+    n: '배출량 = (석탄 순발전량 × 0.8384 + LNG 순발전량 × 0.3800) × 보정계수 0.948' });
+
+  const fuels = ['coal', 'lng'].filter(f => out.n[f]);
+  const nmOf = f => f === 'coal' ? '석탄' : 'LNG';
+  const josa = f => f === 'coal' ? '석탄은' : 'LNG는';
+
+  st.push({ t: '선택한 연료의 배출을 같은 비율로 줄입니다',
+    d: (fuels.length > 1
+        ? fuels.map(f => `${nmOf(f)} <b>${fmt(out.E[f], 1)}</b>`).join(' + ') + ` = <b>${fmt(out.pool, 1)}백만톤</b>`
+        : `${nmOf(fuels[0])} 배출 <b>${fmt(out.pool, 1)}백만톤</b>`) +
+       `이 움직일 수 있는 전부입니다. 여기서 ${fmt(out.need, 1)}백만톤을 덜어내면 남는 비율은 ` +
+       `<b>1 − ${fmt(out.need, 1)} ÷ ${fmt(out.pool, 1)} = ${pct(out.beta)}</b>`,
+    n: fuels.length > 1
+        ? '연료별로 현재 배출 기여도에 비례해 나누면, 어느 연료든 결국 같은 배율로 줄어듭니다. 기여가 큰 연료가 자동으로 더 많이 감당합니다.'
+        : '고른 연료가 하나뿐이라 그 연료가 감축량을 전부 감당합니다.' });
+
+  st.push({ t: '같은 연료 안에서 레버끼리 나눕니다',
+    d: fuels.map(f => {
+      const k = out.n[f];
+      if (k === 1) return `${josa(f)} 레버가 1개라 혼자 <b>${pct(out.beta)}</b>를 감당합니다.`;
+      const chain = Array(k).fill(pct(out.per[f])).join(' × ');
+      return `${josa(f)} 레버가 ${k}개라 각자 <b>${pct(out.per[f])}</b>씩 맡습니다. ${chain} = ${pct(out.beta)}`;
+    }).join('<br>'),
+    n: '레버 효과는 곱으로 쌓이므로, 각자 같은 비율을 맡으면 합쳐서 정확히 목표 배율이 됩니다.' });
+
+  st.push({ t: '레버별 최종값을 계산합니다',
+    d: sel.map(l => {
+      const row = out.rows.find(x => x.label === l.label);
+      const k = out.per[l.fuel];
+      if (l.kind === 'blend') {
+        const b0 = row.from / 100;
+        return `${esc(l.label)} · 혼소하고 남는 탄소분 ${pct(1 - b0)} × ${pct(k)} = ${pct((1 - b0) * k)} ` +
+               `→ 혼소율 <b>${fmt(row.to, 1)}%</b>`;
+      }
+      return `${esc(l.label)} · ${fmt(row.from, 1)}${l.unit} × ${pct(k)} = <b>${fmt(row.to, 1)}${l.unit}</b>`;
+    }).join('<br>'),
+    n: sel.some(l => l.kind === 'blend')
+        ? '혼소율은 "타는 쪽"의 비율을 줄이는 방식이라, 1에서 현재 혼소율을 뺀 값에 배율을 곱한 뒤 다시 1에서 뺍니다.'
+        : '이용률과 정격용량은 발전량에 그대로 비례하므로 배율을 바로 곱합니다.' });
+  return st;
 }
 
 /* ===================== 입력 UI ===================== */
@@ -807,11 +862,24 @@ function renderBacksolve(r) {
     if (bs.feasible) body += `<div class="tools" style="margin-top:13px"><button class="btn" type="button" id="bsApply">이 값으로 적용</button></div>`;
   }
 
+  /* 계산 과정 */
+  if (bs.steps && bs.steps.length) {
+    body += `<details class="calc" open><summary>이 값이 나온 과정</summary><ol class="calc-steps">` +
+      bs.steps.map(s => `<li><span class="ct">${s.t}</span><span class="cd">${s.d}</span>` +
+        (s.n ? `<span class="cn">${s.n}</span>` : '') + `</li>`).join('') +
+      `</ol>` +
+      (bs.freeOnly ? `<p class="calc-alt"><b>참고</b> 필요한 감축량 ${fmt(bs.need, 1)}백만톤은 혼소율만 올려도 모두 덜어낼 수 있습니다. ` +
+        `혼소는 발전량을 유지한 채 탄소발전을 청정수소·암모니아로 옮기므로, 혼소 레버만 고르면 <b>발전량 손실 없이</b> 경로를 맞출 수 있습니다. ` +
+        `대신 그만큼의 청정수소·암모니아를 확보해야 합니다.</p>` : '') +
+      `</details>`;
+  }
+
   host.innerHTML =
     `<div class="alert ${sev}" style="margin:13px 0"><span class="t">${ttl}</span><span class="m">${bs.msg || ''}</span></div>` +
     body +
-    `<p class="note">연료별로 <b>현재 배출 기여도에 비례해</b> 감축량을 나누고, 같은 연료 안에서 여러 레버를 고르면 같은 비율씩 분담시킵니다. ` +
-    `혼소율은 발전량을 유지한 채 탄소발전을 청정수소·암모니아로 옮기고, 이용률·정격은 발전량 자체를 줄입니다. ` +
+    `<p class="note">이 결과는 <b>비용 최적해가 아니라 분담 규칙에 따른 해</b>입니다. 이 시뮬레이터에는 비용 함수가 없어 ` +
+    `"가장 싼 조합"을 고를 근거가 없으므로, 선택한 연료의 배출을 같은 비율로 줄이는 방식을 씁니다. ` +
+    `다른 기준(예: 발전량 손실 최소화, 연료비 최소화)을 쓰면 배분이 달라집니다. ` +
     `정격을 고르면 실효용량도 함께 움직여 수급 균형에 영향을 줍니다.</p>`;
 
   const ap = $('#bsApply');
