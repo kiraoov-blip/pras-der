@@ -133,6 +133,14 @@ function loadPlan(id) {
     const cf = disH > 0 ? clamp(((want - fixed) / disH) * 100, 0, 95) : 0;
     DIS.forEach(k => S.cf[k] = +cf.toFixed(2));
   }
+
+  /* 기준 보정값 산출 — 공표 과부족(최종설비 − 목표설비)을 원안에서 재현하는 상수.
+     공표 수급전망 표가 없는 1~7차는 보정 없이 모형값을 그대로 쓴다. */
+  S.effAdj = 0;
+  if (p.pub) {
+    const r0 = compute();
+    S.effAdj = +((p.pub.finalCap - p.pub.targetCap) - r0.gap).toFixed(3);
+  }
   S.pristine = snapshot();
 }
 
@@ -152,7 +160,12 @@ function compute(st) {
     eff[s.key] = (C.cap[s.key] || 0) * (pc[s.key] / 100);
     gen[s.key] = (C.cap[s.key] || 0) * (C.cf[s.key] / 100) * HOURS;
   });
-  const effTot = sum(eff);
+  /* 기준 보정 — 계획은 목표설비·과부족을 하계(또는 동계) 실효용량 기준으로 산정하는데
+     전원별 정격용량 표는 연말 기준이다. 두 기준의 차이와 공표값 반올림을 한 값으로 모아
+     목표연도 원안에서 계획이 공표한 과부족이 그대로 재현되도록 맞춘다. loadPlan 에서 1회 산출. */
+  const effAdj = C.effAdj || 0;
+  const effSrc = sum(eff);
+  const effTot = effSrc + effAdj;
   const gap = effTot - targetCap;
   const realReserve = (effTot / target - 1) * 100;
 
@@ -169,7 +182,7 @@ function compute(st) {
   const intensity = genTot > 0 ? co2 / genTot : 0;      /* 백만톤 / TWh = tCO2/MWh */
   const capTot = SRC.reduce((t, s) => t + (C.cap[s.key] || 0), 0);
 
-  return { p, basePeak, target, targetCap, eff, effTot, gap, realReserve, capTot,
+  return { p, basePeak, target, targetCap, eff, effSrc, effAdj, effTot, gap, realReserve, capTot,
            gen, genNet, h2nh3, genTot, co2, cfreeShare, renewShare, intensity, pc };
 }
 
@@ -196,6 +209,19 @@ function alerts(r) {
     out.push(['bad', '공급력 부족',
       `실효용량 ${fmt(r.effTot, 1)}GW가 목표설비 ${fmt(r.targetCap, 1)}GW에 <b>${fmt(Math.abs(r.gap), 1)}GW 미달</b>합니다. ` +
       `실현 설비예비율 ${fmt(r.realReserve, 1)}%로 기준 ${fmt(S.reserve, 1)}%를 밑돕니다. 현 구성비로는 정격 ${fmt(nameplate, 1)}GW 증설이 필요합니다.`]);
+  }
+
+  /* 1-b. 여유 없는 설계 — 계획 원안이 기준 예비율에 정확히 맞춰져 있는 경우 */
+  if (p.pub && !isDirty() && Math.abs(r.gap) < 0.25) {
+    const sp = p.pub.finalCap - p.pub.targetCap;
+    out.push(['info', '설비 여유 없음',
+      `${p.name}는 부족분 ${fmt(p.pub.newCap, 1)}GW를 신규설비로 전부 메워 ${ty}년 최종설비 ` +
+      `${fmt(p.pub.finalCap, 1)}GW를 ${p.pub.label} ${fmt(p.pub.targetCap, 1)}GW에 맞췄습니다` +
+      `(설비예비율 ${fmt(p.pub.reserve, 1)}%, 기준 ${fmt(p.reserveNum, 1)}%). ` +
+      (Math.abs(sp) < 0.05
+        ? '여유는 <b>0</b>입니다. 계획 스스로 예비율 기준에 정확히 맞춘 설계라 전제가 조금만 어긋나도 곧바로 부족으로 돌아섭니다.'
+        : `여유는 <b>${fmt(Math.abs(sp), 1)}GW</b>로 신규 설비 1기보다 작아, 전제가 조금만 어긋나도 부족으로 돌아섭니다.`) +
+      (p.pub.caveat ? ` ${p.pub.caveat}` : '')]);
   }
 
   /* 2. 감축경로 */
@@ -306,7 +332,7 @@ function backsolve(r) {
   if (!sel.length) { out.msg = '아래에서 조정할 레버를 하나 이상 고르면 그 조합으로 역산합니다.'; return out; }
   if (out.meet) {
     out.msg = `현재 배출량 ${fmt(r.co2, 1)}백만톤은 ${ty}년 감축경로 ${fmt(lim, 1)}백만톤 안에 있습니다. ` +
-              `여유는 ${fmt(lim - r.co2, 1)}백만톤이며, 선택한 레버를 아래 값까지 완화해도 경로를 지킵니다.`;
+              `여유는 ${fmt(Math.max(lim - r.co2, 0), 1)}백만톤이며, 선택한 레버를 아래 값까지 완화해도 경로를 지킵니다.`;
   }
 
   /* 연료별 현재 배출과, 선택된 레버 수 */
@@ -478,7 +504,7 @@ function renderChain() {
 
 /* ===================== KPI ===================== */
 function renderKPI(r) {
-  const p = r.p;
+  const p = r.p, pub = p.pub, bal = Math.abs(r.gap) < 0.05;
   const est = S.estimated ? ' <span class="pill sub">모형 추정</span>' : '';
   const resPill = r.realReserve >= S.reserve ? '<span class="pill ok">기준 충족</span>'
     : r.realReserve >= S.reserve - 3 ? '<span class="pill sub">기준 근접</span>'
@@ -490,13 +516,19 @@ function renderKPI(r) {
     tile('lead', `목표수요 · ${p.target}년 최대전력`, fmt(r.target, 1), 'GW',
       `기준수요 ${fmt(r.basePeak, 1)} − 수요관리 ${fmt(S.dsm, 1)}`),
     tile('lead', `목표설비 용량`, fmt(r.targetCap, 1), 'GW',
-      `${fmt(r.target, 1)} × (1 + ${fmt(S.reserve, 1)}%)`),
+      `${fmt(r.target, 1)} × (1 + ${fmt(S.reserve, 1)}%)` +
+      (pub ? ` · 공표 ${fmt(pub.targetCap, 1)}` : '')),
     tile('', '공급 실효용량', fmt(r.effTot, 1), 'GW',
-      `정격 ${fmt(sum(S.cap), 1)}GW 중 피크기여 반영분`),
-    tile(r.gap >= 0 ? 'pos' : 'neg', r.gap >= 0 ? '설비 여유' : '신규 필요설비',
-      (r.gap >= 0 ? '+' : '−') + fmt(Math.abs(r.gap), 1), 'GW',
-      (r.gap >= 0 ? '목표설비 대비 초과 확보' : '목표설비 대비 부족분') +
-      (r.effTot > 0 ? ` · 현 구성비로 정격 <b>${fmt(Math.abs(r.gap) * (sum(S.cap) / r.effTot), 1)}GW</b> 상당` : ''))
+      `정격 ${fmt(sum(S.cap), 1)}GW 중 피크기여 반영분` +
+      (Math.abs(r.effAdj) >= 0.05
+        ? ` ${fmt(r.effSrc, 1)} ${r.effAdj < 0 ? '−' : '+'} 기준 보정 ${fmt(Math.abs(r.effAdj), 1)}` : '')),
+    tile(bal ? '' : r.gap > 0 ? 'pos' : 'neg',
+      bal ? '수급 균형' : r.gap > 0 ? '설비 여유' : '신규 필요설비',
+      (bal ? '' : r.gap > 0 ? '+' : '−') + fmt(Math.abs(r.gap), 1), 'GW',
+      bal
+        ? `목표설비를 정확히 충족합니다${pub ? ` · 공표 과부족 ${fmt(pub.finalCap - pub.targetCap, 1)}GW` : ''}`
+        : (r.gap > 0 ? '목표설비 대비 초과 확보' : '목표설비 대비 부족분') +
+          (r.effTot > 0 ? ` · 현 구성비로 정격 <b>${fmt(Math.abs(r.gap) * (sum(S.cap) / r.effTot), 1)}GW</b> 상당` : ''))
   ].join('');
 
   $('#kpiB').innerHTML = [
@@ -507,7 +539,8 @@ function renderKPI(r) {
   ].join('');
 
   $('#kpiDesc').innerHTML =
-    `${p.name} ${p.target}년 기준 · ${p.basis} ` +
+    `${p.name} ${p.target}년 기준 · ${p.basis}` +
+    (pub ? ` · 과부족은 계획과 같은 ${pub.basis} 실효용량 기준 ` : ' ') +
     (isDirty() ? '<span class="pill sub">원안에서 수정됨</span>' : '<span class="pill ok">원안 그대로</span>');
   bindTips($('#s-kpi'));
 }
@@ -708,7 +741,7 @@ function renderMix(r) {
   $('#mixNote').textContent = (mode === 'cap'
     ? '각 계획의 목표연도 정격용량(연말 기준)입니다.'
     : mode === 'eff'
-      ? '각 계획이 자기 본문에서 쓴 실효/정격 비율을 적용한 실효용량입니다. 1~5차는 정격 기준 표를 그대로 씁니다.'
+      ? '각 계획이 자기 본문에서 쓴 실효/정격 비율을 적용한 실효용량입니다. 1~5차는 정격 기준 표를 그대로 씁니다. 전원별 비교를 위한 값이라 계절 기준 보정은 넣지 않았으므로, 수급 균형 판정에 쓰이는 02의 실효용량과는 소수점 차이가 있습니다.'
       : '각 계획의 목표연도 전원별 발전량입니다. 8차는 발전량 비중에 신재생 125.8TWh(20.0%)를 적용해 총 629TWh로 환산했습니다.')
     + ' 막대 길이는 구성비이고, 오른쪽 숫자가 합계입니다.';
 }
@@ -909,11 +942,15 @@ function renderDetail(r) {
   });
   if (r.h2nh3 > 0.05) rows.push(`<tr><td><i class="swatch" style="background:var(--c-h2)"></i>청정수소·암모니아</td>` +
     ['—', '—', '—', '—', fmt(r.h2nh3, 1), fmt((r.h2nh3 / r.genTot) * 100, 1), '0.0'].map(v => `<td>${v}</td>`).join('') + '</tr>');
+  if (Math.abs(r.effAdj) >= 0.05) rows.push(`<tr><td>기준 보정 (${r.p.pub ? r.p.pub.basis : '계절'} 환산)</td>` +
+    ['—', '—', (r.effAdj < 0 ? '−' : '+') + fmt(Math.abs(r.effAdj), 1), '—', '—', '—', '—'].map(v => `<td>${v}</td>`).join('') + '</tr>');
   rows.push(`<tr class="sum"><td>합계</td>` +
     [fmt(sum(S.cap), 1), '—', fmt(r.effTot, 1), '—', fmt(r.genTot, 1), '100.0', fmt(r.co2, 1)].map(v => `<td>${v}</td>`).join('') + '</tr>');
   $('#detailTable').innerHTML = `<thead><tr>${head.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody>`;
-  $('#detailNote').innerHTML = `혼소분은 석탄·LNG 발전량에서 빼 청정수소·암모니아로 옮깁니다. 배출량에는 전환부문 보정계수 <b>${ENGINE.efCal}</b>를 적용했습니다.` +
-    (plan().gen && !plan().gen.hydro ? ` ${plan().name}은 양수 발전량을 '기타'에 합산해 공표하므로 수력·양수 행의 발전량이 0으로 표시됩니다.` : '');
+  $('#detailNote').innerHTML = `혼소분은 석탄·LNG 발전량에서 빼 청정수소·암모니아로 옮깁니다. 배출량에는 전환부문 보정계수 <b>${ENGINE.efCal}</b>을 적용했습니다.` +
+    (Math.abs(r.effAdj) >= 0.05
+      ? ` 전원별 정격용량은 연말 기준인데 계획은 과부족을 ${r.p.pub.basis} 실효용량 기준으로 산정하므로, 두 기준의 차이와 공표값 반올림을 <b>기준 보정</b> 한 줄로 모았습니다. 이 값을 더하면 ${r.p.name}가 공표한 ${r.p.target}년 과부족이 그대로 재현됩니다.` : '') +
+    (plan().gen && !plan().gen.hydro ? ` ${plan().name}는 양수 발전량을 '기타'에 합산해 공표하므로 수력·양수 행의 발전량이 0으로 표시됩니다.` : '');
 }
 
 function renderPlanTable() {
