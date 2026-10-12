@@ -262,7 +262,8 @@ function renderKPI(r) {
       `정격 ${fmt(sum(S.cap), 1)}GW 중 피크기여 반영분`),
     tile(r.gap >= 0 ? 'pos' : 'neg', r.gap >= 0 ? '설비 여유' : '신규 필요설비',
       (r.gap >= 0 ? '+' : '−') + fmt(Math.abs(r.gap), 1), 'GW',
-      r.gap >= 0 ? '목표설비 대비 초과 확보' : '목표설비 대비 부족분')
+      (r.gap >= 0 ? '목표설비 대비 초과 확보' : '목표설비 대비 부족분') +
+      (r.effTot > 0 ? ` · 현 구성비로 정격 <b>${fmt(Math.abs(r.gap) * (sum(S.cap) / r.effTot), 1)}GW</b> 상당` : ''))
   ].join('');
 
   $('#kpiB').innerHTML = [
@@ -622,22 +623,6 @@ function bind() {
     flash(['basePeakN', 'dsmN', 'reserveN', ...SRC.map(s => 'capn_' + s.key), ...SRC.map(s => 'cfn_' + s.key)]);
     toast(`${plan().name} 원안으로 되돌렸습니다`);
   });
-  $('#btnFit').addEventListener('click', () => {
-    const r = compute();
-    if (r.effTot <= 0) return;
-    if (Math.abs(r.gap) < 0.05) { toast(`이미 목표설비 ${fmt(r.targetCap, 1)}GW를 충족하고 있습니다`); return; }
-    const before = sum(S.cap), k = r.targetCap / r.effTot, changed = [];
-    SRC.forEach(s => {
-      const v = +((S.cap[s.key] || 0) * k).toFixed(1);
-      if (v !== S.cap[s.key]) changed.push('capn_' + s.key);
-      S.cap[s.key] = v;
-    });
-    syncInputs(); renderAll(); flash(changed);
-    const after = sum(S.cap);
-    toast(`전원구성을 비례 ${after >= before ? '확대' : '축소'}해 목표설비 ${fmt(r.targetCap, 1)}GW에 맞췄습니다` +
-          `<b> 정격 ${fmt(before, 1)} → ${fmt(after, 1)}GW</b>`);
-  });
-
   $('#btnCopy').addEventListener('click', async () => {
     const t = $('#detailTable'), b = $('#btnCopy');
     const txt = [...t.querySelectorAll('tr')].map(tr => [...tr.children].map(td => td.textContent.trim()).join('\t')).join('\n');

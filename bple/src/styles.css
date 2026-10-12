@@ -325,7 +325,7 @@ input.flash{animation:bple-flash .9s ease-out}
 .legend span[data-k]{cursor:pointer}
 .legend span[data-k]:focus-visible{outline:2px solid var(--blue);outline-offset:1px}
 
-/* 버튼 설명 — 문장마다 줄을 나누고, 한국어가 단어 중간에서 끊기지 않게 한다 */
+/* 버튼 설명 — 한국어가 단어 중간에서 끊기지 않게 한다 */
 .btn-hint{text-align:right;word-break:keep-all;line-height:1.75}
 /* .sec-h 가 줄바꿈되는 폭부터는 버튼과 설명을 모두 왼쪽으로 붙인다 */
 @media(max-width:1100px){
@@ -342,3 +342,5 @@ input.flash{animation:bple-flash .9s ease-out}
 .chain-note{margin:14px 0 0;padding:11px 13px;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;line-height:1.65}
 .chain-note b{color:var(--navy)}
 .chain-note .cav{display:block;margin-top:4px;color:var(--muted)}
+
+.kpi .n b{color:var(--navy);font-weight:800}
