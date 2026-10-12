@@ -27,6 +27,7 @@
       <li><a href="#s-fc">전망비교</a></li>
       <li><a href="#s-mix">전원구성</a></li>
       <li><a href="#s-emis">발전·배출</a></li>
+      <li><a href="#s-diag">진단·민감도</a></li>
       <li><a href="#s-data">데이터</a></li>
     </ul>
     <a class="site-home-btn" href="/" aria-label="처음 화면으로">
@@ -139,6 +140,7 @@
           <div class="kpis" id="kpiA"></div>
           <div class="kpi-group" style="margin-top:18px">발전 · 배출</div>
           <div class="kpis" id="kpiB"></div>
+          <div class="alerts" id="alerts"></div>
         </div>
       </section>
 
@@ -239,11 +241,31 @@
         </div>
       </section>
 
-      <!-- 07 데이터 -->
+      <!-- 07 진단 · 민감도 -->
+      <section class="sec" id="s-diag">
+        <div class="sec-h">
+          <div>
+            <p class="eyebrow">07 · Diagnosis</p>
+            <h2>민감도와 목표 역산</h2>
+            <p class="desc">전제를 한 단위씩 움직였을 때 결과가 얼마나 달라지는지, 그리고 감축경로를 맞추려면 무엇을 어디까지 바꿔야 하는지를 현재 지점에서 계산합니다.</p>
+          </div>
+        </div>
+        <div class="sec-b">
+          <p class="sub-h">레버별 민감도 — 현재 지점에서 한 단위 조정 시</p>
+          <div class="tbl-wrap"><table class="bple" id="sensTable"></table></div>
+          <p class="note" id="sensNote"></p>
+
+          <div class="divider"></div>
+          <p class="sub-h">감축경로 역산 — 경로에 정확히 닿는 한계값</p>
+          <div id="backsolve"></div>
+        </div>
+      </section>
+
+      <!-- 08 데이터 -->
       <section class="sec" id="s-data">
         <div class="sec-h">
           <div>
-            <p class="eyebrow">07 · Data</p>
+            <p class="eyebrow">08 · Data</p>
             <h2>산출 상세와 역대 계획 제원</h2>
             <p class="desc">모든 수치는 각 차수 전력수급기본계획 본문·별첨 표에서 직접 옮긴 값입니다.</p>
           </div>

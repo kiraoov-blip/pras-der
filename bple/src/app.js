@@ -135,27 +135,29 @@ function loadPlan(id) {
 }
 
 /* ===================== 엔진 ===================== */
-function compute() {
-  const p = plan();
-  const addTot = S.addSemi + S.addDc + S.addElec;
-  const basePeak = S.basePeak + addTot;                 /* 기준수요 */
-  const target = Math.max(0.1, basePeak - S.dsm);       /* 목표수요 */
-  const targetCap = target * (1 + S.reserve / 100);     /* 목표설비 */
-  const pc = Object.assign({}, S.pc, { renew: S.pcRenew });
+/* st 를 넘기면 그 상태로 계산한다 — 민감도 분석이 S 를 건드리지 않고 돌려보기 위해 쓴다 */
+function compute(st) {
+  const C = st || S;
+  const p = PLANS.find(x => x.id === C.planId);
+  const addTot = C.addSemi + C.addDc + C.addElec;
+  const basePeak = C.basePeak + addTot;                 /* 기준수요 */
+  const target = Math.max(0.1, basePeak - C.dsm);       /* 목표수요 */
+  const targetCap = target * (1 + C.reserve / 100);     /* 목표설비 */
+  const pc = Object.assign({}, C.pc, { renew: C.pcRenew });
 
   const eff = {}, gen = {};
   SRC.forEach(s => {
-    eff[s.key] = (S.cap[s.key] || 0) * (pc[s.key] / 100);
-    gen[s.key] = (S.cap[s.key] || 0) * (S.cf[s.key] / 100) * HOURS;
+    eff[s.key] = (C.cap[s.key] || 0) * (pc[s.key] / 100);
+    gen[s.key] = (C.cap[s.key] || 0) * (C.cf[s.key] / 100) * HOURS;
   });
   const effTot = sum(eff);
   const gap = effTot - targetCap;
   const realReserve = (effTot / target - 1) * 100;
 
-  const h2nh3 = gen.coal * (S.nh3 / 100) + gen.lng * (S.h2 / 100);
+  const h2nh3 = gen.coal * (C.nh3 / 100) + gen.lng * (C.h2 / 100);
   const genNet = Object.assign({}, gen);
-  genNet.coal = gen.coal * (1 - S.nh3 / 100);
-  genNet.lng = gen.lng * (1 - S.h2 / 100);
+  genNet.coal = gen.coal * (1 - C.nh3 / 100);
+  genNet.lng = gen.lng * (1 - C.h2 / 100);
   const genTot = sum(genNet) + h2nh3;
 
   const co2 = (genNet.coal * ENGINE.ef.coal + genNet.lng * ENGINE.ef.lng) * ENGINE.efCal;
@@ -163,9 +165,131 @@ function compute() {
   const cfreeShare = genTot > 0 ? (cfree / genTot) * 100 : 0;
   const renewShare = genTot > 0 ? ((genNet.renew + genNet.newe) / genTot) * 100 : 0;
   const intensity = genTot > 0 ? co2 / genTot : 0;      /* 백만톤 / TWh = tCO2/MWh */
+  const capTot = SRC.reduce((t, s) => t + (C.cap[s.key] || 0), 0);
 
-  return { p, basePeak, target, targetCap, eff, effTot, gap, realReserve,
+  return { p, basePeak, target, targetCap, eff, effTot, gap, realReserve, capTot,
            gen, genNet, h2nh3, genTot, co2, cfreeShare, renewShare, intensity, pc };
+}
+
+/* 상태 복제 — 민감도용 */
+function cloneState(mut) {
+  const c = Object.assign({}, S, { cap: Object.assign({}, S.cap), cf: Object.assign({}, S.cf), pc: Object.assign({}, S.pc) });
+  if (mut) mut(c);
+  return c;
+}
+
+/* 11차 감축경로상 해당 연도의 배출 상한 ('30년 145.9 → '38년 83.1 선형) */
+const pathCo2 = y => 145.9 - (145.9 - 83.1) * ((clamp(y, 2030, 2038) - 2030) / 8);
+
+/* ===================== 진단 · 민감도 · 역산 ===================== */
+
+/* 전제가 기준을 벗어났는지 점검해 경고로 알린다 */
+function alerts(r) {
+  const p = r.p, out = [];
+  const ty = p.target, lim = pathCo2(ty), inPath = ty >= 2030;
+
+  /* 1. 공급신뢰도 */
+  if (r.gap < -0.05) {
+    const nameplate = r.effTot > 0 ? Math.abs(r.gap) * (r.capTot / r.effTot) : 0;
+    out.push(['bad', '공급력 부족',
+      `실효용량 ${fmt(r.effTot, 1)}GW가 목표설비 ${fmt(r.targetCap, 1)}GW에 <b>${fmt(Math.abs(r.gap), 1)}GW 미달</b>합니다. ` +
+      `실현 설비예비율 ${fmt(r.realReserve, 1)}%로 기준 ${fmt(S.reserve, 1)}%를 밑돕니다. 현 구성비로는 정격 ${fmt(nameplate, 1)}GW 증설이 필요합니다.`]);
+  }
+
+  /* 2. 감축경로 */
+  if (inPath) {
+    const d = r.co2 - lim;
+    if (d > 0.05) out.push(['bad', '감축경로 미충족',
+      `${ty}년 배출량 <b>${fmt(r.co2, 1)}백만톤</b>이 11차 감축경로 ${fmt(lim, 1)}백만톤을 ` +
+      `<b>${fmt(d, 1)}백만톤(${fmt((d / lim) * 100, 1)}%)</b> 초과합니다.`]);
+    else if (d > -lim * 0.005) out.push(['info', '감축경로 여유 없음',
+      `${ty}년 배출량 ${fmt(r.co2, 1)}백만톤이 감축경로 ${fmt(lim, 1)}백만톤에 거의 맞닿아 있습니다. ` +
+      `배출을 늘리는 조정은 곧바로 경로를 넘깁니다.`]);
+  }
+
+  /* 3. 계획 원안 대비 설비 조정폭 */
+  const base = SRC.reduce((t, s) => t + (p.cap[s.key] || 0), 0);
+  const dCap = r.capTot - base;
+  if (Math.abs(dCap) >= 0.05) {
+    let worst = null;
+    SRC.forEach(s => {
+      const d = (S.cap[s.key] || 0) - (p.cap[s.key] || 0);
+      if (!worst || Math.abs(d) > Math.abs(worst.d)) worst = { s, d };
+    });
+    const pct = base > 0 ? (dCap / base) * 100 : 0;
+    const sev = Math.abs(pct) >= 10 ? 'warn' : 'info';
+    out.push([sev, '원안 대비 설비 조정',
+      `정격 합계 ${fmt(r.capTot, 1)}GW는 ${p.name} 원안 ${fmt(base, 1)}GW 대비 ` +
+      `<b>${dCap > 0 ? '+' : '−'}${fmt(Math.abs(dCap), 1)}GW(${pct > 0 ? '+' : '−'}${fmt(Math.abs(pct), 1)}%)</b> ` +
+      `${dCap > 0 ? '초과' : '부족'}합니다.` +
+      (worst && Math.abs(worst.d) >= 0.05
+        ? ` 가장 크게 움직인 전원은 ${worst.s.label} ${worst.d > 0 ? '+' : '−'}${fmt(Math.abs(worst.d), 1)}GW입니다.` : '')]);
+  }
+
+  /* 4. 이상치 점검 */
+  const over = SRC.filter(s => (S.cf[s.key] || 0) > 92);
+  if (over.length) out.push(['warn', '이용률 과다',
+    `${over.map(s => s.label).join('·')}의 이용률이 92%를 넘습니다. 예방정비와 고장정지를 감안하면 실현이 어려운 수준입니다.`]);
+
+  /* 치명적 경고가 없으면 충족 메시지를 맨 앞에 둔다 */
+  if (!out.some(x => x[0] === 'bad')) {
+    const ok = [`기준 설비예비율 ${fmt(S.reserve, 1)}% 충족(실현 ${fmt(r.realReserve, 1)}%)`];
+    if (inPath) ok.push(`${ty}년 감축경로 ${fmt(lim, 1)}백만톤 이내(${fmt(r.co2, 1)}백만톤)`);
+    out.unshift(['ok', '기준 충족', ok.join(' · ') + '.']);
+  }
+  return out;
+}
+
+/* 레버를 한 단위씩 움직여 효과를 수치로 뽑는다 */
+function sensitivity(base) {
+  const L = [
+    ['기준 설비예비율', '+1%p', c => c.reserve += 1],
+    ['수요관리 목표', '+1GW', c => c.dsm += 1],
+    ['추가수요 (데이터센터)', '+1GW', c => c.addDc += 1],
+    ['재생e 피크기여도', '+1%p', c => c.pcRenew += 1],
+    ['재생e 정격용량', '+10GW', c => c.cap.renew = (c.cap.renew || 0) + 10],
+    ['원전 정격용량', '+1GW', c => c.cap.nuclear = (c.cap.nuclear || 0) + 1],
+    ['석탄 이용률', '+1%p', c => c.cf.coal = (c.cf.coal || 0) + 1],
+    ['석탄 암모니아 혼소율', '+10%p', c => c.nh3 = clamp(c.nh3 + 10, 0, 100)],
+    ['LNG 수소 혼소율', '+10%p', c => c.h2 = clamp(c.h2 + 10, 0, 100)]
+  ];
+  return L.map(([name, unit, mut]) => {
+    const n = compute(cloneState(mut));
+    return { name, unit,
+      targetCap: n.targetCap - base.targetCap, eff: n.effTot - base.effTot, gap: n.gap - base.gap,
+      gen: n.genTot - base.genTot, cfree: n.cfreeShare - base.cfreeShare, co2: n.co2 - base.co2 };
+  });
+}
+
+/* 감축경로를 맞추려면 무엇을 얼마로 바꿔야 하는지 거꾸로 푼다 */
+function backsolve(r) {
+  const p = r.p, ty = p.target;
+  if (ty < 2030) return null;
+  const lim = pathCo2(ty), EF = ENGINE.ef, K = ENGINE.efCal;
+  const grossCoal = (S.cap.coal || 0) * (S.cf.coal / 100) * HOURS;
+  const grossLng = (S.cap.lng || 0) * (S.cf.lng / 100) * HOURS;
+  /* 목표 배출을 만족하는 석탄 순발전량 */
+  const needCoal = (lim / K - r.genNet.lng * EF.lng) / EF.coal;
+  const out = { lim, meet: r.co2 <= lim * 1.005, rows: [] };
+
+  if (needCoal < 0) {
+    /* 석탄을 모두 멈춰도 LNG 만으로 초과 — LNG 쪽에서 풀어야 한다 */
+    const needLng = lim / (K * EF.lng);
+    if (grossLng > 0 && needLng < grossLng)
+      out.rows.push(['LNG 수소 혼소율', `${fmt((1 - needLng / grossLng) * 100, 1)}%`, `현재 ${fmt(S.h2, 1)}% · 석탄을 전부 멈춘다는 전제`]);
+    out.note = '석탄을 모두 멈춰도 LNG 발전만으로 감축경로를 초과합니다. LNG 쪽을 함께 줄여야 합니다.';
+    return out;
+  }
+  const denomCf = (S.cap.coal || 0) * HOURS * (1 - S.nh3 / 100);
+  if (denomCf > 0) out.rows.push(['석탄 이용률', `${fmt(clamp((needCoal / denomCf) * 100, 0, 100), 1)}%`, `현재 ${fmt(S.cf.coal, 1)}%`]);
+  if (grossCoal > 0 && needCoal < grossCoal)
+    out.rows.push(['석탄 암모니아 혼소율', `${fmt(clamp((1 - needCoal / grossCoal) * 100, 0, 100), 1)}%`, `현재 ${fmt(S.nh3, 1)}%`]);
+  const denomCap = (S.cf.coal / 100) * HOURS * (1 - S.nh3 / 100);
+  if (denomCap > 0) out.rows.push(['석탄 정격용량', `${fmt(Math.max(0, needCoal / denomCap), 1)}GW`, `현재 ${fmt(S.cap.coal || 0, 1)}GW`]);
+  out.note = out.meet
+    ? `현재 배출량 ${fmt(r.co2, 1)}백만톤은 ${ty}년 감축경로 ${fmt(lim, 1)}백만톤 안에 있습니다. 아래는 경로에 정확히 닿는 한계값이라, 여기까지는 늘려도 경로를 지킵니다.`
+    : `현재 배출량 ${fmt(r.co2, 1)}백만톤이 ${ty}년 감축경로 ${fmt(lim, 1)}백만톤을 넘습니다. 아래 중 하나를 그 값으로 바꾸면 경로를 맞춥니다.`;
+  return out;
 }
 
 /* ===================== 입력 UI ===================== */
@@ -546,6 +670,52 @@ function renderCo2(r) {
       `. 실선은 11차가 제시한 '30년 145.9 → '38년 83.1백만톤 선형 감축경로입니다.`;
 }
 
+/* ===================== 진단 렌더 ===================== */
+function renderAlerts(r) {
+  $('#alerts').innerHTML = alerts(r).map(([sev, t, m]) =>
+    `<div class="alert ${sev}"><span class="t">${esc(t)}</span><span class="m">${m}</span></div>`).join('');
+}
+
+function renderSens(r) {
+  const rows = sensitivity(r);
+  const cell = (v, unit, inv) => {
+    if (Math.abs(v) < 0.045) return '<td class="z">—</td>';
+    const good = inv ? v < 0 : v > 0;
+    return `<td class="${good ? 'dn' : 'up'}">${v > 0 ? '+' : '−'}${fmt(Math.abs(v), 1)}${unit}</td>`;
+  };
+  const head = ['조정 항목', '조정폭', '목표설비', '실효용량', '과부족', '총발전량', '무탄소비중', '배출량'];
+  $('#sensTable').className = 'bple sens';
+  $('#sensTable').innerHTML =
+    `<thead><tr>${head.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>` +
+    rows.map(x => `<tr><td>${esc(x.name)}</td><td>${esc(x.unit)}</td>` +
+      cell(x.targetCap, 'GW', true) + cell(x.eff, 'GW') + cell(x.gap, 'GW') +
+      cell(x.gen, 'TWh') + cell(x.cfree, '%p') + cell(x.co2, '백만톤', true) +
+      '</tr>').join('') + '</tbody>';
+  /* 가장 효율적인 공급력 레버를 찾아 한 줄로 짚어준다 */
+  const byEff = rows.filter(x => x.eff > 0.05).sort((a2, b2) => b2.eff - a2.eff)[0];
+  const byCo2 = rows.filter(x => x.co2 < -0.05).sort((a2, b2) => a2.co2 - b2.co2)[0];
+  let n = '초록은 수급·탄소에 유리한 방향, 주황은 불리한 방향입니다. 0.05 미만 변화는 생략했습니다.';
+  if (byEff) n += ` 공급 실효용량을 가장 크게 올리는 레버는 <b>${esc(byEff.name)} ${esc(byEff.unit)}</b>(${fmt(byEff.eff, 1)}GW)입니다.`;
+  if (byCo2) n += ` 배출을 가장 크게 줄이는 레버는 <b>${esc(byCo2.name)} ${esc(byCo2.unit)}</b>(${fmt(Math.abs(byCo2.co2), 1)}백만톤)입니다.`;
+  $('#sensNote').innerHTML = n;
+}
+
+function renderBacksolve(r) {
+  const bs = backsolve(r), host = $('#backsolve');
+  if (!bs) {
+    host.innerHTML = `<p class="note">${r.p.name}의 목표연도 ${r.p.target}년은 11차 감축경로(2030~2038) 이전이라 역산 대상이 아닙니다.</p>`;
+    return;
+  }
+  host.innerHTML =
+    `<div class="alert ${bs.meet ? 'ok' : 'bad'}" style="margin-bottom:13px">` +
+    `<span class="t">${bs.meet ? '경로 충족' : '경로 초과'}</span><span class="m">${bs.note}</span></div>` +
+    (bs.rows.length
+      ? `<div class="bs-grid">${bs.rows.map(([k, v, n]) =>
+          `<div class="bs-item"><div class="k">${esc(k)}</div><div class="v">${esc(v)}</div><div class="n">${esc(n)}</div></div>`).join('')}</div>`
+      : '') +
+    `<p class="note">각 값은 <b>다른 전제를 그대로 둔 채 그 항목만</b> 바꿔 ${fmt(bs.lim, 1)}백만톤에 정확히 닿게 하는 수치입니다. 셋을 동시에 적용하면 과잉 감축이 됩니다.</p>`;
+}
+
 /* ===================== 07 표 ===================== */
 function renderDetail(r) {
   const head = ['전원', '정격용량 (GW)', '피크기여도 (%)', '실효용량 (GW)', '이용률 (%)', '발전량 (TWh)', '발전비중 (%)', '배출량 (백만톤)'];
@@ -587,8 +757,9 @@ function renderPlanTable() {
 /* ===================== 렌더 ===================== */
 function renderAll() {
   const r = compute();
-  renderChain(); renderKPI(r); renderBalance(r); renderTraj(); renderErr();
-  renderMix(r); renderGen(r); renderCo2(r); renderDetail(r); renderPlanTable();
+  renderChain(); renderKPI(r); renderAlerts(r); renderBalance(r); renderTraj(); renderErr();
+  renderMix(r); renderGen(r); renderCo2(r); renderSens(r); renderBacksolve(r);
+  renderDetail(r); renderPlanTable();
 }
 
 /* ===================== 이벤트 ===================== */

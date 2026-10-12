@@ -344,3 +344,33 @@ input.flash{animation:bple-flash .9s ease-out}
 .chain-note .cav{display:block;margin-top:4px;color:var(--muted)}
 
 .kpi .n b{color:var(--navy);font-weight:800}
+
+/* 진단 경고 — 공용 토큰만 써서 심각도를 구분한다 */
+.alerts{display:grid;gap:9px;margin-top:18px}
+.alert{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;align-items:start;
+  padding:12px 14px;border-radius:11px;border:1px solid;font-size:12.5px;line-height:1.65}
+.alert .t{font-weight:800;white-space:nowrap}
+.alert .m{min-width:0;word-break:keep-all}
+.alert b{font-weight:800}
+.alert.bad{background:#fdf2f0;border-color:#edc9c0;color:#7b3a2c}
+.alert.bad .t,.alert.bad b{color:#9c3f2c}
+.alert.warn{background:var(--warn-bg);border-color:#e7cf93;color:var(--warn-ink)}
+.alert.warn .t,.alert.warn b{color:#8a5a09}
+.alert.info{background:var(--surface-2);border-color:var(--card-line);color:var(--ink-2)}
+.alert.info .t,.alert.info b{color:var(--navy)}
+.alert.ok{background:var(--accent-soft);border-color:var(--blue-soft);color:var(--ink-2)}
+.alert.ok .t,.alert.ok b{color:var(--blue)}
+@media(max-width:640px){.alert{grid-template-columns:minmax(0,1fr);gap:3px}}
+
+/* 민감도 표 */
+table.sens{min-width:720px}
+table.sens td.z{color:var(--muted)}
+table.sens td.up{color:var(--up);font-weight:750}
+table.sens td.dn{color:var(--down);font-weight:750}
+
+/* 역산 */
+.bs-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-top:4px}
+.bs-item{border:1px solid var(--card-line);border-radius:13px;background:var(--surface);padding:14px 15px}
+.bs-item .k{font-size:12.5px;font-weight:750;color:#676c77;margin-bottom:7px}
+.bs-item .v{font-size:23px;font-weight:800;letter-spacing:-.03em;color:var(--blue);line-height:1.15}
+.bs-item .n{font-size:11.5px;color:var(--muted);margin-top:5px}
