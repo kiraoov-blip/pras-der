@@ -68,8 +68,17 @@ const S = {
   planId: 11, basePeak: 0, addSemi: 0, addDc: 0, addElec: 0, dsm: 0,
   reserve: 22, pcRenew: 11.1, cap: {}, cf: {}, pc: {}, nh3: 0, h2: 0,
   estimated: false, trMode: 'all', mxMode: 'cap',
-  off: { bal: new Set(), traj: new Set(), mix: new Set() }
+  off: { bal: new Set(), traj: new Set(), mix: new Set() },
+  pristine: ''
 };
+
+/* 분석 조건이 계획 원안에서 바뀌었는지 — 시나리오와 원안을 구분해 보여주기 위해 쓴다 */
+function snapshot() {
+  return JSON.stringify([S.planId, S.basePeak, S.addSemi, S.addDc, S.addElec, S.dsm,
+    S.reserve, S.pcRenew, S.nh3, S.h2,
+    SRC.map(s => S.cap[s.key]), SRC.map(s => S.cf[s.key])]);
+}
+const isDirty = () => snapshot() !== S.pristine;
 
 /* 범례 — 클릭하면 해당 계열을 숨기고 다시 누르면 되살린다 */
 function legend(host, ns, items, rerender) {
@@ -122,6 +131,7 @@ function loadPlan(id) {
     const cf = disH > 0 ? clamp(((want - fixed) / disH) * 100, 0, 95) : 0;
     DIS.forEach(k => S.cf[k] = +cf.toFixed(2));
   }
+  S.pristine = snapshot();
 }
 
 /* ===================== 엔진 ===================== */
@@ -241,8 +251,9 @@ function renderKPI(r) {
     tile('', '전환부문 온실가스', fmt(r.co2, 1), '백만톤', `배출원단위 ${fmt(r.intensity, 3)} tCO₂/MWh${est}`)
   ].join('');
 
-  $('#kpiDesc').textContent =
-    `${p.name} ${p.target}년 기준 · ${p.basis}`;
+  $('#kpiDesc').innerHTML =
+    `${p.name} ${p.target}년 기준 · ${p.basis} ` +
+    (isDirty() ? '<span class="pill sub">원안에서 수정됨</span>' : '<span class="pill ok">원안 그대로</span>');
   bindTips($('#s-kpi'));
 }
 
@@ -410,7 +421,8 @@ function mixBar(label, sub, obj, extra, unit, cur, na) {
 
 function renderMix(r) {
   const mode = S.mxMode, unit = mode === 'gen' ? 'TWh' : 'GW';
-  let html = mixBar('시나리오', `${plan().target}년 · 조정 전제`,
+  const tag = isDirty() ? '원안에서 수정됨' : `${plan().name} 원안 그대로`;
+  let html = mixBar('시나리오', `${plan().target}년 · ${tag}`,
     mode === 'cap' ? S.cap : mode === 'eff' ? r.eff : r.genNet,
     mode === 'gen' ? r.h2nh3 : 0, unit, true);
   [...PLANS].reverse().forEach(p => {
@@ -429,7 +441,8 @@ function renderMix(r) {
   const li = SRC.map(s => ({ k: s.key, t: s.label, c: 'var(--c-' + s.key + ')', sq: true }));
   if (mode === 'gen') li.push({ k: 'h2', t: '청정수소·암모니아', c: 'var(--c-h2)', sq: true });
   legend($('#mixLegend'), 'mix', li, () => { const q = compute(); renderMix(q); renderGen(q); });
-  $('#mixDesc').textContent = '시나리오를 맨 위에 두고 최근 차수부터 거슬러 올라가며 목표연도 원안을 같은 축으로 비교합니다. 범례를 누르면 해당 전원을 빼고 다시 계산합니다.';
+  $('#mixDesc').innerHTML = '맨 위 <b>시나리오</b>는 분석 조건에 입력된 값으로 계산한 결과이고, 아래 <b>제N차</b>는 그 계획이 공표한 원안입니다. ' +
+    '조건을 건드리지 않으면 선택한 차수의 원안과 같은 막대가 됩니다. 범례를 누르면 해당 전원을 빼고 다시 계산합니다.';
   $('#mixNote').textContent = (mode === 'cap'
     ? '각 계획의 목표연도 정격용량(연말 기준)입니다.'
     : mode === 'eff'
@@ -441,8 +454,8 @@ function renderMix(r) {
 /* ===================== 06 발전량·배출 ===================== */
 function renderGen(r) {
   const p = plan();
-  let html = mixBar('시나리오', `${p.target}년 · 조정 전제`, r.genNet, r.h2nh3, 'TWh', true);
-  if (p.gen) html += mixBar(`${p.name} 원안`, `${p.genYear}년`, p.gen, p.genH2 || 0, 'TWh', false);
+  let html = mixBar('시나리오', `${p.target}년 · ${isDirty() ? '원안에서 수정됨' : '원안 그대로'}`, r.genNet, r.h2nh3, 'TWh', true);
+  if (p.gen) html += mixBar(`${p.name} 원안`, `${p.genYear}년 공표값`, p.gen, p.genH2 || 0, 'TWh', false);
 
   /* 탄소 / 무탄소 분해 — 11차가 발전량 표에서 함께 공표하는 구분이다 */
   const carbon = r.genNet.coal + r.genNet.lng + r.genNet.oil;

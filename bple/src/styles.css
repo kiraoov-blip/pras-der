@@ -324,3 +324,8 @@ input.flash{animation:bple-flash .9s ease-out}
 /* 범례 토글 가능 표시 */
 .legend span[data-k]{cursor:pointer}
 .legend span[data-k]:focus-visible{outline:2px solid var(--blue);outline-offset:1px}
+
+/* 버튼 설명 — 우측 정렬된 tools-wrap 안에서 줄바꿈되게 폭을 잡아둔다 */
+.btn-hint{max-width:46ch;text-align:right}
+@media(max-width:640px){.btn-hint{text-align:left;max-width:none}}
+.brow.mx .nm .pill{margin-left:0;align-self:flex-start}
