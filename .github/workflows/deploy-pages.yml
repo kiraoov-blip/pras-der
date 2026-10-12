@@ -7,6 +7,7 @@ name: Deploy PRAS-DER + PRAS-TOU + CARE-Jeju + IEA Hub to GitHub Pages
 #   /tou/**      → kiraoov-blip/pras-tou 저장소를 체크아웃해서 그대로 복사(빌드 불필요)
 #   /care/**     → kiraoov-blip/care 저장소를 체크아웃해서 그 자리에서 빌드한 결과
 #   /iea-price/** → 이 저장소의 iea-price/ 폴더(정적 HTML 한 장 + 폰트·데이터 내장, 빌드 불필요)
+#   /bple/**     → 이 저장소의 bple/ 폴더(전력수급기본계획 시뮬레이터, 정적 폴더, 빌드 불필요)
 #
 # GitHub Pages 커스텀 도메인은 저장소 하나에만 붙기 때문에, 여러 제품을 한 도메인
 # 아래 서로 다른 경로로 보여주려면 이렇게 여러 저장소를 이 워크플로 안에서 함께
@@ -120,6 +121,9 @@ jobs:
           # kepco-stat도 같은 방식의 정적 폴더다. 배포에는 index.html·favicon·vendor만 싣는다.
           mkdir -p public-root/kepco-stat
           cp -r kepco-stat/index.html kepco-stat/favicon.svg kepco-stat/vendor public-root/kepco-stat/
+          # bple(전력수급기본계획)도 같은 방식의 정적 폴더다. 외부 의존성은 CDN의
+          # Chart.js 하나뿐이라 vendor 폴더 없이 폴더째 복사하면 된다.
+          cp -r bple public-root/bple
 
       - name: Upload GitHub Pages artifact
         uses: actions/upload-pages-artifact@v4
