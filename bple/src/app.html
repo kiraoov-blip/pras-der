@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>전력수급기본계획 시뮬레이터</title>
+<meta name="description" content="제1~11차 전력수급기본계획 비교 시뮬레이터 — 계획별 수요전망·설비예비율·전원구성을 원문 수치로 비교하고, 전제를 바꿔 설비 과부족과 발전량·온실가스 배출을 재계산">
+<link rel="icon" href="favicon.svg">
+<style>
+  html{-webkit-text-size-adjust:100%}
+  :root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+  img{max-width:100%}
+  [hidden]{display:none!important}
+</style>
+</head>
+<body>
+<style>
+/*__BASECSS__*/
+</style>
+<nav class="site-nav" aria-label="시뮬레이터">
+  <div class="site-nav-inner">
+    <a href="#top" class="site-brand">전력수급기본계획<span>BPLE 1-11</span></a>
+    <ul id="navList">
+      <li><a href="#s-input" class="active">분석조건</a></li>
+      <li><a href="#s-kpi">산정결과</a></li>
+      <li><a href="#s-bal">수급균형</a></li>
+      <li><a href="#s-fc">전망비교</a></li>
+      <li><a href="#s-mix">전원구성</a></li>
+      <li><a href="#s-emis">발전·배출</a></li>
+      <li><a href="#s-data">데이터</a></li>
+    </ul>
+    <a class="site-home-btn" href="/" aria-label="처음 화면으로">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3.6 11.4 12 4.4l8.4 7"/><path d="M5.7 10.2V19a1 1 0 0 0 1 1H9.6v-5.3h4.8V20h2.9a1 1 0 0 0 1-1v-8.8"/></svg>
+      <span>처음으로</span>
+    </a>
+  </div>
+</nav>
+
+<main id="top" style="flex:1 0 auto;display:flex;flex-direction:column">
+  <header class="hero">
+    <div class="hero-inner">
+      <h1>전력수급기본계획 시뮬레이터</h1>
+      <p>제1차(2002)~제11차(2025) 전력수급기본계획 비교 — 수요전망·설비예비율·전원구성을 원문 수치로 불러오고 전제를 바꿔 재계산</p>
+    </div>
+  </header>
+
+  <div class="page-shell workspace">
+    <div class="dashboard-layout">
+
+      <!-- 01 분석 조건 -->
+      <section class="sec" id="s-input">
+        <div class="sec-h">
+          <div>
+            <p class="eyebrow">01 · Input</p>
+            <h2>분석 조건</h2>
+            <p class="desc">차수를 고르면 그 계획의 목표연도 원안이 아래 전제에 그대로 적재됩니다. 값을 바꾸면 모든 결과가 즉시 다시 계산됩니다.</p>
+          </div>
+          <div class="tools-wrap">
+            <div class="tools">
+              <button class="btn" type="button" id="btnFit">예비율 충족시키기</button>
+              <button class="text-button" type="button" id="btnReset">계획 원안으로</button>
+            </div>
+          </div>
+        </div>
+        <div class="sec-b">
+          <div class="grid-in top">
+            <div class="field">
+              <label for="planSel">기준 전기본</label>
+              <select id="planSel"></select>
+              <span class="hint" id="planHint"></span>
+            </div>
+            <div class="field">
+              <label for="basePeakN">모형수요 <span class="hint">목표연도 최대전력</span></label>
+              <input type="number" id="basePeakN" step="0.1" min="0">
+              <input type="range" id="basePeak" step="0.1" min="30" max="200" aria-label="모형수요 슬라이더">
+            </div>
+            <div class="field">
+              <label for="dsmN">수요관리 목표 <span class="hint">GW</span></label>
+              <input type="number" id="dsmN" step="0.1" min="0">
+              <input type="range" id="dsm" step="0.1" min="0" max="40" aria-label="수요관리 목표 슬라이더">
+            </div>
+            <div class="field">
+              <label for="addSemiN">추가수요 · 첨단산업 <span class="hint">GW</span></label>
+              <input type="number" id="addSemiN" step="0.1" min="0">
+              <input type="range" id="addSemi" step="0.1" min="0" max="20" aria-label="첨단산업 슬라이더">
+            </div>
+            <div class="field">
+              <label for="addDcN">추가수요 · 데이터센터 <span class="hint">GW</span></label>
+              <input type="number" id="addDcN" step="0.1" min="0">
+              <input type="range" id="addDc" step="0.1" min="0" max="30" aria-label="데이터센터 슬라이더">
+            </div>
+            <div class="field">
+              <label for="addElecN">추가수요 · 전기화 <span class="hint">GW</span></label>
+              <input type="number" id="addElecN" step="0.1" min="0">
+              <input type="range" id="addElec" step="0.1" min="0" max="40" aria-label="전기화 슬라이더">
+            </div>
+            <div class="field">
+              <label for="reserveN">기준 설비예비율 <span class="hint">%</span></label>
+              <input type="number" id="reserveN" step="0.1" min="0">
+              <input type="range" id="reserve" step="0.1" min="5" max="40" aria-label="기준 설비예비율 슬라이더">
+            </div>
+            <div class="field">
+              <label for="pcRenewN">재생e 피크기여도 <span class="hint">%</span></label>
+              <input type="number" id="pcRenewN" step="0.1" min="0" max="100">
+              <input type="range" id="pcRenew" step="0.1" min="0" max="60" aria-label="재생에너지 피크기여도 슬라이더">
+            </div>
+          </div>
+
+          <div class="divider"></div>
+          <p class="sub-h">전원구성 — 목표연도 정격용량 (GW)</p>
+          <div class="grid-in caps" id="capGrid"></div>
+
+          <div class="divider"></div>
+          <p class="sub-h">운영 전제 — 설비 이용률 (%)</p>
+          <div class="grid-in caps" id="cfGrid"></div>
+
+          <div class="divider"></div>
+          <p class="sub-h">무탄소 전환 — 혼소율 (%)</p>
+          <div class="grid-in" id="blendGrid"></div>
+
+          <dl class="meta-strip" id="planMeta"></dl>
+          <p class="plan-note" id="planNote"></p>
+        </div>
+      </section>
+
+      <!-- 02 산정 결과 -->
+      <section class="sec" id="s-kpi">
+        <div class="sec-h">
+          <div>
+            <p class="eyebrow">02 · Result</p>
+            <h2>산정 결과</h2>
+            <p class="desc" id="kpiDesc"></p>
+          </div>
+        </div>
+        <div class="sec-b">
+          <div class="kpi-group">수요 · 설비</div>
+          <div class="kpis" id="kpiA"></div>
+          <div class="kpi-group" style="margin-top:18px">발전 · 배출</div>
+          <div class="kpis" id="kpiB"></div>
+        </div>
+      </section>
+
+      <!-- 03 수급 균형 -->
+      <section class="sec" id="s-bal">
+        <div class="sec-h">
+          <div>
+            <p class="eyebrow">03 · Balance</p>
+            <h2>설비 수급 균형</h2>
+            <p class="desc" id="balDesc"></p>
+          </div>
+        </div>
+        <div class="sec-b">
+          <div class="legend" id="balLegend"></div>
+          <div class="chart" id="balChart"></div>
+          <p class="note">막대는 계획의 연도별 목표수요(최대전력), 실선은 현재 기준 설비예비율을 적용한 목표설비, 점선은 계획 원문의 연도별 설비예비율(오른쪽 축)입니다. 범례를 누르면 해당 계열을 숨길 수 있습니다.</p>
+        </div>
+      </section>
+
+      <!-- 04 전망 비교 -->
+      <section class="sec" id="s-fc">
+        <div class="sec-h">
+          <div>
+            <p class="eyebrow">04 · Forecast</p>
+            <h2>역대 계획 전망 비교</h2>
+            <p class="desc">11개 계획이 각각 그린 최대전력 궤적과, 그 전망이 실적과 얼마나 벌어졌는지를 나란히 봅니다.</p>
+          </div>
+          <div class="tools-wrap">
+            <div class="seg inline" role="group" aria-label="표시 범위">
+              <label><input type="radio" name="trMode" value="all" checked><span>전체</span></label>
+              <label><input type="radio" name="trMode" value="recent"><span>8~11차</span></label>
+            </div>
+          </div>
+        </div>
+        <div class="sec-b">
+          <div class="two">
+            <div>
+              <p class="sub-h">연도별 최대전력 전망 궤적</p>
+              <div class="legend" id="trajLegend"></div>
+              <div class="chart" id="trajChart"></div>
+              <p class="note" id="trajNote"></p>
+            </div>
+            <div class="fill-col">
+              <p class="sub-h">계획 대비 실적 오차</p>
+              <div class="rank" id="errRank"></div>
+              <p class="note" id="errNote"></p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 05 전원구성 -->
+      <section class="sec" id="s-mix">
+        <div class="sec-h">
+          <div>
+            <p class="eyebrow">05 · Mix</p>
+            <h2>전원구성 비교</h2>
+            <p class="desc" id="mixDesc"></p>
+          </div>
+          <div class="tools-wrap">
+            <div class="seg inline" role="group" aria-label="표시 기준">
+              <label><input type="radio" name="mxMode" value="cap" checked><span>정격용량</span></label>
+              <label><input type="radio" name="mxMode" value="eff"><span>실효용량</span></label>
+              <label><input type="radio" name="mxMode" value="gen"><span>발전량</span></label>
+            </div>
+          </div>
+        </div>
+        <div class="sec-b">
+          <div class="legend" id="mixLegend"></div>
+          <div class="bill" id="mixWrap"></div>
+          <p class="note" id="mixNote"></p>
+        </div>
+      </section>
+
+      <!-- 06 발전·배출 -->
+      <section class="sec" id="s-emis">
+        <div class="sec-h">
+          <div>
+            <p class="eyebrow">06 · Emissions</p>
+            <h2>발전량과 전환부문 온실가스</h2>
+            <p class="desc" id="emisDesc"></p>
+          </div>
+        </div>
+        <div class="sec-b">
+          <div class="two">
+            <div>
+              <p class="sub-h">시나리오 발전량 구성</p>
+              <div class="legend" id="genLegend"></div>
+              <div class="bill" id="genWrap"></div>
+              <dl class="meta-strip gen" id="genSummary"></dl>
+            </div>
+            <div>
+              <p class="sub-h">11차 감축경로 대비</p>
+              <div class="chart" id="co2Chart"></div>
+              <p class="note" id="co2Note"></p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 07 데이터 -->
+      <section class="sec" id="s-data">
+        <div class="sec-h">
+          <div>
+            <p class="eyebrow">07 · Data</p>
+            <h2>산출 상세와 역대 계획 제원</h2>
+            <p class="desc">모든 수치는 각 차수 전력수급기본계획 본문·별첨 표에서 직접 옮긴 값입니다.</p>
+          </div>
+          <div class="tools-wrap">
+            <div class="tools"><button class="btn sm" type="button" id="btnCopy">산출표 복사</button></div>
+          </div>
+        </div>
+        <div class="sec-b">
+          <p class="sub-h">전원별 산출 상세</p>
+          <div class="tbl-wrap"><table class="bple" id="detailTable"></table></div>
+          <p class="note" id="detailNote"></p>
+
+          <div class="divider"></div>
+          <p class="sub-h">역대 전력수급기본계획 제원</p>
+          <div class="tbl-wrap tbl-scroll"><table class="bple wide" id="planTable"></table></div>
+          <p class="note">최대전력·전력소비량은 각 계획의 목표연도 목표수요 기준입니다. 1~3차는 판매전력량, 4차 이후는 전력소비량을 씁니다. 8·9차는 동계, 10·11차는 하계 최대전력이 헤드라인 기준입니다. 행을 누르면 그 계획이 적재됩니다.</p>
+
+          <div class="divider"></div>
+          <div class="assumption-strip">
+            <strong>모델 기준</strong>
+            <ul>
+              <li>산정식은 제11차 전기본 「발전설비 계획 수립절차」를 따릅니다. <b>목표설비 = 목표수요 × (1 + 기준 설비예비율)</b>, <b>실효용량 = 정격용량 × 피크기여도</b>, <b>발전량 = 정격용량 × 이용률 × 8.76</b>.</li>
+              <li>피크기여도와 이용률의 기본값은 각 계획이 공표한 실효/정격 비율과 전원별 발전량에서 역산한 값입니다.</li>
+              <li>배출계수는 11차가 제시한 '20~'22년 실적 평균(석탄 <b>0.8384</b>, LNG <b>0.3800</b> tCO₂eq/MWh), 전환부문 보정계수는 <b>0.948</b>이다. 11차 배출목표 '30년 145.9·'38년 83.1백만톤과 10차 '36년 98.8백만톤을 모두 0.1% 이내로 재현합니다.</li>
+              <li>6·7·9차는 전원별 발전량 전망을 공표하지 않아, 그 계획의 목표연도 전력소비량에 발전단 보정 1.11을 적용해 역산한 <b>모형 추정</b>입니다.</li>
+              <li>출처: 산업통상자원부 제1차~제11차 전력수급기본계획 공고 전문.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div class="page-shell footer-inner">
+    <span>BPLE 1-11</span>
+    <p>전력수급기본계획 비교 시뮬레이터 · 제1~11차 공고 전문 기반</p>
+  </div>
+</footer>
+
+<script>
+/*__DATA__*/
+</script>
+<script>
+/*__APP__*/
+</script>
+</body>
+</html>
