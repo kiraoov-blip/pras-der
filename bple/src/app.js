@@ -211,6 +211,7 @@ function syncInputs() {
   $('#bNh3N').value = S.nh3; $('#bH2N').value = S.h2;
 
   $('#planHint').textContent = `${p.period[0]}~${p.period[1]} · 목표연도 ${p.target}년 · ${p.scope}`;
+  renderChain();
   $('#planMeta').innerHTML = [
     ['계획기간', `${p.period[0]} – ${p.period[1]}`],
     ['목표연도', `${p.target}년`],
@@ -220,6 +221,26 @@ function syncInputs() {
     ['최대전력 연평균', `${fmt(p.peakCagr, 1)} %`]
   ].map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('');
   $('#planNote').textContent = p.note;
+}
+
+/* 모형수요 → 목표수요 산정 사슬을 입력칸 아래에 그대로 보여준다.
+   11차처럼 계획이 항목별로 따로 반올림해 모형수요가 0.1 어긋나는 경우도 함께 밝힌다. */
+function renderChain() {
+  const p = plan(), add = S.addSemi + S.addDc + S.addElec;
+  const tgt = Math.max(0.1, S.basePeak + add - S.dsm);
+  let t;
+  if (add === 0 && S.dsm === 0) {
+    t = `추가수요와 수요관리를 따로 분리하지 않은 계획이라 모형수요가 곧 <b>목표수요 ${fmt(tgt, 1)} GW</b>입니다.`;
+  } else {
+    t = `모형수요 ${fmt(S.basePeak, 1)}`;
+    if (add > 0) t += ` + 추가수요 ${fmt(add, 1)} = 기준수요 ${fmt(S.basePeak + add, 1)}`;
+    if (S.dsm > 0) t += ` − 수요관리 ${fmt(S.dsm, 1)}`;
+    t += ` = <b>목표수요 ${fmt(tgt, 1)} GW</b>`;
+  }
+  if (p.modelPub != null && Math.abs(p.modelPub - S.basePeak) >= 0.05)
+    t += `<span class="cav">※ ${p.name} 공표 모형수요는 ${fmt(p.modelPub, 1)}GW이나, 계획이 항목별로 따로 반올림해 합계가 0.1 어긋납니다.` +
+         ` 공표 기준수요 ${fmt(p.basePub, 1)}·목표수요 ${fmt(p.peak[p.target], 1)}GW가 정확히 떨어지도록 역산한 값을 씁니다.</span>`;
+  $('#basePeakChain').innerHTML = t;
 }
 
 /* ===================== KPI ===================== */
@@ -565,7 +586,7 @@ function renderPlanTable() {
 /* ===================== 렌더 ===================== */
 function renderAll() {
   const r = compute();
-  renderKPI(r); renderBalance(r); renderTraj(); renderErr();
+  renderChain(); renderKPI(r); renderBalance(r); renderTraj(); renderErr();
   renderMix(r); renderGen(r); renderCo2(r); renderDetail(r); renderPlanTable();
 }
 

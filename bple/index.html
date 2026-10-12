@@ -342,13 +342,23 @@ input.flash{animation:bple-flash .9s ease-out}
 .legend span[data-k]{cursor:pointer}
 .legend span[data-k]:focus-visible{outline:2px solid var(--blue);outline-offset:1px}
 
-/* 버튼 설명 — 우측 정렬된 tools-wrap 안에서 줄바꿈되게 폭을 잡아둔다 */
-.btn-hint{max-width:46ch;text-align:right}
-@media(max-width:640px){.btn-hint{text-align:left;max-width:none}}
+/* 버튼 설명 — 문장마다 줄을 나누고, 한국어가 단어 중간에서 끊기지 않게 한다 */
+.btn-hint{text-align:right;word-break:keep-all;line-height:1.75}
+/* .sec-h 가 줄바꿈되는 폭부터는 버튼과 설명을 모두 왼쪽으로 붙인다 */
+@media(max-width:1100px){
+  #s-input .tools-wrap{align-items:flex-start;width:100%}
+  #s-input .tools{width:100%}
+  .btn-hint{text-align:left}
+}
 .brow.mx .nm .pill{margin-left:0;align-self:flex-start}
 /* 시나리오와 맞붙은 선택 차수 원안 — 짝임을 알 수 있게 라벨만 강조 */
 .brow.mx.base .nm{font-weight:800;color:var(--navy)}
 .brow.mx.base .sub{color:var(--blue)}
+
+/* 수요 산정 사슬 — 입력 그리드 바로 아래 전폭 한 줄 */
+.chain-note{margin:14px 0 0;padding:11px 13px;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;line-height:1.65}
+.chain-note b{color:var(--navy)}
+.chain-note .cav{display:block;margin-top:4px;color:var(--muted)}
 
 </style>
 <nav class="site-nav" aria-label="시뮬레이터">
@@ -394,7 +404,7 @@ input.flash{animation:bple-flash .9s ease-out}
               <button class="btn" type="button" id="btnFit">예비율 충족시키기</button>
               <button class="text-button" type="button" id="btnReset">계획 원안으로</button>
             </div>
-            <span class="hint btn-hint"><b>충족시키기</b>는 전원 구성비를 유지한 채 설비 총량만 목표설비에 맞추고, <b>원안으로</b>는 모든 전제를 계획 공표값으로 되돌립니다.</span>
+            <span class="hint btn-hint"><b>충족시키기</b>는 전원 구성비를 유지한 채 설비 총량만 목표설비에 맞춥니다.<br><b>원안으로</b>는 모든 전제를 계획 공표값으로 되돌립니다.</span>
           </div>
         </div>
         <div class="sec-b">
@@ -440,6 +450,7 @@ input.flash{animation:bple-flash .9s ease-out}
               <input type="range" id="pcRenew" step="0.1" min="0" max="60" aria-label="재생에너지 피크기여도 슬라이더">
             </div>
           </div>
+          <p class="hint chain-note" id="basePeakChain"></p>
 
           <div class="divider"></div>
           <p class="sub-h">전원구성 — 목표연도 정격용량 (GW)</p>
@@ -843,6 +854,9 @@ const PLANS = [
     reserve: "22% (단기 20 / 중기 21 / 장기 22)", reserveNum: 22,
     peak: { 2024: 101.0, 2025: 102.5, 2026: 104.2, 2027: 106.2, 2028: 107.8, 2029: 109.3, 2030: 111.4, 2031: 113.4, 2032: 115.7, 2033: 118.0, 2034: 120.3, 2035: 123.1, 2036: 125.0, 2037: 127.1, 2038: 129.3 },
     peakWinter: { 2024: 96.1, 2025: 97.5, 2026: 98.9, 2027: 100.6, 2028: 101.9, 2029: 103.2, 2030: 105.1, 2031: 107.1, 2032: 108.9, 2033: 110.2, 2034: 112.1, 2035: 114.1, 2036: 115.5, 2037: 116.9, 2038: 118.8 },
+    /* 11차 참고1 공표 모형수요(’38년 128.9)는 항목별 반올림 탓에 합계가 0.1 어긋난다.
+       시뮬레이터는 공표 기준수요 145.6·목표수요 129.3이 정확히 나오도록 128.8을 쓴다. */
+    modelPub: 128.9, basePub: 145.6,
     peakBase: { 2024: 104.2, 2025: 106.0, 2026: 108.3, 2027: 110.9, 2028: 113.1, 2029: 115.3, 2030: 118.1, 2031: 120.9, 2032: 124.2, 2033: 127.5, 2034: 131.0, 2035: 135.0, 2036: 138.2, 2037: 141.8, 2038: 145.6 },
     reserveSeries: { 2024: 20.5, 2025: 22.4, 2026: 23.5, 2027: 24.4, 2028: 23.9, 2029: 23.0, 2030: 21.7, 2031: 21.0, 2032: 21.0, 2033: 22.0, 2034: 22.0, 2035: 22.0, 2036: 22.0, 2037: 22.0, 2038: 22.0 },
     demandLabel: '전력소비량', demandVal: 624.5, demandYear: 2038, demandCagr: 0.9,
@@ -1079,6 +1093,7 @@ function syncInputs() {
   $('#bNh3N').value = S.nh3; $('#bH2N').value = S.h2;
 
   $('#planHint').textContent = `${p.period[0]}~${p.period[1]} · 목표연도 ${p.target}년 · ${p.scope}`;
+  renderChain();
   $('#planMeta').innerHTML = [
     ['계획기간', `${p.period[0]} – ${p.period[1]}`],
     ['목표연도', `${p.target}년`],
@@ -1088,6 +1103,26 @@ function syncInputs() {
     ['최대전력 연평균', `${fmt(p.peakCagr, 1)} %`]
   ].map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('');
   $('#planNote').textContent = p.note;
+}
+
+/* 모형수요 → 목표수요 산정 사슬을 입력칸 아래에 그대로 보여준다.
+   11차처럼 계획이 항목별로 따로 반올림해 모형수요가 0.1 어긋나는 경우도 함께 밝힌다. */
+function renderChain() {
+  const p = plan(), add = S.addSemi + S.addDc + S.addElec;
+  const tgt = Math.max(0.1, S.basePeak + add - S.dsm);
+  let t;
+  if (add === 0 && S.dsm === 0) {
+    t = `추가수요와 수요관리를 따로 분리하지 않은 계획이라 모형수요가 곧 <b>목표수요 ${fmt(tgt, 1)} GW</b>입니다.`;
+  } else {
+    t = `모형수요 ${fmt(S.basePeak, 1)}`;
+    if (add > 0) t += ` + 추가수요 ${fmt(add, 1)} = 기준수요 ${fmt(S.basePeak + add, 1)}`;
+    if (S.dsm > 0) t += ` − 수요관리 ${fmt(S.dsm, 1)}`;
+    t += ` = <b>목표수요 ${fmt(tgt, 1)} GW</b>`;
+  }
+  if (p.modelPub != null && Math.abs(p.modelPub - S.basePeak) >= 0.05)
+    t += `<span class="cav">※ ${p.name} 공표 모형수요는 ${fmt(p.modelPub, 1)}GW이나, 계획이 항목별로 따로 반올림해 합계가 0.1 어긋납니다.` +
+         ` 공표 기준수요 ${fmt(p.basePub, 1)}·목표수요 ${fmt(p.peak[p.target], 1)}GW가 정확히 떨어지도록 역산한 값을 씁니다.</span>`;
+  $('#basePeakChain').innerHTML = t;
 }
 
 /* ===================== KPI ===================== */
@@ -1433,7 +1468,7 @@ function renderPlanTable() {
 /* ===================== 렌더 ===================== */
 function renderAll() {
   const r = compute();
-  renderKPI(r); renderBalance(r); renderTraj(); renderErr();
+  renderChain(); renderKPI(r); renderBalance(r); renderTraj(); renderErr();
   renderMix(r); renderGen(r); renderCo2(r); renderDetail(r); renderPlanTable();
 }
 
