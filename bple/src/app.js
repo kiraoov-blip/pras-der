@@ -69,6 +69,8 @@ const S = {
   reserve: 22, pcRenew: 11.1, cap: {}, cf: {}, pc: {}, nh3: 0, h2: 0,
   estimated: false, trMode: 'all', mxMode: 'cap',
   off: { bal: new Set(), traj: new Set(), mix: new Set() },
+  /* 역산 기본 선택 — 정격을 빼면 실효용량이 그대로라 수급 균형을 흔들지 않는다 */
+  bsSel: new Set(['cfCoal', 'nh3', 'cfLng', 'h2']),
   pristine: ''
 };
 
@@ -261,34 +263,86 @@ function sensitivity(base) {
   });
 }
 
-/* 감축경로를 맞추려면 무엇을 얼마로 바꿔야 하는지 거꾸로 푼다 */
+/* ── 감축경로 역산 ──────────────────────────────────────────────
+   석탄·LNG 각각의 이용률·혼소율·정격용량 6개 레버 중 선택한 것만 움직여
+   감축경로에 정확히 닿게 한다.
+
+   배분 규칙 : 연료별로 현재 배출 기여도에 비례해 감축량을 나누고,
+   한 연료 안에서 여러 레버를 골랐으면 같은 비율(β^(1/n))씩 분담시킨다.
+   혼소율은 발전량을 유지한 채 탄소발전을 청정수소·암모니아로 옮기고,
+   이용률·정격은 발전량 자체를 줄인다는 점이 결과 요약에 드러난다. */
+
+const BSLEVERS = [
+  { k: 'cfCoal',  fuel: 'coal', kind: 'cf',    label: '석탄 이용률',         unit: '%'  },
+  { k: 'nh3',     fuel: 'coal', kind: 'blend', label: '석탄 암모니아 혼소율', unit: '%'  },
+  { k: 'capCoal', fuel: 'coal', kind: 'cap',   label: '석탄 정격용량',        unit: 'GW' },
+  { k: 'cfLng',   fuel: 'lng',  kind: 'cf',    label: 'LNG 이용률',          unit: '%'  },
+  { k: 'h2',      fuel: 'lng',  kind: 'blend', label: 'LNG 수소 혼소율',      unit: '%'  },
+  { k: 'capLng',  fuel: 'lng',  kind: 'cap',   label: 'LNG 정격용량',         unit: 'GW' }
+];
+
+/* 레버 값을 상태에 반영 */
+function applyLever(c, lv, beta) {
+  if (lv.kind === 'cf')    c.cf[lv.fuel] = clamp((c.cf[lv.fuel] || 0) * beta, 0, 100);
+  if (lv.kind === 'cap')   c.cap[lv.fuel] = Math.max(0, (c.cap[lv.fuel] || 0) * beta);
+  if (lv.kind === 'blend') {
+    const b = lv.fuel === 'coal' ? 'nh3' : 'h2';
+    c[b] = clamp(100 * (1 - (1 - (c[b] || 0) / 100) * beta), 0, 100);
+  }
+}
+function leverValue(c, lv) {
+  if (lv.kind === 'cf')  return c.cf[lv.fuel] || 0;
+  if (lv.kind === 'cap') return c.cap[lv.fuel] || 0;
+  return lv.fuel === 'coal' ? c.nh3 : c.h2;
+}
+
 function backsolve(r) {
   const p = r.p, ty = p.target;
   if (ty < 2030) return null;
   const lim = pathCo2(ty), EF = ENGINE.ef, K = ENGINE.efCal;
-  const grossCoal = (S.cap.coal || 0) * (S.cf.coal / 100) * HOURS;
-  const grossLng = (S.cap.lng || 0) * (S.cf.lng / 100) * HOURS;
-  /* 목표 배출을 만족하는 석탄 순발전량 */
-  const needCoal = (lim / K - r.genNet.lng * EF.lng) / EF.coal;
-  const out = { lim, meet: r.co2 <= lim * 1.005, rows: [] };
+  const sel = BSLEVERS.filter(l => S.bsSel.has(l.k));
+  const out = { lim, co2: r.co2, meet: r.co2 <= lim * 1.005, sel, rows: [], feasible: true };
 
-  if (needCoal < 0) {
-    /* 석탄을 모두 멈춰도 LNG 만으로 초과 — LNG 쪽에서 풀어야 한다 */
-    const needLng = lim / (K * EF.lng);
-    if (grossLng > 0 && needLng < grossLng)
-      out.rows.push(['LNG 수소 혼소율', `${fmt((1 - needLng / grossLng) * 100, 1)}%`, `현재 ${fmt(S.h2, 1)}% · 석탄을 전부 멈춘다는 전제`]);
-    out.note = '석탄을 모두 멈춰도 LNG 발전만으로 감축경로를 초과합니다. LNG 쪽을 함께 줄여야 합니다.';
-    return out;
+  if (!sel.length) { out.msg = '아래에서 조정할 레버를 하나 이상 고르면 그 조합으로 역산합니다.'; return out; }
+  if (out.meet) {
+    out.msg = `현재 배출량 ${fmt(r.co2, 1)}백만톤은 ${ty}년 감축경로 ${fmt(lim, 1)}백만톤 안에 있습니다. ` +
+              `여유는 ${fmt(lim - r.co2, 1)}백만톤이며, 선택한 레버를 아래 값까지 완화해도 경로를 지킵니다.`;
   }
-  const denomCf = (S.cap.coal || 0) * HOURS * (1 - S.nh3 / 100);
-  if (denomCf > 0) out.rows.push(['석탄 이용률', `${fmt(clamp((needCoal / denomCf) * 100, 0, 100), 1)}%`, `현재 ${fmt(S.cf.coal, 1)}%`]);
-  if (grossCoal > 0 && needCoal < grossCoal)
-    out.rows.push(['석탄 암모니아 혼소율', `${fmt(clamp((1 - needCoal / grossCoal) * 100, 0, 100), 1)}%`, `현재 ${fmt(S.nh3, 1)}%`]);
-  const denomCap = (S.cf.coal / 100) * HOURS * (1 - S.nh3 / 100);
-  if (denomCap > 0) out.rows.push(['석탄 정격용량', `${fmt(Math.max(0, needCoal / denomCap), 1)}GW`, `현재 ${fmt(S.cap.coal || 0, 1)}GW`]);
-  out.note = out.meet
-    ? `현재 배출량 ${fmt(r.co2, 1)}백만톤은 ${ty}년 감축경로 ${fmt(lim, 1)}백만톤 안에 있습니다. 아래는 경로에 정확히 닿는 한계값이라, 여기까지는 늘려도 경로를 지킵니다.`
-    : `현재 배출량 ${fmt(r.co2, 1)}백만톤이 ${ty}년 감축경로 ${fmt(lim, 1)}백만톤을 넘습니다. 아래 중 하나를 그 값으로 바꾸면 경로를 맞춥니다.`;
+
+  /* 연료별 현재 배출과, 선택된 레버 수 */
+  const E = { coal: r.genNet.coal * EF.coal * K, lng: r.genNet.lng * EF.lng * K };
+  const n = { coal: sel.filter(l => l.fuel === 'coal').length, lng: sel.filter(l => l.fuel === 'lng').length };
+  const pool = (n.coal ? E.coal : 0) + (n.lng ? E.lng : 0);
+  const need = r.co2 - lim;                      /* 양수면 감축 필요, 음수면 완화 여지 */
+
+  if (pool <= 0) { out.msg = '선택한 레버로 움직일 수 있는 배출이 없습니다.'; out.feasible = false; return out; }
+  if (need > pool + 1e-9) {
+    out.feasible = false;
+    out.msg = `선택한 레버를 모두 끝까지 밀어도 ${fmt(need - pool, 1)}백만톤이 남습니다. ` +
+              `다른 레버를 함께 고르거나 무탄소 전원을 늘려야 합니다.`;
+  }
+
+  /* 연료별 목표 배출 → 순발전량 배율 β */
+  const c2 = cloneState();
+  ['coal', 'lng'].forEach(f => {
+    if (!n[f]) return;
+    const share = Math.min(E[f], need * (E[f] / pool));   /* 기여도 비례 분담 */
+    const beta = E[f] > 0 ? Math.max(0, (E[f] - share) / E[f]) : 1;
+    const per = Math.pow(beta, 1 / n[f]);                 /* 같은 연료 안에서 균등 분담 */
+    sel.filter(l => l.fuel === f).forEach(l => applyLever(c2, l, per));
+  });
+
+  const after = compute(c2);
+  out.rows = sel.map(l => ({ label: l.label, unit: l.unit,
+    from: leverValue(S, l), to: leverValue(c2, l) }));
+  out.after = { co2: after.co2, genTot: after.genTot, cfree: after.cfreeShare,
+                dGen: after.genTot - r.genTot, dCfree: after.cfreeShare - r.cfreeShare,
+                eff: after.effTot, dEff: after.effTot - r.effTot, gap: after.gap };
+  out.state = c2;
+  if (!out.meet && out.feasible)
+    out.msg = `현재 배출량 ${fmt(r.co2, 1)}백만톤이 ${ty}년 감축경로 ${fmt(lim, 1)}백만톤을 ` +
+              `${fmt(need, 1)}백만톤 넘습니다. 선택한 ${sel.length}개 레버가 현재 배출 기여도에 비례해 ` +
+              `나눠 감당하면 아래 값이 됩니다.`;
   return out;
 }
 
@@ -700,20 +754,78 @@ function renderSens(r) {
   $('#sensNote').innerHTML = n;
 }
 
+/* 레버 선택 UI 는 한 번만 그린다 — 체크할 때마다 다시 그리면 포커스가 날아간다 */
+function renderBsPicks() {
+  const host = $('#bsPicks');
+  if (host.dataset.ready) return;
+  host.dataset.ready = '1';
+  host.innerHTML = ['coal', 'lng'].map(f => {
+    const nm = f === 'coal' ? '석탄' : 'LNG';
+    return `<div class="bs-fuel"><span class="bs-fuel-h"><i class="swatch" style="background:var(--c-${f})"></i>${nm}</span>` +
+      BSLEVERS.filter(l => l.fuel === f).map(l => {
+        const short = l.label.replace(nm, '').trim() || l.label;
+        return `<label class="check"><input type="checkbox" class="bsL" value="${l.k}"${S.bsSel.has(l.k) ? ' checked' : ''}> ${esc(short)}</label>`;
+      }).join('') + `</div>`;
+  }).join('');
+  host.querySelectorAll('.bsL').forEach(el => el.addEventListener('change', () => {
+    el.checked ? S.bsSel.add(el.value) : S.bsSel.delete(el.value);
+    renderBacksolve(compute());
+  }));
+}
+
 function renderBacksolve(r) {
-  const bs = backsolve(r), host = $('#backsolve');
+  const host = $('#bsResult');
+  renderBsPicks();
+  const bs = backsolve(r);
   if (!bs) {
+    $('#bsPicks').hidden = true;
     host.innerHTML = `<p class="note">${r.p.name}의 목표연도 ${r.p.target}년은 11차 감축경로(2030~2038) 이전이라 역산 대상이 아닙니다.</p>`;
     return;
   }
+  $('#bsPicks').hidden = false;
+
+  const sev = !bs.sel.length ? 'info' : !bs.feasible ? 'bad' : bs.meet ? 'ok' : 'warn';
+  const ttl = !bs.sel.length ? '레버 선택' : !bs.feasible ? '달성 불가' : bs.meet ? '경로 충족' : '경로 초과';
+
+  let body = '';
+  if (bs.rows.length) {
+    body += `<div class="bs-grid">` + bs.rows.map(x => {
+      const up = x.to > x.from + 0.05, dn = x.to < x.from - 0.05;
+      return `<div class="bs-item"><div class="k">${esc(x.label)}</div>` +
+        `<div class="v">${fmt(x.to, 1)}${esc(x.unit)}</div>` +
+        `<div class="n">현재 ${fmt(x.from, 1)}${esc(x.unit)}` +
+        (up || dn ? ` <b class="${dn ? 'dn' : 'up'}">${dn ? '▼' : '▲'} ${fmt(Math.abs(x.to - x.from), 1)}${esc(x.unit)}</b>` : ' · 변화 없음') +
+        `</div></div>`;
+    }).join('') + `</div>`;
+    const A = bs.after;
+    body += `<div class="bs-sum">` + [
+      ['적용 후 배출량', `${fmt(A.co2, 1)} 백만톤`, `경로 ${fmt(bs.lim, 1)}백만톤`],
+      ['총 발전량', `${fmt(A.genTot, 0)} TWh`, `${A.dGen >= 0 ? '+' : '−'}${fmt(Math.abs(A.dGen), 1)} TWh`],
+      ['무탄소 발전비중', `${fmt(A.cfree, 1)} %`, `${A.dCfree >= 0 ? '+' : '−'}${fmt(Math.abs(A.dCfree), 1)}%p`],
+      ['공급 실효용량', `${fmt(A.eff, 1)} GW`, A.gap >= 0 ? '목표설비 충족' : `${fmt(Math.abs(A.gap), 1)}GW 부족`]
+    ].map(([k, v, n]) => `<div><dt>${k}</dt><dd>${v}<span>${n}</span></dd></div>`).join('') + `</div>`;
+    if (bs.feasible) body += `<div class="tools" style="margin-top:13px"><button class="btn" type="button" id="bsApply">이 값으로 적용</button></div>`;
+  }
+
   host.innerHTML =
-    `<div class="alert ${bs.meet ? 'ok' : 'bad'}" style="margin-bottom:13px">` +
-    `<span class="t">${bs.meet ? '경로 충족' : '경로 초과'}</span><span class="m">${bs.note}</span></div>` +
-    (bs.rows.length
-      ? `<div class="bs-grid">${bs.rows.map(([k, v, n]) =>
-          `<div class="bs-item"><div class="k">${esc(k)}</div><div class="v">${esc(v)}</div><div class="n">${esc(n)}</div></div>`).join('')}</div>`
-      : '') +
-    `<p class="note">각 값은 <b>다른 전제를 그대로 둔 채 그 항목만</b> 바꿔 ${fmt(bs.lim, 1)}백만톤에 정확히 닿게 하는 수치입니다. 셋을 동시에 적용하면 과잉 감축이 됩니다.</p>`;
+    `<div class="alert ${sev}" style="margin:13px 0"><span class="t">${ttl}</span><span class="m">${bs.msg || ''}</span></div>` +
+    body +
+    `<p class="note">연료별로 <b>현재 배출 기여도에 비례해</b> 감축량을 나누고, 같은 연료 안에서 여러 레버를 고르면 같은 비율씩 분담시킵니다. ` +
+    `혼소율은 발전량을 유지한 채 탄소발전을 청정수소·암모니아로 옮기고, 이용률·정격은 발전량 자체를 줄입니다. ` +
+    `정격을 고르면 실효용량도 함께 움직여 수급 균형에 영향을 줍니다.</p>`;
+
+  const ap = $('#bsApply');
+  if (ap) ap.addEventListener('click', () => {
+    const c = bs.state;
+    SRC.forEach(s => { S.cap[s.key] = +(c.cap[s.key] || 0).toFixed(2); S.cf[s.key] = +(c.cf[s.key] || 0).toFixed(2); });
+    S.nh3 = +c.nh3.toFixed(1); S.h2 = +c.h2.toFixed(1);
+    syncInputs(); renderAll();
+    flash(bs.rows.map(x => {
+      const l = BSLEVERS.find(y => y.label === x.label);
+      return l.kind === 'cf' ? 'cfn_' + l.fuel : l.kind === 'cap' ? 'capn_' + l.fuel : (l.fuel === 'coal' ? 'bNh3N' : 'bH2N');
+    }));
+    toast(`역산 결과를 적용했습니다 <b>배출 ${fmt(bs.after.co2, 1)}백만톤</b>`);
+  });
 }
 
 /* ===================== 07 표 ===================== */

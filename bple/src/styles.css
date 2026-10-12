@@ -374,3 +374,18 @@ table.sens td.dn{color:var(--down);font-weight:750}
 .bs-item .k{font-size:12.5px;font-weight:750;color:#676c77;margin-bottom:7px}
 .bs-item .v{font-size:23px;font-weight:800;letter-spacing:-.03em;color:var(--blue);line-height:1.15}
 .bs-item .n{font-size:11.5px;color:var(--muted);margin-top:5px}
+
+/* 역산 레버 선택 */
+.bs-picks{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.bs-fuel{border:1px solid var(--card-line);border-radius:12px;background:var(--surface-2);padding:12px 14px;display:grid;gap:8px}
+.bs-fuel-h{display:flex;align-items:center;font-size:12.5px;font-weight:800;color:var(--navy)}
+.bs-fuel .check{font-size:12.5px}
+.bs-item .n b.up{color:var(--up)}
+.bs-item .n b.dn{color:var(--down)}
+/* 적용 결과 요약 */
+.bs-sum{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--line);
+  border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-top:13px}
+.bs-sum div{background:var(--surface);padding:12px 14px;min-width:0}
+.bs-sum dt{margin:0 0 5px;font-size:11.5px;font-weight:750;color:var(--muted)}
+.bs-sum dd{margin:0;font-size:15px;font-weight:800;color:var(--navy);font-variant-numeric:tabular-nums;display:flex;flex-direction:column;gap:2px}
+.bs-sum dd span{font-size:11.5px;font-weight:700;color:var(--blue)}
