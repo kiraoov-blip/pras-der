@@ -299,7 +299,7 @@ footer{background:#23262a;color:#cbced3}
 
 /* 표 — 공용 규격, 폭만 내용에 맞춤 */
 table.bple{min-width:760px}
-table.bple.wide{min-width:900px}
+table.bple.wide{min-width:1020px}
 table.bple th:nth-child(2),table.bple td:nth-child(2){text-align:right;white-space:nowrap;color:inherit;font-size:13px}
 table.bple tr.sum td{font-weight:800;background:#f6f7f8;color:var(--navy)}
 table.bple th{cursor:default}

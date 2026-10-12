@@ -917,12 +917,15 @@ function renderDetail(r) {
 }
 
 function renderPlanTable() {
-  const head = ['차수', '공고', '계획기간', '목표', '최대전력<br>(GW)', '연평균<br>(%)', '소비량<br>(TWh)', '기준 설비예비율', '설비<br>(GW)', '원전<br>(%)', '재생e<br>(%)'];
+  const head = ['차수', '공고', '계획기간', '목표<br>연도',
+    '최대전력<br>(GW)', '최대전력<br>연평균(%)', '소비량<br>(TWh)', '소비량<br>연평균(%)',
+    '기준 설비예비율', '정격설비<br>(GW)', '원전 설비<br>비중(%)', '신재생 설비<br>비중(%)'];
   const body = [...PLANS].reverse().map(p => {
     const tot = sum(p.cap), ren = ((p.cap.renew + p.cap.newe) / tot) * 100;
     return `<tr data-id="${p.id}"${p.id === S.planId ? ' class="cur"' : ''} role="button" tabindex="0">` +
-      [p.name, p.year, `${p.period[0]}–${p.period[1]}`, p.target, fmt(p.peak[p.target], 1), fmt(p.peakCagr, 1),
-       fmt(p.demandVal, 1), p.reserve, fmt(tot, 1), fmt((p.cap.nuclear / tot) * 100, 1), fmt(ren, 1)]
+      [p.name, p.year, `${p.period[0]}–${p.period[1]}`, p.target,
+       fmt(p.peak[p.target], 1), fmt(p.peakCagr, 1), fmt(p.demandVal, 1), fmt(p.demandCagr, 1),
+       p.reserve, fmt(tot, 1), fmt((p.cap.nuclear / tot) * 100, 1), fmt(ren, 1)]
         .map(v => `<td>${v}</td>`).join('') + '</tr>';
   });
   $('#planTable').innerHTML = `<thead><tr>${head.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${body.join('')}</tbody>`;
