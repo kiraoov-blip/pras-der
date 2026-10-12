@@ -42,9 +42,15 @@ app/bple/             ← 폴더째 삭제
 
 ## 2단계 — 새로 추가할 것
 
-### 2-1. 폴더 복사
+### 2-1. 기존 `bple/` 를 지우고 새로 올리기
+
+> **이미 `bple/` 를 올리셨다면 폴더를 통째로 지운 뒤 새로 올려주세요.** 예전 구조의
+> `bple/styles.css` · `bple/app.js` · `bple/data/` 가 남아 있으면 저장소가 지저분해지고,
+> 그 경로를 캐시에 들고 있는 브라우저가 낡은 화면을 계속 보여줄 수 있습니다.
+> 새 `index.html` 은 그 파일들을 아예 참조하지 않으므로, 지우고 나면 재발하지 않습니다.
 
 ```bash
+rm -rf bple
 cp -r pras-bple-hub/bple ./bple
 ```
 
@@ -52,12 +58,18 @@ cp -r pras-bple-hub/bple ./bple
 
 ```
 bple/
-├ index.html
-├ styles.css
-├ app.js
+├ index.html            배포되는 단일 파일 (글꼴·CSS·JS·데이터 모두 내장)
 ├ favicon.svg
-└ data/plans.js
+├ README.md
+├ src/                  소스 — 고칠 때는 여기를 고친다
+│  ├ app.html  styles.css  app.js  data/plans.js
+└ scripts/build_page.py  src/ → index.html
 ```
+
+IEA · EMBER · KEPCO Statistics 와 같이 **배포물이 `index.html` 한 장**이다. 외부
+네트워크 요청이 0건이고, 같은 경로에 예전 버전이 올라가 있었더라도 브라우저가 낡은
+CSS·JS 를 캐시에서 꺼내 쓰는 일이 없다. `src/` 와 `scripts/` 는 저장소에만 두고
+배포에는 싣지 않는다(kepco-stat 와 동일).
 
 ### 2-2. 파일 두 개 교체
 
@@ -66,7 +78,7 @@ bple/
 | 교체할 파일 | 바뀐 내용 |
 |---|---|
 | `hub/index.html` | 7곳 수정 — 로컬 브랜드 토큰, 카드 CSS, 카드 마크업, 그리드 열 수, meta/intro/footer 문구 |
-| `.github/workflows/deploy-pages.yml` | 2곳 수정 — 상단 주석에 경로 한 줄, 조립 단계에 `cp -r bple public-root/bple` |
+| `.github/workflows/deploy-pages.yml` | 2곳 수정 — 상단 주석에 경로 한 줄, 조립 단계에 `bple/index.html` · `favicon.svg` 복사 |
 
 ---
 
@@ -90,9 +102,11 @@ bple/
 `kepco-stat` 처럼 vendor 폴더를 가려 담을 필요가 없어 폴더째 복사합니다.
 
 ```yaml
-          # bple(전력수급기본계획)도 같은 방식의 정적 폴더다. 외부 의존성은 CDN의
-          # Chart.js 하나뿐이라 vendor 폴더 없이 폴더째 복사하면 된다.
-          cp -r bple public-root/bple
+          # bple(전력수급기본계획)도 같은 방식의 정적 폴더다. kepco-stat 처럼
+          # src/ 와 scripts/ 는 소스일 뿐이고 배포에는 빌드 산출물인 index.html 과
+          # favicon 만 싣는다. 글꼴·CSS·JS·데이터가 모두 그 한 장 안에 들어 있다.
+          mkdir -p public-root/bple
+          cp bple/index.html bple/favicon.svg public-root/bple/
 ```
 
 ---
@@ -120,6 +134,12 @@ GitHub Pages 는 HTML 에 10분짜리 캐시 헤더를 붙입니다. 바로 안 
 
 - 허브 카드 **7장**, 순서 PRAS-DER → PRAS-TOU → CARE-Jeju → IEA → EMBER → KEPCO → **전력수급기본계획**
 - 데스크톱 **4열**(4+3), 1480px·400px 모두 가로 스크롤 0px
-- 시뮬레이터 차트 5개 정상 생성, 콘솔 에러 0건
+- 시뮬레이터: 1480 / 760 / 400px 세 폭에서 콘솔 에러 0건, 가로 스크롤 0px
+- 7개 섹션 모두 하단 여백 **0px** (고정 높이 차트를 없앤 결과)
+- 글꼴 `document.fonts.check('700 16px Pretendard')` = true, 외부 네트워크 요청 **0건**
+- 11개 계획 전부 목표수요·실효용량이 공표치와 일치 (오차 0.06GW 이내)
+- KPI 카드 높이 **126px** — IEA·EMBER·KEPCO 와 동일 규격
+- 범례 토글 왕복 동작 확인, 버튼 조작 시 토스트·입력 강조 표시 확인
+- 렌더된 본문 전체에 반말 문장 0건
 - "처음으로" 버튼 `href="/"` — 다른 독립 시뮬레이터와 같은 규약
 - 워크플로 YAML 파싱 및 조립 단계 명령 확인
