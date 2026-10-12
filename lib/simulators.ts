@@ -6,7 +6,7 @@
  * 클라이언트 모듈에서 값을 내보내면 서버 쪽에는 실제 배열 대신 클라이언트 참조가 넘어가
  * 정적 빌드 중 렌더가 실패한다.
  */
-export type SimulatorIcon = "forecast" | "heatpump" | "ev" | "pv-ess";
+export type SimulatorIcon = "forecast" | "heatpump" | "ev" | "pv-ess" | "bple";
 
 export type Simulator = {
   href: string;
@@ -51,5 +51,13 @@ export const SIMULATORS: readonly Simulator[] = [
     name: "태양광·ESS",
     desc: "자가소비·계통연계 수익 구조",
     icon: "pv-ess",
+  },
+  {
+    href: "/bple",
+    short: "전기본",
+    tag: "BPLE 1-11",
+    name: "전력수급기본계획",
+    desc: "1~11차 계획 비교와 설비·전원구성 시나리오",
+    icon: "bple",
   },
 ];
