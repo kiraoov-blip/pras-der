@@ -329,3 +329,6 @@ input.flash{animation:bple-flash .9s ease-out}
 .btn-hint{max-width:46ch;text-align:right}
 @media(max-width:640px){.btn-hint{text-align:left;max-width:none}}
 .brow.mx .nm .pill{margin-left:0;align-self:flex-start}
+/* 시나리오와 맞붙은 선택 차수 원안 — 짝임을 알 수 있게 라벨만 강조 */
+.brow.mx.base .nm{font-weight:800;color:var(--navy)}
+.brow.mx.base .sub{color:var(--blue)}

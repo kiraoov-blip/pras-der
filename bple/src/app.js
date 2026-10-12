@@ -402,8 +402,8 @@ function renderErr() {
 }
 
 /* ===================== 05 전원구성 ===================== */
-function mixBar(label, sub, obj, extra, unit, cur, na) {
-  if (na) return `<div class="brow mx"><span class="nm">${esc(label)}<span class="sub">${esc(sub)}</span></span><span class="na">${esc(na)}</span><span></span></div>`;
+function mixBar(label, sub, obj, extra, unit, cur, na, base) {
+  if (na) return `<div class="brow mx${base ? ' base' : ''}"><span class="nm">${esc(label)}<span class="sub">${esc(sub)}</span></span><span class="na">${esc(na)}</span><span></span></div>`;
   const vis = SRC.filter(s => !S.off.mix.has(s.key));
   const exV = S.off.mix.has('h2') ? 0 : (extra || 0);
   const tot = vis.reduce((t, s) => t + (obj[s.key] || 0), 0) + exV;
@@ -414,7 +414,7 @@ function mixBar(label, sub, obj, extra, unit, cur, na) {
     return `<span style="flex:${v};background:${'var(--c-' + s.key + ')'}" data-tip="&lt;div class='t'&gt;${esc(label)} · ${s.label}&lt;/div&gt;&lt;div class='r'&gt;&lt;span&gt;용량&lt;/span&gt;&lt;b&gt;${fmt(v, 1)} ${unit}&lt;/b&gt;&lt;/div&gt;&lt;div class='r'&gt;&lt;span&gt;비중&lt;/span&gt;&lt;b&gt;${fmt(pct, 1)}%&lt;/b&gt;&lt;/div&gt;"></span>`;
   }).join('');
   if (exV > 0) segs += `<span style="flex:${exV};background:var(--c-h2)" data-tip="&lt;div class='t'&gt;${esc(label)} · 청정수소·암모니아&lt;/div&gt;&lt;div class='r'&gt;&lt;span&gt;발전량&lt;/span&gt;&lt;b&gt;${fmt(exV, 1)} ${unit}&lt;/b&gt;&lt;/div&gt;&lt;div class='r'&gt;&lt;span&gt;비중&lt;/span&gt;&lt;b&gt;${fmt((exV / tot) * 100, 1)}%&lt;/b&gt;&lt;/div&gt;"></span>`;
-  return `<div class="brow mx${cur ? ' cur' : ''}"><span class="nm">${esc(label)}<span class="sub">${esc(sub)}</span></span>` +
+  return `<div class="brow mx${cur ? ' cur' : ''}${base ? ' base' : ''}"><span class="nm">${esc(label)}<span class="sub">${esc(sub)}</span></span>` +
          `<span class="track"><span class="mxbar">${segs}</span></span>` +
          `<span class="amt">${fmt(tot, 1)} <small class="cur">${unit}</small></span></div>`;
 }
@@ -422,27 +422,34 @@ function mixBar(label, sub, obj, extra, unit, cur, na) {
 function renderMix(r) {
   const mode = S.mxMode, unit = mode === 'gen' ? 'TWh' : 'GW';
   const tag = isDirty() ? '원안에서 수정됨' : `${plan().name} 원안 그대로`;
-  let html = mixBar('시나리오', `${plan().target}년 · ${tag}`,
+  const scenario = mixBar('시나리오', `${plan().target}년 · ${tag}`,
     mode === 'cap' ? S.cap : mode === 'eff' ? r.eff : r.genNet,
     mode === 'gen' ? r.h2nh3 : 0, unit, true);
-  [...PLANS].reverse().forEach(p => {
+  const planBar = p => {
     if (mode === 'gen') {
-      html += p.gen ? mixBar(p.name, `${p.genYear}년 원안`, p.gen, p.genH2 || 0, unit, false)
-                    : mixBar(p.name, `${p.genYear}년 원안`, {}, 0, unit, false, '전원별 발전량 미공표');
-    } else if (mode === 'eff') {
+      return p.gen ? mixBar(p.name, `${p.genYear}년 원안`, p.gen, p.genH2 || 0, unit, false, null, p.id === S.planId)
+                   : mixBar(p.name, `${p.genYear}년 원안`, {}, 0, unit, false, '전원별 발전량 미공표', p.id === S.planId);
+    }
+    if (mode === 'eff') {
       const q = planPC(p), e = {};
       SRC.forEach(s => e[s.key] = (p.cap[s.key] || 0) * (q[s.key] / 100));
-      html += mixBar(p.name, `${p.capYear}년 원안`, e, 0, unit, false);
-    } else {
-      html += mixBar(p.name, `${p.capYear}년 원안`, p.cap, 0, unit, false);
+      return mixBar(p.name, `${p.capYear}년 원안`, e, 0, unit, false, null, p.id === S.planId);
     }
+    return mixBar(p.name, `${p.capYear}년 원안`, p.cap, 0, unit, false, null, p.id === S.planId);
+  };
+  /* 시나리오 막대를 선택한 차수 바로 위에 끼워 넣어 원안과 맞붙여 본다 */
+  let html = '';
+  [...PLANS].reverse().forEach(p => {
+    if (p.id === S.planId) html += scenario;
+    html += planBar(p);
   });
   $('#mixWrap').innerHTML = html; bindTips($('#mixWrap'));
   const li = SRC.map(s => ({ k: s.key, t: s.label, c: 'var(--c-' + s.key + ')', sq: true }));
   if (mode === 'gen') li.push({ k: 'h2', t: '청정수소·암모니아', c: 'var(--c-h2)', sq: true });
   legend($('#mixLegend'), 'mix', li, () => { const q = compute(); renderMix(q); renderGen(q); });
-  $('#mixDesc').innerHTML = '맨 위 <b>시나리오</b>는 분석 조건에 입력된 값으로 계산한 결과이고, 아래 <b>제N차</b>는 그 계획이 공표한 원안입니다. ' +
-    '조건을 건드리지 않으면 선택한 차수의 원안과 같은 막대가 됩니다. 범례를 누르면 해당 전원을 빼고 다시 계산합니다.';
+  $('#mixDesc').innerHTML = `<b>시나리오</b>는 분석 조건에 입력된 값으로 계산한 결과이고, <b>제N차</b>는 그 계획이 공표한 원안입니다. ` +
+    `바로 아래 <b>${plan().name}</b> 원안과 맞붙여 놓았으니 두 막대를 그대로 견주시면 됩니다. ` +
+    '조건을 건드리지 않으면 두 막대가 같아집니다. 범례를 누르면 해당 전원을 빼고 다시 계산합니다.';
   $('#mixNote').textContent = (mode === 'cap'
     ? '각 계획의 목표연도 정격용량(연말 기준)입니다.'
     : mode === 'eff'
