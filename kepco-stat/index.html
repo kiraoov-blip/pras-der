@@ -601,6 +601,13 @@ table.scn th{cursor:default}
                 <span class="hint" id="iUnitHint">전력원단위 = 판매전력량 ÷ 실질 부가가치</span></div>
               <div class="field"><label for="iMode">값 기준</label>
                 <select id="iMode"><option value="value">전력원단위</option><option value="idx">지수 (시작 연도 = 100)</option></select></div>
+              <div class="field"><span class="lab">세로축 직접 입력 <small id="iAxUnit" style="font-weight:600;color:#828893"></small></span>
+                <div class="row" style="gap:6px">
+                  <input type="number" id="iAxMin" step="any" placeholder="최소" aria-label="세로축 최소" style="flex:1;min-width:0">
+                  <input type="number" id="iAxMax" step="any" placeholder="최대" aria-label="세로축 최대" style="flex:1;min-width:0">
+                  <input type="number" id="iAxStep" step="any" min="0" placeholder="간격" aria-label="세로축 눈금 간격" style="flex:1;min-width:0">
+                  <button class="text-button" id="iAxReset" type="button" style="white-space:nowrap">자동</button>
+                </div><span class="hint">비워 두면 자동으로 맞춥니다</span></div>
             </div>
             <div class="chips" id="iChips" style="margin-bottom:12px" data-noexport></div>
             <div class="legend" id="iLegend"></div>
@@ -743,7 +750,7 @@ const DEF={year:Y1,base:2015,from:2001,to:Y1,unit:'big',yax:'zero',
   gMetric:'gen',gMode:'value',gSel:['steam_old','nuc','coal','lng','ren','hydro'],
   rev:{dp:{},dq:{},el:0,pc:null,loss:null},
   scn:{from:'coal',to:'ren',shift:5,grow:0},
-  facG:'fuel',facM:'value',finG:'pl',finM:'value',indG:'mfgk',iMode:'value',iUnit:'krw',iSel:['제조업','1차금속','비금속','석유정제·화학','컴퓨터전자','운송장비'],indM:'value',
+  facG:'fuel',facM:'value',finG:'pl',finM:'value',indG:'mfgk',iMode:'value',iUnit:'krw',iAx:{},iSel:['제조업','1차금속','비금속','석유정제·화학','컴퓨터전자','운송장비'],indM:'value',
   rMetric:'sales',rSub:'total',rSort:'desc',rSel:['경기','서울','충남','경북'],dTable:'sales'};
 let S=structuredClone(DEF);
 
@@ -813,8 +820,15 @@ function lineChart(el,o){
   const all=o.series.flatMap(s=>s.pts.filter(v=>v!=null));
   if(!all.length){ el.innerHTML='<div class="empty">표시할 항목이 없습니다. 범례를 눌러 항목을 다시 켜 주세요.</div>'; return; }
   let lo=Math.min(...all), hi=Math.max(...all); if(o.zero&&lo>0) lo=0; if(o.zero&&hi<0) hi=0;
+  const ax=o.axis||{}; if(ax.min!=null) lo=ax.min; if(ax.max!=null) hi=ax.max;
+  if(lo>=hi){ if(ax.max!=null&&ax.min==null) lo=hi-1; else hi=lo+1; }
   if(lo===hi){lo-=1;hi+=1}
-  const tk=niceTicks(lo,hi), iw=W-m.l-m.r, ih=H-m.t-m.b;
+  let tk=niceTicks(lo,hi); const iw=W-m.l-m.r, ih=H-m.t-m.b;
+  if(ax.min!=null||ax.max!=null||ax.step){ // 직접 입력한 축: 입력값을 그대로 경계로 쓴다
+    const L=ax.min!=null?ax.min:tk.lo, Hh=ax.max!=null?ax.max:tk.hi;
+    let st=ax.step>0&&(Hh-L)/ax.step<=40?ax.step:niceTicks(L,Hh).step, t=[];
+    for(let v=ax.min!=null?L:Math.ceil(L/st-1e-9)*st;v<=Hh+st*1e-6;v+=st) t.push(+v.toFixed(10)); // 최소값을 넣었으면 눈금도 거기서 시작(엑셀과 같게)
+    tk={t,step:st,lo:L,hi:Hh}; }
   const X=i=>m.l+(n>1?iw*i/(n-1):iw/2), Y=v=>m.t+ih*(1-(v-tk.lo)/(tk.hi-tk.lo));
   let g='';
   tk.t.forEach(v=>{g+=`<line x1="${m.l}" x2="${W-m.r}" y1="${Y(v)}" y2="${Y(v)}" stroke="${v===0?'#b9bec7':'#eceef1'}"/><text x="${m.l-8}" y="${Y(v)+4}" text-anchor="end">${tickFmt(v,tk.step)}</text>`});
@@ -834,6 +848,8 @@ function lineChart(el,o){
       if(lone) p+=`<circle cx="${X(i)}" cy="${Y(v)}" r="${lone?3.2:2.6}" fill="${s.color}"/>`; });
     p+=`<path d="${d}" fill="none" stroke="${s.color}" stroke-width="${s.w||2.2}" ${s.dash?'stroke-dasharray="6 5"':''} stroke-linejoin="round" stroke-linecap="round"/>`;
     FLm.forEach((n,x)=>{const i=xs.indexOf(x), v=s.pts[i]; if(v!=null&&n.ss.has(s)) p+=`<circle cx="${X(i)}" cy="${Y(v)}" r="4.6" fill="#fff" stroke="${s.color}" stroke-width="2.2"/>`}); });
+  const cid='clip'+(el.id||Math.random().toString(36).slice(2)); // 축을 좁혀도 선이 그림 영역 밖으로 나가지 않게
+  p=`<clipPath id="${cid}"><rect x="${m.l-6}" y="${m.t-6}" width="${iw+12}" height="${ih+12}"/></clipPath><g clip-path="url(#${cid})">${p}</g>`;
   el.innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(o.title||'추이 그래프')}"><g class="axis">${g}<text x="${m.l}" y="12" style="font-weight:700;fill:#6b7280">${esc(o.unit||'')}</text></g>${p}<line class="cur" y1="${m.t}" y2="${m.t+ih}" stroke="#0a2350" stroke-opacity=".35" visibility="hidden"/><rect x="${m.l}" y="${m.t}" width="${iw}" height="${ih}" fill="transparent"/></svg>`;
   const svg=el.querySelector('svg'), cur=svg.querySelector('.cur'), rect=svg.querySelector('rect');
   const move=e=>{ const r=svg.getBoundingClientRect(), px=(e.clientX-r.left)/r.width*W;
@@ -872,7 +888,10 @@ function setupControls(){
   fillSel($('#dTable'),DT.map(d=>[d.id,d.n]));
   const bind=(id,key,num)=>$(id).addEventListener('change',e=>{S[key]=num?+e.target.value:e.target.value;render()});
   bind('#year','year',1);bind('#base','base',1);bind('#unit','unit');bind('#sMetric','sMetric');bind('#sMode','sMode');bind('#mCls','mCls');
-  bind('#gMetric','gMetric');bind('#iMode','iMode');bind('#iUnit','iUnit');bind('#gMode','gMode');bind('#rMetric','rMetric');bind('#rSub','rSub');$('#dTable').addEventListener('change',e=>{S.dTable=e.target.value;renderTable()});
+  bind('#gMetric','gMetric');bind('#iMode','iMode');bind('#iUnit','iUnit');
+  ['iAxMin','iAxMax','iAxStep'].forEach(id=>$('#'+id).addEventListener('change',()=>{const a=S.iAx[iAxKey()]||(S.iAx[iAxKey()]={}), v=$('#'+id).value;
+    a[{iAxMin:'min',iAxMax:'max',iAxStep:'step'}[id]]=v===''?null:+v; renderInten()}));
+  $('#iAxReset').addEventListener('click',()=>{delete S.iAx[iAxKey()];renderInten()});bind('#gMode','gMode');bind('#rMetric','rMetric');bind('#rSub','rSub');$('#dTable').addEventListener('change',e=>{S.dTable=e.target.value;renderTable()});
   $('#tFrom').addEventListener('change',e=>{S.from=+e.target.value;if(S.from>=S.to)S.to=Math.min(Y1,S.from+1);sync();render()});
   $('#tTo').addEventListener('change',e=>{S.to=+e.target.value;if(S.to<=S.from)S.from=Math.max(YA,S.to-1);sync();render()});
   $('#tPreset').addEventListener('change',e=>{const v=e.target.value; if(v!=='custom'){S.from=+v;S.to=Y1;} sync();render(); if(v==='custom') $('#tFrom').focus()});
@@ -1156,6 +1175,7 @@ function renderExplorer(pre){
 /* ---------- 09 전력원단위 ---------- */
 const IDEF=[['제조업','제조업 전체','#0a2350'],['전체','전체 (판매량÷GDP)','#e60012'],...KIND.map(([k,c])=>[k,k,c])];
 const IYA=1995;
+const iAxKey=()=>S.iUnit+'|'+S.iMode; // 단위·값 기준마다 축 입력을 따로 기억한다
 const FX20=1180.1; // 2020년 연평균 원/달러 환율(한국은행). 실질 부가가치가 2020년 기준 연쇄가격이라 2020년 환율 하나로 바꾼다
 const IU=()=>S.iUnit==='usd'?{u:'kWh/USD',f:FX20/1e6,d:3,gu:'십억 달러',gf:1/FX20}:{u:'kWh/백만원',f:1,d:0,gu:'조원',gf:1e-3};
 function renderInten(){
@@ -1168,7 +1188,8 @@ function renderInten(){
   const unit=idx?`지수 (${xs[0]}=100)`:iu.u;
   $('#intDesc').textContent=`${xs[0]}–${xs[xs.length-1]}년 · ${unit} · 판매전력량 ÷ 실질 부가가치(2020년 연쇄가격${S.iUnit==='usd'?', 2020년 환율로 달러 환산':''}). 값이 작을수록 같은 부가가치를 만드는 데 전기를 덜 씁니다.`;
   $('#iLegend').innerHTML=legendHtml(series,'inten');
-  lineChart($('#iChart'),{x:xs,series:vis('inten',series),unit,zero:S.yax==='zero',marks:[{x:2016,label:'기계→전자 이동'},{x:2018,label:'석유정제·화학 분리'}],title:'제조업 업종별 전력원단위',key:'inten',d:idx?1:iu.d,h:380});
+  const axv=S.iAx[iAxKey()]||{}; $('#iAxMin').value=axv.min??''; $('#iAxMax').value=axv.max??''; $('#iAxStep').value=axv.step??''; $('#iAxUnit').textContent=`(${unit})`;
+  lineChart($('#iChart'),{x:xs,series:vis('inten',series),unit,axis:axv,zero:S.yax==='zero',marks:[{x:2016,label:'기계→전자 이동'},{x:2018,label:'석유정제·화학 분리'}],title:'제조업 업종별 전력원단위',key:'inten',d:idx?1:iu.d,h:380});
   $('#iNote').textContent='판매전력량은 한국전력통계 제조업종별 판매량을, 부가가치는 한국은행 「경제활동별 GDP(실질, 2020년 연쇄가격)」를 썼습니다(2025년은 잠정치). 판매량의 업종은 한국은행 13개 업종 구분에 맞춰 묶었고, 석유정제와 화학제품은 판매량이 2017년까지 한 칸이라 2018년부터만 나뉩니다(그 전은 “석유정제·화학” 합산). 2016년에는 판매량 원자료에서 기계 일부가 전자로 옮겨 집계되어 두 업종의 원단위가 한 해에 크게 바뀝니다. 석유정제는 부가가치가 정제마진에 따라 크게 출렁여(2020년 급감) 원단위 변동이 큽니다. 2017년까지 판매량에는 한국은행 기준으로 제조업이 아닌 출판·재생재료가 조금(제조업의 1% 미만) 들어 있습니다. 실질 연쇄가격은 업종을 더해도 제조업과 같지 않아, 제조업 전체는 업종 합이 아닌 제조업 부가가치로 나눴습니다.'+(S.iUnit==='usd'?` kWh/USD는 2020년 불변 원화 부가가치를 2020년 연평균 환율(${nf(FX20,1)}원/달러) 하나로 바꾼 값이라, 원화 기준과 추이·변화율이 같고 수준만 달라집니다. 해마다 다른 환율을 쓰면 환율 변동이 원단위에 섞이므로 쓰지 않았습니다.`:'');
   // 순위·표
   const y=S.year<IYA?Y1:S.year, b=S.base<IYA?IYA:S.base, [eu,em]=U.energy();
