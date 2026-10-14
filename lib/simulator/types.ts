@@ -49,6 +49,11 @@ export interface SimulationInput {
   evTariffVoltage: EvTariffVoltage;
   /** 충전사업자용 선택요금(I~IV). 충전사업자 외 고객유형에서는 무시하며, 생략 시 I. */
   operatorTariffOption?: ChargingOperatorTariffOption;
+  /**
+   * 충전사업자 충전일 이동률(0-1). 같은 주 비발령일 충전을 발령일 발령시간으로 옮기는 정도로,
+   * 1이면 발령시간 부하를 실측연도 최대 시간당 부하까지 채운다. 생략 시 0.5.
+   */
+  operatorDayShiftRate?: number;
   customerCount: number;
   discountRate: number;
   /** Share of technically movable load that actually responds (0-1). */
@@ -87,6 +92,8 @@ export interface RevenueNeutralDiscountResult {
 
 export interface GridResult {
   shiftedEnergyMwh: number;
+  /** shiftedEnergyMwh 중 다른 날에서 발령일로 옮겨 온 양(충전사업자 충전일 이동). 그 외 0. */
+  dayShiftedEnergyMwh: number;
   eventWindowLoadIncreaseMwh: number;
   curtailmentReductionMwh: number;
 }

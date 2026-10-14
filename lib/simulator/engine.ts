@@ -36,6 +36,12 @@ type HourlyRoute = {
    * 2-2는 주 2회 충전 한도 안에서 배정된 날만 1이다.
    */
   occurrenceWeight?: number;
+  /** 충전사업자 충전일 이동: 같은 주 다른 날에서 발령시간으로 옮겨 온 양(kWh, 1대당). */
+  dayShiftedKwh?: number;
+  /** 옮겨 온 양이 원래 날에 냈을 요금(원, 현행단가) — 고객편익에 더한다. */
+  sourceSavingWon?: number;
+  /** 옮겨 온 양의 원래 날 SMP 구입비(원) — 구입비 변화에서 뺀다. */
+  sourceSmpCostWon?: number;
 };
 type SelectedEvent = ReferenceEvent & { hours: number[] };
 type LoadProfileMap = Record<RepresentativeCustomerType, Record<ReferenceSeason, readonly number[]>>;
@@ -470,8 +476,8 @@ function routeForEvent(
   selectedAppliances: ReadonlySet<ApplianceCode>,
 ): HourlyRoute {
   if (type === "EV_CHARGING_OPERATOR") {
-    // 충전소 합산부하에는 시나리오 1만 적용한다(runSimulation 에서 정규화).
-    return shiftPeakToEvent(operatorProfileForEvent(event), event.hours, input.shiftRate);
+    // 충전소 합산부하에는 시나리오 1 + 충전일 이동만 적용한다(runSimulation 에서 정규화).
+    return operatorEventRoute(event, input, input.operatorTariffOption ?? "I");
   }
   if (input.shiftMode === "SCENARIO_1") {
     return aggregateScenarioOne(type, event.season, event.hours, input.shiftRate);
@@ -585,6 +591,89 @@ function operatorProfileForEvent(event: ReferenceEvent): number[] {
   return actual ? perOperatorUser(actual) : operatorAverageProfile(event.season, event.dayType);
 }
 
+/** 실측연도에 전체 충전망이 실제로 기록한 최대 시간당 부하(kWh). 충전일 이동의 처리용량 상한이다. */
+export const EV_CHARGING_OPERATOR_PEAK_HOURLY_KWH = Math.max(...Object.values(OPERATOR_DAILY_KWH).flat());
+export const DEFAULT_OPERATOR_DAY_SHIFT_RATE = 0.5;
+
+function addDays(date: string, days: number): string {
+  return new Date(Date.parse(`${date}T00:00:00Z`) + days * 24 * 60 * 60 * 1_000).toISOString().slice(0, 10);
+}
+
+/** 실측연도는 공휴일까지 반영하고, 그 밖의 연도는 토·일만 구분한다. */
+function operatorDayType(date: string): ReferenceDayType {
+  const day = new Date(`${date}T00:00:00Z`);
+  if (date.startsWith(String(EV_CHARGING_OPERATOR_BASIS.dataYear))) return dayTypeFor2025(day);
+  if (day.getUTCDay() === 6) return "SATURDAY";
+  return day.getUTCDay() === 0 ? "HOLIDAY" : "WEEKDAY";
+}
+
+/**
+ * 충전일 이동의 출발지: 발령일과 같은 주(월~일)의 비발령일.
+ * 실측연도는 해당 날짜의 실측부하를, 그 밖의 연도는 계절·요일유형 평균부하를 쓴다.
+ * 실측연도인데 자료 범위를 벗어난 날(연초·연말 주의 전년·다음 해 날짜)은 제외한다.
+ * 반환값은 1대당 kWh와, 그 양을 원래 날에 썼을 때의 현행 요금(원)이다.
+ */
+function operatorWeekSource(
+  event: ReferenceEvent,
+  year: AnalysisYear,
+  evTariffVoltage: EvTariffVoltage,
+  operatorOption: ChargingOperatorTariffOption,
+): { kwh: number; billWon: number; eventDaysInWeek: number } {
+  const eventDates = new Set(EVENTS[String(year) as `${AnalysisYear}`].map((item) => item.date));
+  const monday = isoWeekStart(event.date);
+  let kwh = 0;
+  let billWon = 0;
+  let eventDaysInWeek = 0;
+  for (let offset = 0; offset < 7; offset += 1) {
+    const date = addDays(monday, offset);
+    if (eventDates.has(date)) { eventDaysInWeek += 1; continue; }
+    const actual = OPERATOR_DAILY_KWH[date];
+    if (!actual && year === EV_CHARGING_OPERATOR_BASIS.dataYear) continue;
+    const season = seasonForMonth(Number(date.slice(5, 7)));
+    const dayType = operatorDayType(date);
+    const load = actual ? perOperatorUser(actual) : operatorAverageProfile(season, dayType);
+    kwh += load.reduce((sum, value) => sum + value, 0);
+    billWon += dot(load, tariffRates("EV_CHARGING_OPERATOR", season, dayType, evTariffVoltage, operatorOption));
+  }
+  return { kwh, billWon, eventDaysInWeek: Math.max(1, eventDaysInWeek) };
+}
+
+/**
+ * 충전사업자 발령일 경로: ① 시나리오 1 시간 이동 → ② 충전일 이동.
+ * ②는 발령시간마다 (실측 최대 시간당 부하 − ①후 부하)의 여유에 이동률을 곱해 채운다.
+ * 채운 양은 같은 주 비발령일 충전에서 그 날들의 부하 모양대로 빼 온 것으로 보며,
+ * 주의 비발령일 충전량을 그 주 발령일 수로 나눈 몫을 넘지 못한다.
+ */
+function operatorEventRoute(
+  event: SelectedEvent,
+  input: SimulationInput,
+  operatorOption: ChargingOperatorTariffOption,
+): HourlyRoute {
+  const route = shiftPeakToEvent(operatorProfileForEvent(event), event.hours, input.shiftRate);
+  const dayShiftRate = Math.max(0, Math.min(1, input.operatorDayShiftRate ?? DEFAULT_OPERATOR_DAY_SHIFT_RATE));
+  if (dayShiftRate === 0 || event.hours.length === 0) return route;
+
+  const capacity = EV_CHARGING_OPERATOR_PEAK_HOURLY_KWH / EV_CHARGING_OPERATOR_BASIS.operatorUserCount;
+  const room = event.hours.map((hour) => Math.max(0, capacity - route.shifted[hour]) * dayShiftRate);
+  const wanted = room.reduce((sum, value) => sum + value, 0);
+  const source = operatorWeekSource(event, input.analysisYear, input.evTariffVoltage, operatorOption);
+  const added = Math.min(wanted, source.kwh / source.eventDaysInWeek);
+  if (added <= 0) return route;
+
+  const scale = added / wanted;
+  event.hours.forEach((hour, index) => { route.shifted[hour] += room[index] * scale; });
+  // 원래 날의 SMP는 기준자료에 없어, 발령일 SMP를 그날 부하 모양으로 가중한 평균을 대리값으로 쓴다.
+  const baseKwh = route.base.reduce((sum, value) => sum + value, 0);
+  const typicalSmp = baseKwh > 0 ? dot(route.base, event.smp) / baseKwh : 0;
+  return {
+    ...route,
+    movedKwh: route.movedKwh + added,
+    dayShiftedKwh: added,
+    sourceSavingWon: source.billWon * (added / source.kwh),
+    sourceSmpCostWon: added * typicalSmp,
+  };
+}
+
 const operatorAnnualBillCache = new Map<string, number>();
 
 /** 실측연도 365일 부하에 현행 충전사업자 요금을 적용한 1대당 연간 전력량요금. */
@@ -664,6 +753,10 @@ export function validateSimulationInput(input: SimulationInput): string[] {
   )) errors.push("가전별 이전 설정률은 0과 1 사이여야 합니다.");
   if (!Number.isFinite(input.eventRule.smpThresholdWonPerKwh)) errors.push("SMP 임계값은 숫자여야 합니다.");
   if (input.eventRule.startHour > input.eventRule.endHour) errors.push("발령 시작시간은 종료시간보다 늦을 수 없습니다.");
+  if (input.operatorDayShiftRate !== undefined
+    && (!Number.isFinite(input.operatorDayShiftRate) || input.operatorDayShiftRate < 0 || input.operatorDayShiftRate > 1)) {
+    errors.push("충전일 이동률은 0과 1 사이여야 합니다.");
+  }
   if (input.operatorTariffOption !== undefined && !["I", "II", "III", "IV"].includes(input.operatorTariffOption)) {
     errors.push("충전사업자 선택요금은 I~IV 중 하나여야 합니다.");
   }
@@ -704,6 +797,7 @@ export function runSimulation(rawInput: SimulationInput): SimulationResult {
 
   let benefitPerCustomer = 0;
   let movedKwhPerCustomer = 0;
+  let dayShiftedKwhPerCustomer = 0;
   let smpCostChangePerCustomer = 0;
   let annualCurrentBill = 0;
   const chartBase = Array.from({ length: 24 }, () => 0);
@@ -723,13 +817,15 @@ export function runSimulation(rawInput: SimulationInput): SimulationResult {
         input.evTariffVoltage,
         operatorOption,
       );
-      benefitPerCustomer += (dot(route.base, currentRates) - dot(route.shifted, newRates))
+      // 충전일 이동분은 원래 날에 낼 요금(sourceSavingWon)을 아끼고 발령시간 할인단가로 다시 낸다.
+      benefitPerCustomer += (dot(route.base, currentRates) - dot(route.shifted, newRates) + (route.sourceSavingWon ?? 0))
         * occurrenceWeight * weight;
       movedKwhPerCustomer += route.movedKwh * occurrenceWeight * weight;
-      smpCostChangePerCustomer += route.shifted.reduce(
+      dayShiftedKwhPerCustomer += (route.dayShiftedKwh ?? 0) * occurrenceWeight * weight;
+      smpCostChangePerCustomer += (route.shifted.reduce(
         (sum, value, hour) => sum + (value - route.base[hour]) * event.smp[hour],
         0,
-      ) * occurrenceWeight * weight;
+      ) - (route.sourceSmpCostWon ?? 0)) * occurrenceWeight * weight;
       for (let hour = 0; hour < 24; hour += 1) {
         chartBase[hour] += route.base[hour] * weight;
         chartShifted[hour] += route.shifted[hour] * weight;
@@ -776,6 +872,9 @@ export function runSimulation(rawInput: SimulationInput): SimulationResult {
     warnings.push(`충전사업자 부하는 ${basis.dataYear}년 충전소 ${basis.siteCount.toLocaleString("ko-KR")}개소의 시간대별 실측 사용량(연 ${(basis.annualKwh / 1e6).toFixed(1)}GWh)이며, 발령일 당일 부하를 그대로 씁니다. 실측연도가 아닌 날은 같은 계절·요일유형 평균부하로 대체합니다.`);
     warnings.push(`고객 1명은 충전사업자를 이용하는 전기차 1대이며, 기본 ${basis.operatorUserCount.toLocaleString("ko-KR")}대는 도내 운행 전기차 ${basis.operatingEvCount.toLocaleString("ko-KR")}대('25.12)에서 자가소비용 ${basis.selfConsumptionCustomers.toLocaleString("ko-KR")}명을 뺀 값입니다.`);
     warnings.push(`요금은 전기자동차 충전전력요금(충전서비스 제공사업자용) ${resolveEvTariffVoltage("EV_CHARGING_OPERATOR", input.evTariffVoltage) === "HIGH" ? "고압" : "저압"} ${optionLabel}을 적용했습니다.`);
+    const dayShiftRate = Math.max(0, Math.min(1, input.operatorDayShiftRate ?? DEFAULT_OPERATOR_DAY_SHIFT_RATE));
+    warnings.push(`충전일 이동률 ${(dayShiftRate * 100).toFixed(1)}%: 같은 주 비발령일 충전을 발령일 발령시간으로 옮기며, 100%는 발령시간 부하를 ${basis.dataYear}년 실측 최대 시간당 부하(${(EV_CHARGING_OPERATOR_PEAK_HOURLY_KWH / 1_000).toFixed(1)}MWh)까지 채우는 것입니다. 옮긴 양은 원래 날의 현행단가로 아끼고 발령시간 할인단가로 다시 냅니다.`);
+    warnings.push("충전일 이동분의 원래 날 SMP는 기준자료에 없어, 발령일 SMP를 그날 부하 모양으로 가중한 평균으로 대신합니다.");
     warnings.push("1대당 편익은 사업자에게 돌아가는 요금 할인이 충전요금 인하로 이용자에게 전부 전가된다고 볼 때의 값입니다.");
   } else if (input.customerType !== "RESIDENTIAL_TOU") {
     warnings.push("EV는 계약전력 50kW 미만을 완속, 50kW 이상을 급속으로 구분합니다.");
@@ -834,6 +933,7 @@ export function runSimulation(rawInput: SimulationInput): SimulationResult {
     },
     grid: {
       shiftedEnergyMwh,
+      dayShiftedEnergyMwh: dayShiftedKwhPerCustomer * targetCustomers / 1_000,
       eventWindowLoadIncreaseMwh: shiftedEnergyMwh,
       curtailmentReductionMwh: shiftedEnergyMwh * CURTAILMENT_AVOIDANCE_FACTOR,
     },

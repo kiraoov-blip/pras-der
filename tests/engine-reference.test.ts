@@ -4,6 +4,7 @@ import { DEFAULT_CUSTOMER_COUNTS, DEFAULT_SIMULATION_INPUT, REFERENCE_MONTHLY_US
 import {
   EV_BASIC_CHARGE_WON_PER_KW,
   EV_CHARGING_OPERATOR_BASIS,
+  EV_CHARGING_OPERATOR_PEAK_HOURLY_KWH,
   EV_ENERGY_RATE_TABLE,
   EV_REPRESENTATIVE_BASIS,
   EV_REPRESENTATIVE_SESSIONS_PER_WEEK,
@@ -434,10 +435,12 @@ test("역산한 할인율을 되먹이면 목표 편익이 재현된다", () => 
 // ── 전기차 충전사업자 ───────────────────────────────────────────────
 // 기준값은 제주_전기차_2025.xlsx 원자료를 엔진과 별도로(파이썬, 반올림 없는 합산부하) 계산한 결과다.
 // 2025년 실적 56일·195시간, 할인율 50%, 수요이전율 50%, 시나리오 1, 이용 EV 27,140대.
+// total·discountOnly 는 충전일 이동 0%, dayShiftFull 은 충전일 이동 100%(실측 최대 16,125.6kWh/h) 기준이다.
 const OPERATOR_REFERENCE_WON = {
-  LOW_I: { total: 124_267_046.3, discountOnly: 74_534_975.0 },
+  LOW_I: { total: 124_267_046.3, discountOnly: 74_534_975.0, dayShiftFull: 158_071_172.5 },
   HIGH_IV: { total: 113_208_476.0, discountOnly: 70_515_324.6 },
 };
+const OPERATOR_DAY_SHIFT_FULL_KWH = 678_391.0;
 
 function simulateOperator(overrides: Partial<SimulationInput> = {}) {
   return simulate({
@@ -469,8 +472,8 @@ test("충전사업자 이용 EV 대수는 도내 운행 전기차에서 자가�
 });
 
 test("충전사업자 저압 선택Ⅰ 전체편익이 원자료 독립계산과 일치한다", () => {
-  const result = simulateOperator();
-  const discountOnly = simulateOperator({ shiftRate: 0 });
+  const result = simulateOperator({ operatorDayShiftRate: 0 });
+  const discountOnly = simulateOperator({ shiftRate: 0, operatorDayShiftRate: 0 });
   assert.equal(result.eventDays, 56);
   assert.equal(result.eventHours, 195);
   assert.ok(Math.abs(result.customer.totalAnnualBenefitWon - OPERATOR_REFERENCE_WON.LOW_I.total) < 1_000);
@@ -479,8 +482,8 @@ test("충전사업자 저압 선택Ⅰ 전체편익이 원자료 독립계산과
 });
 
 test("충전사업자 고압 선택Ⅳ(전체시간) 전체편익이 원자료 독립계산과 일치한다", () => {
-  const result = simulateOperator({ evTariffVoltage: "HIGH", operatorTariffOption: "IV" });
-  const discountOnly = simulateOperator({ evTariffVoltage: "HIGH", operatorTariffOption: "IV", shiftRate: 0 });
+  const result = simulateOperator({ evTariffVoltage: "HIGH", operatorTariffOption: "IV", operatorDayShiftRate: 0 });
+  const discountOnly = simulateOperator({ evTariffVoltage: "HIGH", operatorTariffOption: "IV", shiftRate: 0, operatorDayShiftRate: 0 });
   assert.ok(Math.abs(result.customer.totalAnnualBenefitWon - OPERATOR_REFERENCE_WON.HIGH_IV.total) < 1_000);
   assert.ok(Math.abs(discountOnly.customer.totalAnnualBenefitWon - OPERATOR_REFERENCE_WON.HIGH_IV.discountOnly) < 1_000);
 });
@@ -535,4 +538,54 @@ test("충전사업자에도 목표 1회당 편익 역산이 작동한다", () =>
   const solution = findTargetBenefitSettings(input, { targetPerEventBenefitWon: Math.round(current * 1.2), solveDiscount: true, solveShift: false });
   assert.equal(solution.status, "OK");
   assert.ok(solution.achievedPerEventBenefitWon >= Math.round(current * 1.2) - 0.5);
+});
+
+// ── 충전사업자 충전일 이동 ─────────────────────────────────────────
+
+test("충전일 이동 처리용량은 2025년 실측 최대 시간당 부하다", () => {
+  const observed = Math.max(...Object.values(CHARGING_OPERATOR_DATA.dailyHourlyKwh).flat());
+  assert.equal(EV_CHARGING_OPERATOR_PEAK_HOURLY_KWH, observed);
+  assert.ok(Math.abs(EV_CHARGING_OPERATOR_PEAK_HOURLY_KWH - 16_125.6) < 0.1);
+});
+
+test("충전일 이동 100%는 원자료 독립계산(실측 최대까지 채움)과 일치한다", () => {
+  const result = simulateOperator({ operatorDayShiftRate: 1 });
+  assert.ok(Math.abs(result.customer.totalAnnualBenefitWon - OPERATOR_REFERENCE_WON.LOW_I.dayShiftFull) < 5_000,
+    `${result.customer.totalAnnualBenefitWon}`);
+  assert.ok(Math.abs(result.grid.dayShiftedEnergyMwh * 1_000 - OPERATOR_DAY_SHIFT_FULL_KWH) < 50);
+});
+
+test("충전일 이동 기본값은 50%이며 0%와 100%의 거의 중간이다", () => {
+  const none = simulateOperator({ operatorDayShiftRate: 0 });
+  const half = simulateOperator({ operatorDayShiftRate: 0.5 });
+  const full = simulateOperator({ operatorDayShiftRate: 1 });
+  const omitted = simulateOperator();
+  assert.equal(omitted.customer.totalAnnualBenefitWon, half.customer.totalAnnualBenefitWon);
+  assert.equal(none.grid.dayShiftedEnergyMwh, 0);
+  // 발령일이 몰린 주는 100%에서 '그 주 비발령일 충전량' 한도에 걸려 덜 옮겨지므로, 50%는 중간값 이상이다.
+  const middle = (none.customer.totalAnnualBenefitWon + full.customer.totalAnnualBenefitWon) / 2;
+  assert.ok(half.customer.totalAnnualBenefitWon >= middle - 1);
+  assert.ok((half.customer.totalAnnualBenefitWon - middle) / middle < 0.002);
+  assert.ok(half.grid.dayShiftedEnergyMwh >= full.grid.dayShiftedEnergyMwh / 2 - 1e-6);
+});
+
+test("충전일 이동은 저SMP 발령시간으로 옮기므로 한전 구입비를 줄인다", () => {
+  const costs = [0, 0.5, 1].map((operatorDayShiftRate) => simulateOperator({ operatorDayShiftRate }).utility.smpPurchaseCostChangeWon);
+  assert.ok(costs[1] < costs[0] && costs[2] < costs[1]);
+});
+
+test("충전일 이동은 수요이전율과 독립이며 충전사업자 외 고객유형에는 영향이 없다", () => {
+  const noHourShift = simulateOperator({ shiftRate: 0, operatorDayShiftRate: 1 });
+  assert.ok(noHourShift.grid.dayShiftedEnergyMwh > 0);
+  assert.ok(Math.abs(noHourShift.grid.shiftedEnergyMwh - noHourShift.grid.dayShiftedEnergyMwh) < 1e-9);
+  for (const customerType of ["RESIDENTIAL_TOU", "EV_TOTAL", "EV_SLOW_LOW_VOLTAGE", "EV_FAST_HIGH_VOLTAGE"] as const) {
+    const a = simulate({ customerType, operatorDayShiftRate: 0 });
+    const b = simulate({ customerType, operatorDayShiftRate: 1 });
+    assert.equal(a.customer.totalAnnualBenefitWon, b.customer.totalAnnualBenefitWon);
+    assert.equal(b.grid.dayShiftedEnergyMwh, 0);
+  }
+});
+
+test("충전일 이동률이 0~1 밖이면 입력 오류로 알린다", () => {
+  assert.ok(simulateOperator({ operatorDayShiftRate: 1.5 }).warnings.some((warning) => warning.includes("충전일 이동률은 0과 1 사이")));
 });

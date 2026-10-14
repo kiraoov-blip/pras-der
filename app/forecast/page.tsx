@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { DEFAULT_CUSTOMER_COUNTS, REFERENCE_MONTHLY_USAGE_KWH } from "@/lib/simulator/defaults";
-import { EV_CHARGING_OPERATOR_BASIS, EV_CONTRACT_POWER_THRESHOLD_KW, EV_REPRESENTATIVE_BASIS, findRevenueNeutralDiscount, findTargetBenefitSettings, runSimulation } from "@/lib/simulator/engine";
+import { DEFAULT_OPERATOR_DAY_SHIFT_RATE, EV_CHARGING_OPERATOR_BASIS, EV_CHARGING_OPERATOR_PEAK_HOURLY_KWH, EV_CONTRACT_POWER_THRESHOLD_KW, EV_REPRESENTATIVE_BASIS, findRevenueNeutralDiscount, findTargetBenefitSettings, runSimulation } from "@/lib/simulator/engine";
 import { ALL_APPLIANCE_CODES, SELECTABLE_APPLIANCES } from "@/lib/simulator/appliances";
 import type { AnalysisDayType, AnalysisSeason, AnalysisYear, ApplianceCode, ChargingOperatorTariffOption, CustomerTypeCode, EventMode, EvTariffVoltage, LoadShiftMode, RevenueNeutralDiscountResult, SimulationInput } from "@/lib/simulator/types";
 
@@ -81,6 +81,7 @@ export default function Home() {
   const [customerCount, setCustomerCount] = useState<number>(DEFAULT_CUSTOMER_COUNTS.RESIDENTIAL_TOU);
   const [discount, setDiscount] = useState(50);
   const [shiftRate, setShiftRate] = useState(50);
+  const [operatorDayShift, setOperatorDayShift] = useState(DEFAULT_OPERATOR_DAY_SHIFT_RATE * 100);
   const [scenario, setScenario] = useState<LoadShiftMode>("SCENARIO_1");
   const [selectedAppliances, setSelectedAppliances] = useState<ApplianceCode[]>([...ALL_APPLIANCE_CODES]);
   const [applianceShiftRates, setApplianceShiftRates] = useState<Record<ApplianceCode, number>>({ ...FULL_APPLIANCE_RATES });
@@ -129,6 +130,7 @@ export default function Home() {
     customerType: customerCode,
     evTariffVoltage,
     operatorTariffOption,
+    operatorDayShiftRate: operatorDayShift / 100,
     customerCount,
     discountRate: discount / 100,
     shiftRate: shiftRate / 100,
@@ -142,7 +144,7 @@ export default function Home() {
       endHour,
       smpThresholdWonPerKwh: smpThreshold,
     },
-  }), [analysisYear, seasonFilter, dayTypeFilter, customerCode, evTariffVoltage, operatorTariffOption, customerCount, discount, shiftRate, scenario, selectedAppliances, applianceShiftRates, weekendPriority, eventMode, startHour, endHour, smpThreshold]);
+  }), [analysisYear, seasonFilter, dayTypeFilter, customerCode, evTariffVoltage, operatorTariffOption, operatorDayShift, customerCount, discount, shiftRate, scenario, selectedAppliances, applianceShiftRates, weekendPriority, eventMode, startHour, endHour, smpThreshold]);
   const result = useMemo(() => runSimulation(simulationInput), [simulationInput]);
 
   const maxProfile = Math.max(...result.baseLoadProfile, ...result.shiftedLoadProfile) * 1.08;
@@ -275,7 +277,7 @@ export default function Home() {
   const reset = () => {
     setAnalysisYear(2025); setSeasonFilter("ALL"); setDayTypeFilter("ALL");
     setCustomerType("주택용 TOU"); setCustomerCount(DEFAULT_CUSTOMER_COUNTS.RESIDENTIAL_TOU);
-    setEvTariffVoltage("AUTO"); setOperatorTariffOption("I");
+    setEvTariffVoltage("AUTO"); setOperatorTariffOption("I"); setOperatorDayShift(DEFAULT_OPERATOR_DAY_SHIFT_RATE * 100);
     setDiscount(50); setShiftRate(50); setScenario("SCENARIO_1");
     setSelectedAppliances([...ALL_APPLIANCE_CODES]);
     setApplianceShiftRates({ ...FULL_APPLIANCE_RATES });
@@ -410,6 +412,16 @@ export default function Home() {
               <div className="range-marks"><span>0%</span><span>50%</span><span>100%</span></div>
               <p className="shift-definition">이전 가능한 부하를 모두 옮기면 100%, 절반만 옮기면 50%, 반응하지 않으면 0%입니다.</p>
               <div className="route-row"><div><span>이전 출발</span><strong>{routeSource}</strong></div><span className="route-arrow">→</span><div><span>이전 도착</span><strong>발령시간</strong></div></div>
+              {isOperator ? <>
+                <div className="shift-value day-shift-value"><span>충전일 이동률</span><strong>{operatorDayShift.toFixed(1)}<small>%</small></strong></div>
+                <div className="shift-slider-row">
+                  <input type="range" min="0" max="100" step="0.1" value={operatorDayShift} onChange={(event) => setOperatorDayShift(clampOneDecimalPercent(Number(event.target.value)))} />
+                  <label className="percent-entry"><input aria-label="충전일 이동률 직접 입력" type="number" min="0" max="100" step="0.1" value={operatorDayShift} onChange={(event) => setOperatorDayShift(clampOneDecimalPercent(Number(event.target.value) || 0))} /><span>%</span></label>
+                </div>
+                <div className="range-marks"><span>0% 이동 없음</span><span>50%</span><span>100% 실측 최대</span></div>
+                <p className="shift-definition">같은 주 다른 날의 충전을 발령일 발령시간으로 옮기는 정도입니다. 100%는 발령시간 충전량을 {EV_CHARGING_OPERATOR_BASIS.dataYear}년 충전망 실측 최대 시간당 부하({formatOneDecimal(EV_CHARGING_OPERATOR_PEAK_HOURLY_KWH / 1_000)}MWh)까지 채우는 것입니다.</p>
+                <div className="route-row"><div><span>이전 출발</span><strong>같은 주 비발령일 충전</strong></div><span className="route-arrow">→</span><div><span>이전 도착</span><strong>발령시간</strong></div></div>
+              </> : null}
             </div> : <div className="shift-control appliance-summary">
               <div className="shift-value"><span>수요이전율</span><strong>{shiftRate.toFixed(1)}<small>%</small></strong></div>
               <div className="shift-slider-row">
@@ -476,7 +488,7 @@ export default function Home() {
           <article className="metric-card accent-blue"><p>발령일수</p><strong>{formatInteger(result.eventDays)}<small>일</small></strong><span>{scopeLabel}</span></article>
           <article className="metric-card"><p>총 발령시간</p><strong>{formatInteger(result.eventHours)}<small>시간</small></strong><span>일평균 {averageEventHours.toFixed(1)}시간</span></article>
           <article className="metric-card"><p>분석대상 고객</p><strong>{formatInteger(result.targetCustomers)}<small>{customerUnit}</small></strong><span>{isOperator ? "충전사업자 이용 전기차" : "입력한 대상 고객 전체"}</span></article>
-          <article className="metric-card accent-green"><p>부하 이전량</p><strong>{formatOneDecimal(result.grid.shiftedEnergyMwh)}<small>MWh</small></strong><span>에너지 총량 보존</span></article>
+          <article className="metric-card accent-green"><p>부하 이전량</p><strong>{formatOneDecimal(result.grid.shiftedEnergyMwh)}<small>MWh</small></strong><span>{isOperator ? `그중 충전일 이동 ${formatOneDecimal(result.grid.dayShiftedEnergyMwh)}MWh` : "에너지 총량 보존"}</span></article>
           <article className="metric-card"><p>고객당 기준기간 편익</p><strong>{formatInteger(result.customer.annualBenefitPerCustomerWon)}<small>원</small></strong><span>할인 및 부하이전 반영</span></article>
           <article className="metric-card accent-blue"><p>대상고객 전체편익</p><strong>{formatInteger(result.customer.totalAnnualBenefitWon / 10_000)}<small>만원</small></strong><span>대상 고객 전체의 편익 합계</span></article>
           <article className="metric-card accent-green"><p>고객당 1회당 편익</p><strong>{formatInteger(perEventBenefit)}<small>원</small></strong><span>기준기간 편익 ÷ 발령 {formatInteger(result.eventDays)}일</span></article>
@@ -574,7 +586,7 @@ export default function Home() {
                 })() : null}
               </svg>
             </div>
-            <p className="chart-note">{scopeLabel} 부하곡선입니다. 점에 커서를 올리거나 키보드로 선택하면 시간별 현행·이전 후 사용량을 확인할 수 있으며, 부하이전 전후의 24시간 에너지 총량은 동일합니다.</p>
+            <p className="chart-note">{scopeLabel} 부하곡선입니다. 점에 커서를 올리거나 키보드로 선택하면 시간별 현행·이전 후 사용량을 확인할 수 있으며, {isOperator && result.grid.dayShiftedEnergyMwh > 0 ? "같은 시간대 이동분은 하루 에너지 총량이 같고, 충전일 이동분만큼 발령일 사용량이 늘어납니다(그만큼 같은 주 다른 날 사용량이 줄어듭니다)." : "부하이전 전후의 24시간 에너지 총량은 동일합니다."}</p>
           </article>
 
           <article className="section-card result-card">
