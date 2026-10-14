@@ -1,6 +1,7 @@
 import type {
   AnalysisYear,
   ApplianceCode,
+  ChargingOperatorTariffOption,
   CustomerTypeCode,
   EvTariffVoltage,
   RevenueNeutralDiscountResult,
@@ -16,10 +17,13 @@ import {
   type ReferenceEvent,
   type ReferenceSeason,
 } from "./reference-data.generated";
+import { CHARGING_OPERATOR_DATA } from "./charging-operator-data.generated";
 
-export const ENGINE_VERSION = "2.7.0-ev-representative-alignment";
+export const ENGINE_VERSION = "2.8.0-ev-charging-operator";
 
 type BaseCustomerType = Exclude<CustomerTypeCode, "EV_TOTAL">;
+/** 계절별 대표 부하곡선을 쓰는 고객유형. 충전사업자는 날짜별 실측부하를 쓴다. */
+type RepresentativeCustomerType = Exclude<BaseCustomerType, "EV_CHARGING_OPERATOR">;
 type ResolvedEvTariffVoltage = Exclude<EvTariffVoltage, "AUTO">;
 type Components = Array<{ type: BaseCustomerType; weight: number }>;
 type HourlyRoute = {
@@ -34,7 +38,7 @@ type HourlyRoute = {
   occurrenceWeight?: number;
 };
 type SelectedEvent = ReferenceEvent & { hours: number[] };
-type LoadProfileMap = Record<BaseCustomerType, Record<ReferenceSeason, readonly number[]>>;
+type LoadProfileMap = Record<RepresentativeCustomerType, Record<ReferenceSeason, readonly number[]>>;
 type ApplianceProfileMap = Record<string, Record<ApplianceCode, readonly number[]>>;
 type EventMap = Record<`${AnalysisYear}`, readonly ReferenceEvent[]>;
 
@@ -65,10 +69,42 @@ export const EV_ENERGY_RATE_TABLE = {
   },
 } as const;
 
+/**
+ * 전기자동차 충전전력요금(충전서비스 제공사업자용) — '26.4.16 시행, [경부하, 중간부하, 최대부하] 원/kWh.
+ * 선택IV는 전체시간 단일요금이므로 세 값이 같다. 봄·가을 주말 11~14시 50% 할인은 자가소비용과 같이 적용된다.
+ */
+export const EV_OPERATOR_ENERGY_RATE_TABLE = {
+  LOW: {
+    I: { SHOULDER: [85.4, 97.2, 102.1], SUMMER: [95.9, 162.2, 203.5], WINTER: [110.6, 143.1, 172.0] },
+    II: { SHOULDER: [85.4, 97.2, 102.1], SUMMER: [83.1, 140.0, 270.8], WINTER: [105.8, 126.7, 227.0] },
+    III: { SHOULDER: [85.4, 97.2, 102.1], SUMMER: [90.1, 138.6, 236.0], WINTER: [115.5, 125.4, 198.4] },
+    IV: { SHOULDER: [97.2, 97.2, 97.2], SUMMER: [172.0, 172.0, 172.0], WINTER: [154.9, 154.9, 154.9] },
+  },
+  HIGH: {
+    I: { SHOULDER: [80.2, 91.0, 94.9], SUMMER: [89.8, 129.9, 151.2], WINTER: [99.4, 118.4, 132.4] },
+    II: { SHOULDER: [80.2, 91.0, 94.9], SUMMER: [78.2, 113.0, 198.6], WINTER: [95.2, 105.5, 172.4] },
+    III: { SHOULDER: [80.2, 91.0, 94.9], SUMMER: [84.5, 111.9, 174.0], WINTER: [103.6, 104.5, 151.6] },
+    IV: { SHOULDER: [91.0, 91.0, 91.0], SUMMER: [137.4, 137.4, 137.4], WINTER: [127.7, 127.7, 127.7] },
+  },
+} as const;
+
+/**
+ * 충전사업자 이용 전기차 대수 = 도내 실제 운행 전기차 − 자가소비용 고객.
+ * 운행대수는 제주특별자치도 전기자동차 등록현황('25년 12월, 타지역 운행 리스차량 제외) 기준.
+ */
+export const EV_CHARGING_OPERATOR_BASIS = {
+  operatingEvCount: 45_467,
+  selfConsumptionCustomers: 18_327,
+  operatorUserCount: 45_467 - 18_327,
+  siteCount: CHARGING_OPERATOR_DATA.siteCount,
+  annualKwh: CHARGING_OPERATOR_DATA.annualKwh,
+  dataYear: CHARGING_OPERATOR_DATA.year,
+} as const;
+
 // EV energy-only values are independently reproduced from the annual workbook.
 // Residential is corrected to the official tariff table: the detailed workbook
 // incorrectly applied EV weekend time bands to residential TOU.
-const ENERGY_CHARGE_2025_WON: Record<BaseCustomerType, number> = {
+const ENERGY_CHARGE_2025_WON: Record<RepresentativeCustomerType, number> = {
   RESIDENTIAL_TOU: 1_127_265.02449335,
   EV_SLOW_LOW_VOLTAGE: 491_772.6626142673,
   EV_FAST_HIGH_VOLTAGE: 584_640.2439547501,
@@ -102,18 +138,30 @@ function resolveEvTariffVoltage(
   return requested === "AUTO" ? defaultEvTariffVoltage(type) : requested;
 }
 
+function evEnergyRates(
+  type: BaseCustomerType,
+  season: ReferenceSeason,
+  evTariffVoltage: EvTariffVoltage,
+  operatorOption: ChargingOperatorTariffOption,
+): readonly number[] {
+  const voltage = resolveEvTariffVoltage(type, evTariffVoltage);
+  return type === "EV_CHARGING_OPERATOR"
+    ? EV_OPERATOR_ENERGY_RATE_TABLE[voltage][operatorOption][season]
+    : EV_ENERGY_RATE_TABLE[voltage][season];
+}
+
 function weekdayRates(
   type: BaseCustomerType,
   season: ReferenceSeason,
   evTariffVoltage: EvTariffVoltage = "AUTO",
+  operatorOption: ChargingOperatorTariffOption = "I",
 ): number[] {
   if (type === "RESIDENTIAL_TOU") {
     return season === "SHOULDER"
       ? [...repeated(125.8, 8), ...repeated(153.8, 8), ...repeated(172.4, 6), ...repeated(125.8, 2)]
       : [...repeated(138.7, 8), ...repeated(184.7, 8), ...repeated(220.5, 6), ...repeated(138.7, 2)];
   }
-  const voltage = resolveEvTariffVoltage(type, evTariffVoltage);
-  const [low, middle, peak] = EV_ENERGY_RATE_TABLE[voltage][season];
+  const [low, middle, peak] = evEnergyRates(type, season, evTariffVoltage, operatorOption);
   return [...repeated(low, 8), ...repeated(middle, 8), ...repeated(peak, 6), ...repeated(low, 2)];
 }
 
@@ -122,8 +170,9 @@ function tariffRates(
   season: ReferenceSeason,
   dayType: ReferenceDayType,
   evTariffVoltage: EvTariffVoltage = "AUTO",
+  operatorOption: ChargingOperatorTariffOption = "I",
 ): number[] {
-  const weekday = weekdayRates(type, season, evTariffVoltage);
+  const weekday = weekdayRates(type, season, evTariffVoltage, operatorOption);
   if (type === "RESIDENTIAL_TOU" || dayType === "WEEKDAY") return weekday;
   const low = weekday[0];
   const middle = weekday[8];
@@ -217,6 +266,7 @@ function componentsFor(customerType: CustomerTypeCode): Components {
 }
 
 function copyProfile(type: BaseCustomerType, season: ReferenceSeason): number[] {
+  if (type === "EV_CHARGING_OPERATOR") return operatorAverageProfile(season, "ALL");
   return [...LOAD_PROFILES[type][season]];
 }
 
@@ -232,7 +282,15 @@ function aggregateScenarioOne(
   eventHours: readonly number[],
   shiftRate: number,
 ): HourlyRoute {
-  const base = copyProfile(type, season);
+  return shiftPeakToEvent(copyProfile(type, season), eventHours, shiftRate);
+}
+
+/** 시나리오 1: 최대부하 시간대 끝에서부터 발령시간 수만큼의 부하를 발령시간대로 균등 이전한다. */
+function shiftPeakToEvent(
+  base: number[],
+  eventHours: readonly number[],
+  shiftRate: number,
+): HourlyRoute {
   const shifted = [...base];
   const count = Math.min(eventHours.length, PEAK_HOURS.length);
   const sourceHours = PEAK_HOURS.slice(PEAK_HOURS.length - count);
@@ -411,6 +469,10 @@ function routeForEvent(
   event: ReferenceEvent & { hours: number[] },
   selectedAppliances: ReadonlySet<ApplianceCode>,
 ): HourlyRoute {
+  if (type === "EV_CHARGING_OPERATOR") {
+    // 충전소 합산부하에는 시나리오 1만 적용한다(runSimulation 에서 정규화).
+    return shiftPeakToEvent(operatorProfileForEvent(event), event.hours, input.shiftRate);
+  }
   if (input.shiftMode === "SCENARIO_1") {
     return aggregateScenarioOne(type, event.season, event.hours, input.shiftRate);
   }
@@ -437,8 +499,9 @@ function discountedRates(
   discountRate: number,
   weekendPriority: boolean,
   evTariffVoltage: EvTariffVoltage,
+  operatorOption: ChargingOperatorTariffOption,
 ): number[] {
-  const current = tariffRates(type, event.season, event.dayType, evTariffVoltage);
+  const current = tariffRates(type, event.season, event.dayType, evTariffVoltage, operatorOption);
   const eventSet = new Set(event.hours);
   return current.map((rate, hour) => {
     if (!eventSet.has(hour)) return rate;
@@ -479,8 +542,72 @@ function dayTypeFor2025(date: Date): ReferenceDayType {
   return "WEEKDAY";
 }
 
+// ── 충전사업자 실측부하 ─────────────────────────────────────────────
+// 원자료는 전체 충전소의 날짜별 합산부하다. 이를 이용 전기차 대수로 나눠
+// '충전사업자 이용 EV 1대당' 부하로 쓰고, 결과는 대상 고객 수를 곱해 전체로 환산한다.
+const OPERATOR_DAILY_KWH = CHARGING_OPERATOR_DATA.dailyHourlyKwh;
+
+function perOperatorUser(load: readonly number[]): number[] {
+  return load.map((kwh) => kwh / EV_CHARGING_OPERATOR_BASIS.operatorUserCount);
+}
+
+let operatorAverageCache: Map<string, number[]> | null = null;
+
+/** 실측연도의 계절×요일유형(및 계절 전체) 평균 일부하, 1대당 kWh. 실측이 없는 날의 대체값. */
+function operatorAverageProfile(season: ReferenceSeason, dayType: ReferenceDayType | "ALL"): number[] {
+  if (!operatorAverageCache) {
+    const sums = new Map<string, { total: number[]; days: number }>();
+    const add = (key: string, load: readonly number[]) => {
+      const entry = sums.get(key) ?? { total: Array.from({ length: 24 }, () => 0), days: 0 };
+      load.forEach((kwh, hour) => { entry.total[hour] += kwh; });
+      entry.days += 1;
+      sums.set(key, entry);
+    };
+    Object.entries(OPERATOR_DAILY_KWH).forEach(([date, load]) => {
+      const day = new Date(`${date}T00:00:00Z`);
+      const daySeason = seasonForMonth(day.getUTCMonth() + 1);
+      add(`${daySeason}_${dayTypeFor2025(day)}`, load);
+      add(`${daySeason}_ALL`, load);
+    });
+    operatorAverageCache = new Map([...sums].map(([key, { total, days }]) => [
+      key,
+      perOperatorUser(total.map((kwh) => kwh / days)),
+    ]));
+  }
+  const profile = operatorAverageCache.get(`${season}_${dayType}`)
+    ?? operatorAverageCache.get(`${season}_ALL`);
+  return profile ? [...profile] : Array.from({ length: 24 }, () => 0);
+}
+
+/** 발령일 당일 실측부하(1대당). 실측연도 밖의 날짜는 같은 계절·요일유형 평균으로 대체한다. */
+function operatorProfileForEvent(event: ReferenceEvent): number[] {
+  const actual = OPERATOR_DAILY_KWH[event.date];
+  return actual ? perOperatorUser(actual) : operatorAverageProfile(event.season, event.dayType);
+}
+
+const operatorAnnualBillCache = new Map<string, number>();
+
+/** 실측연도 365일 부하에 현행 충전사업자 요금을 적용한 1대당 연간 전력량요금. */
+function operatorAnnualEnergyBill(
+  evTariffVoltage: EvTariffVoltage,
+  operatorOption: ChargingOperatorTariffOption,
+): number {
+  const key = `${evTariffVoltage}_${operatorOption}`;
+  const cached = operatorAnnualBillCache.get(key);
+  if (cached !== undefined) return cached;
+  let total = 0;
+  Object.entries(OPERATOR_DAILY_KWH).forEach(([date, load]) => {
+    const day = new Date(`${date}T00:00:00Z`);
+    const season = seasonForMonth(day.getUTCMonth() + 1);
+    const rates = tariffRates("EV_CHARGING_OPERATOR", season, dayTypeFor2025(day), evTariffVoltage, operatorOption);
+    total += dot(perOperatorUser(load), rates);
+  });
+  operatorAnnualBillCache.set(key, total);
+  return total;
+}
+
 function annualTariffIndex2025(
-  type: Exclude<BaseCustomerType, "RESIDENTIAL_TOU">,
+  type: Exclude<RepresentativeCustomerType, "RESIDENTIAL_TOU">,
   voltage: ResolvedEvTariffVoltage,
 ): number {
   let total = 0;
@@ -511,9 +638,12 @@ function currentEnergyBill(
   type: BaseCustomerType,
   year: AnalysisYear,
   evTariffVoltage: EvTariffVoltage,
+  operatorOption: ChargingOperatorTariffOption,
 ): number {
-  let energyCharge = ENERGY_CHARGE_2025_WON[type];
-  if (type !== "RESIDENTIAL_TOU") {
+  let energyCharge = type === "EV_CHARGING_OPERATOR"
+    ? operatorAnnualEnergyBill(evTariffVoltage, operatorOption)
+    : ENERGY_CHARGE_2025_WON[type];
+  if (type !== "RESIDENTIAL_TOU" && type !== "EV_CHARGING_OPERATOR") {
     const defaultVoltage = defaultEvTariffVoltage(type);
     const selectedVoltage = resolveEvTariffVoltage(type, evTariffVoltage);
     energyCharge *= EV_TARIFF_INDEX_2025[type][selectedVoltage]
@@ -534,11 +664,23 @@ export function validateSimulationInput(input: SimulationInput): string[] {
   )) errors.push("가전별 이전 설정률은 0과 1 사이여야 합니다.");
   if (!Number.isFinite(input.eventRule.smpThresholdWonPerKwh)) errors.push("SMP 임계값은 숫자여야 합니다.");
   if (input.eventRule.startHour > input.eventRule.endHour) errors.push("발령 시작시간은 종료시간보다 늦을 수 없습니다.");
+  if (input.operatorTariffOption !== undefined && !["I", "II", "III", "IV"].includes(input.operatorTariffOption)) {
+    errors.push("충전사업자 선택요금은 I~IV 중 하나여야 합니다.");
+  }
   return errors;
 }
 
-export function runSimulation(input: SimulationInput): SimulationResult {
-  const warnings = validateSimulationInput(input);
+export function runSimulation(rawInput: SimulationInput): SimulationResult {
+  const warnings = validateSimulationInput(rawInput);
+  const isOperator = rawInput.customerType === "EV_CHARGING_OPERATOR";
+  if (isOperator && rawInput.shiftMode !== "SCENARIO_1") {
+    warnings.push("충전사업자는 충전소 합산부하 기준이라 시나리오 1(최대부하 균등이전)만 적용합니다.");
+  }
+  // 충전사업자는 대표고객 충전 시나리오(2-1·2-2)가 성립하지 않으므로 시나리오 1로 정규화한다.
+  const input: SimulationInput = isOperator && rawInput.shiftMode !== "SCENARIO_1"
+    ? { ...rawInput, shiftMode: "SCENARIO_1" }
+    : rawInput;
+  const operatorOption = input.operatorTariffOption ?? "I";
   const events = selectedEvents(input);
   const components = componentsFor(input.customerType);
   const selectedCodes = new Set(input.selectedAppliances);
@@ -568,17 +710,18 @@ export function runSimulation(input: SimulationInput): SimulationResult {
   const chartShifted = Array.from({ length: 24 }, () => 0);
 
   components.forEach(({ type, weight }) => {
-    annualCurrentBill += currentEnergyBill(type, input.analysisYear, input.evTariffVoltage) * weight;
+    annualCurrentBill += currentEnergyBill(type, input.analysisYear, input.evTariffVoltage, operatorOption) * weight;
     events.forEach((event) => {
       const route = routeForEvent(type, input, event, selectedCodes);
       const occurrenceWeight = route.occurrenceWeight ?? 1;
-      const currentRates = tariffRates(type, event.season, event.dayType, input.evTariffVoltage);
+      const currentRates = tariffRates(type, event.season, event.dayType, input.evTariffVoltage, operatorOption);
       const newRates = discountedRates(
         type,
         event,
         input.discountRate,
         input.weekendDiscountPriority,
         input.evTariffVoltage,
+        operatorOption,
       );
       benefitPerCustomer += (dot(route.base, currentRates) - dot(route.shifted, newRates))
         * occurrenceWeight * weight;
@@ -627,7 +770,14 @@ export function runSimulation(input: SimulationInput): SimulationResult {
     warnings.push("대표고객 기준은 완속 7kW·6시간·월 336kWh, 급속 50kW·1시간·월 400kWh이며 시간대별 형상은 계약종별 부하곡선(완속 42kWh/회·급속 50kWh/회)을 따릅니다.");
     warnings.push("2-1은 모든 발령일에 충전한다고 보는 상한, 2-2는 주 2회 충전한도를 적용한 값입니다. 발령일 대응이 100%가 아니면 실제 편익은 2-2보다 작습니다.");
   }
-  if (input.customerType !== "RESIDENTIAL_TOU") {
+  if (isOperator) {
+    const basis = EV_CHARGING_OPERATOR_BASIS;
+    const optionLabel = { I: "선택Ⅰ", II: "선택Ⅱ", III: "선택Ⅲ", IV: "선택Ⅳ(전체시간)" }[operatorOption];
+    warnings.push(`충전사업자 부하는 ${basis.dataYear}년 충전소 ${basis.siteCount.toLocaleString("ko-KR")}개소의 시간대별 실측 사용량(연 ${(basis.annualKwh / 1e6).toFixed(1)}GWh)이며, 발령일 당일 부하를 그대로 씁니다. 실측연도가 아닌 날은 같은 계절·요일유형 평균부하로 대체합니다.`);
+    warnings.push(`고객 1명은 충전사업자를 이용하는 전기차 1대이며, 기본 ${basis.operatorUserCount.toLocaleString("ko-KR")}대는 도내 운행 전기차 ${basis.operatingEvCount.toLocaleString("ko-KR")}대('25.12)에서 자가소비용 ${basis.selfConsumptionCustomers.toLocaleString("ko-KR")}명을 뺀 값입니다.`);
+    warnings.push(`요금은 전기자동차 충전전력요금(충전서비스 제공사업자용) ${resolveEvTariffVoltage("EV_CHARGING_OPERATOR", input.evTariffVoltage) === "HIGH" ? "고압" : "저압"} ${optionLabel}을 적용했습니다.`);
+    warnings.push("1대당 편익은 사업자에게 돌아가는 요금 할인이 충전요금 인하로 이용자에게 전부 전가된다고 볼 때의 값입니다.");
+  } else if (input.customerType !== "RESIDENTIAL_TOU") {
     warnings.push("EV는 계약전력 50kW 미만을 완속, 50kW 이상을 급속으로 구분합니다.");
     warnings.push(input.evTariffVoltage === "AUTO"
       ? "공급전압 자동값은 완속 저압·급속 고압이며, 충전방식과 별도로 저압·고압 요금종별을 선택할 수 있습니다."

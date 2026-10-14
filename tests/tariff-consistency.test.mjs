@@ -66,7 +66,85 @@ const OFFICIAL = {
 
   /** 전기자동차 기본요금(원/kW) */
   evBasicCharge: { LOW: 2390, HIGH: 2580 },
+
+  /** 전기자동차 충전전력요금(충전서비스 제공사업자용, 원/kWh) — [경부하, 중간부하, 최대부하]. IV는 전체시간 */
+  evOperator: {
+    LOW: {
+      I: { SHOULDER: [85.4, 97.2, 102.1], SUMMER: [95.9, 162.2, 203.5], WINTER: [110.6, 143.1, 172.0] },
+      II: { SHOULDER: [85.4, 97.2, 102.1], SUMMER: [83.1, 140.0, 270.8], WINTER: [105.8, 126.7, 227.0] },
+      III: { SHOULDER: [85.4, 97.2, 102.1], SUMMER: [90.1, 138.6, 236.0], WINTER: [115.5, 125.4, 198.4] },
+      IV: { SHOULDER: [97.2, 97.2, 97.2], SUMMER: [172.0, 172.0, 172.0], WINTER: [154.9, 154.9, 154.9] },
+    },
+    HIGH: {
+      I: { SHOULDER: [80.2, 91.0, 94.9], SUMMER: [89.8, 129.9, 151.2], WINTER: [99.4, 118.4, 132.4] },
+      II: { SHOULDER: [80.2, 91.0, 94.9], SUMMER: [78.2, 113.0, 198.6], WINTER: [95.2, 105.5, 172.4] },
+      III: { SHOULDER: [80.2, 91.0, 94.9], SUMMER: [84.5, 111.9, 174.0], WINTER: [103.6, 104.5, 151.6] },
+      IV: { SHOULDER: [91.0, 91.0, 91.0], SUMMER: [137.4, 137.4, 137.4], WINTER: [127.7, 127.7, 127.7] },
+    },
+  },
 };
+
+const OPERATOR_OPTIONS = ["I", "II", "III", "IV"];
+const SEASONS = ["SHOULDER", "SUMMER", "WINTER"];
+
+/** engine.ts 의 EV_OPERATOR_ENERGY_RATE_TABLE 을 읽는다. */
+function operatorFromEngine() {
+  const table = must(
+    /EV_OPERATOR_ENERGY_RATE_TABLE\s*=\s*\{([\s\S]*?)\n\}\s*as const;/,
+    read("lib/simulator/engine.ts"),
+    "engine.ts 의 EV_OPERATOR_ENERGY_RATE_TABLE",
+  )[1];
+  const out = {};
+  for (const voltage of ["LOW", "HIGH"]) {
+    const block = must(
+      new RegExp(`\\b${voltage}\\s*:\\s*\\{([\\s\\S]*?)\\n  \\}`),
+      table,
+      `engine.ts EV_OPERATOR_ENERGY_RATE_TABLE.${voltage}`,
+    )[1];
+    out[voltage] = {};
+    for (const option of OPERATOR_OPTIONS) {
+      const row = must(
+        new RegExp(`\\b${option}\\s*:\\s*\\{([^}]*)\\}`),
+        block,
+        `engine.ts EV_OPERATOR_ENERGY_RATE_TABLE.${voltage}.${option}`,
+      )[1];
+      out[voltage][option] = {};
+      for (const season of SEASONS) {
+        out[voltage][option][season] = numList(must(
+          new RegExp(`\\b${season}\\s*:\\s*\\[([^\\]]+)\\]`),
+          row,
+          `engine.ts EV_OPERATOR_ENERGY_RATE_TABLE.${voltage}.${option}.${season}`,
+        )[1]);
+      }
+    }
+  }
+  return out;
+}
+
+/** public/sim/ev/app.js 의 RATE_TABLES.service_{low|high}_{1..4} 를 읽는다. */
+function operatorFromEvApp() {
+  const src = read("public/sim/ev/app.js");
+  const out = {};
+  for (const [voltage, key] of [["LOW", "low"], ["HIGH", "high"]]) {
+    out[voltage] = {};
+    OPERATOR_OPTIONS.forEach((option, index) => {
+      const name = `service_${key}_${index + 1}`;
+      const seasons = must(
+        new RegExp(`${name}\\s*:\\s*\\{[\\s\\S]*?season\\s*:\\s*\\{([\\s\\S]*?)\\n\\s*\\}`),
+        src,
+        `app.js 의 RATE_TABLES.${name}.season`,
+      )[1];
+      out[voltage][option] = {};
+      for (const [k, season] of [["springfall", "SHOULDER"], ["summer", "SUMMER"], ["winter", "WINTER"]]) {
+        const body = must(new RegExp(`\\b${k}\\s*:\\s*\\{([^}]*)\\}`), seasons, `app.js ${name}.${k}`)[1];
+        out[voltage][option][season] = ["off", "mid", "peak"].map((field) =>
+          Number(must(new RegExp(`\\b${field}\\s*:\\s*([\\d.]+)`), body, `app.js ${name}.${k}.${field}`)[1]),
+        );
+      }
+    });
+  }
+  return out;
+}
 
 /* ────────────────────────────────────────────────────────────────
    추출 도우미
@@ -253,6 +331,22 @@ test("engine.ts ↔ ev/app.js · EV 단가가 서로 동일", () => {
     engine.ev,
     "두 구현의 EV 단가가 어긋났습니다. 요금 개정 시 한쪽만 고친 것이 아닌지 확인하세요.",
   );
+});
+
+test("engine.ts · 충전사업자용 충전전력요금이 공식 요금표와 일치", () => {
+  assert.deepEqual(operatorFromEngine(), OFFICIAL.evOperator);
+});
+
+test("ev/app.js · 충전사업자용 충전전력요금이 공식 요금표와 일치", () => {
+  assert.deepEqual(operatorFromEvApp(), OFFICIAL.evOperator);
+});
+
+test("engine.ts · 충전사업자용 봄·가을 선택Ⅰ~Ⅲ 단가는 같은 전압 자가소비용과 같다", () => {
+  for (const voltage of ["LOW", "HIGH"]) {
+    for (const option of ["I", "II", "III"]) {
+      assert.deepEqual(OFFICIAL.evOperator[voltage][option].SHOULDER, OFFICIAL.ev[voltage].SHOULDER);
+    }
+  }
 });
 
 test("engine.ts · 주택용 TOU 단가가 공식 요금표와 일치", () => {

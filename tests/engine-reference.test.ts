@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { DEFAULT_CUSTOMER_COUNTS, DEFAULT_SIMULATION_INPUT } from "../lib/simulator/defaults.ts";
+import { DEFAULT_CUSTOMER_COUNTS, DEFAULT_SIMULATION_INPUT, REFERENCE_MONTHLY_USAGE_KWH } from "../lib/simulator/defaults.ts";
 import {
   EV_BASIC_CHARGE_WON_PER_KW,
+  EV_CHARGING_OPERATOR_BASIS,
   EV_ENERGY_RATE_TABLE,
   EV_REPRESENTATIVE_BASIS,
   EV_REPRESENTATIVE_SESSIONS_PER_WEEK,
@@ -16,6 +17,7 @@ import {
 } from "../lib/simulator/engine.ts";
 import { ALL_APPLIANCE_CODES } from "../lib/simulator/appliances.ts";
 import { REFERENCE_DATA } from "../lib/simulator/reference-data.generated.ts";
+import { CHARGING_OPERATOR_DATA } from "../lib/simulator/charging-operator-data.generated.ts";
 import type { SimulationInput } from "../lib/simulator/types.ts";
 
 function simulate(overrides: Partial<SimulationInput> = {}) {
@@ -427,4 +429,110 @@ test("역산한 할인율을 되먹이면 목표 편익이 재현된다", () => 
   });
   assert.ok(Math.abs(replayed - solution.achievedPerEventBenefitWon) < 1e-9);
   assert.ok(replayed >= target - 0.5);
+});
+
+// ── 전기차 충전사업자 ───────────────────────────────────────────────
+// 기준값은 제주_전기차_2025.xlsx 원자료를 엔진과 별도로(파이썬, 반올림 없는 합산부하) 계산한 결과다.
+// 2025년 실적 56일·195시간, 할인율 50%, 수요이전율 50%, 시나리오 1, 이용 EV 27,140대.
+const OPERATOR_REFERENCE_WON = {
+  LOW_I: { total: 124_267_046.3, discountOnly: 74_534_975.0 },
+  HIGH_IV: { total: 113_208_476.0, discountOnly: 70_515_324.6 },
+};
+
+function simulateOperator(overrides: Partial<SimulationInput> = {}) {
+  return simulate({
+    customerType: "EV_CHARGING_OPERATOR",
+    customerCount: DEFAULT_CUSTOMER_COUNTS.EV_CHARGING_OPERATOR,
+    ...overrides,
+  });
+}
+
+test("충전사업자 기준자료는 2025년 365일·24시간·2,589개소이며 연간 합계가 일치한다", () => {
+  const days = Object.entries(CHARGING_OPERATOR_DATA.dailyHourlyKwh);
+  assert.equal(CHARGING_OPERATOR_DATA.year, 2025);
+  assert.equal(days.length, 365);
+  assert.equal(CHARGING_OPERATOR_DATA.siteCount, 2_589);
+  assert.ok(days.every(([date, load]) => date.startsWith("2025-") && load.length === 24 && load.every((kwh) => kwh >= 0)));
+  const total = sum(days.map(([, load]) => sum(load)));
+  assert.ok(Math.abs(total - CHARGING_OPERATOR_DATA.annualKwh) < 50, `${total} vs ${CHARGING_OPERATOR_DATA.annualKwh}`);
+  assert.ok(Math.abs(CHARGING_OPERATOR_DATA.annualKwh - 60_240_384.5) < 1);
+});
+
+test("충전사업자 이용 EV 대수는 도내 운행 전기차에서 자가소비용 고객을 뺀 값이다", () => {
+  const basis = EV_CHARGING_OPERATOR_BASIS;
+  assert.equal(basis.operatingEvCount - basis.selfConsumptionCustomers, basis.operatorUserCount);
+  assert.equal(basis.operatorUserCount, 27_140);
+  assert.equal(DEFAULT_CUSTOMER_COUNTS.EV_CHARGING_OPERATOR, basis.operatorUserCount);
+  assert.equal(basis.selfConsumptionCustomers, DEFAULT_CUSTOMER_COUNTS.EV_TOTAL);
+  const monthlyPerUser = basis.annualKwh / basis.operatorUserCount / 12;
+  assert.equal(REFERENCE_MONTHLY_USAGE_KWH.EV_CHARGING_OPERATOR, Math.round(monthlyPerUser));
+});
+
+test("충전사업자 저압 선택Ⅰ 전체편익이 원자료 독립계산과 일치한다", () => {
+  const result = simulateOperator();
+  const discountOnly = simulateOperator({ shiftRate: 0 });
+  assert.equal(result.eventDays, 56);
+  assert.equal(result.eventHours, 195);
+  assert.ok(Math.abs(result.customer.totalAnnualBenefitWon - OPERATOR_REFERENCE_WON.LOW_I.total) < 1_000);
+  assert.ok(Math.abs(discountOnly.customer.totalAnnualBenefitWon - OPERATOR_REFERENCE_WON.LOW_I.discountOnly) < 1_000);
+  assert.ok(Math.abs(result.customer.annualBenefitPerCustomerWon - OPERATOR_REFERENCE_WON.LOW_I.total / 27_140) < 0.1);
+});
+
+test("충전사업자 고압 선택Ⅳ(전체시간) 전체편익이 원자료 독립계산과 일치한다", () => {
+  const result = simulateOperator({ evTariffVoltage: "HIGH", operatorTariffOption: "IV" });
+  const discountOnly = simulateOperator({ evTariffVoltage: "HIGH", operatorTariffOption: "IV", shiftRate: 0 });
+  assert.ok(Math.abs(result.customer.totalAnnualBenefitWon - OPERATOR_REFERENCE_WON.HIGH_IV.total) < 1_000);
+  assert.ok(Math.abs(discountOnly.customer.totalAnnualBenefitWon - OPERATOR_REFERENCE_WON.HIGH_IV.discountOnly) < 1_000);
+});
+
+test("충전사업자 전체편익은 대상 대수와 무관하고 1대당 편익만 대수에 반비례한다", () => {
+  const base = simulateOperator();
+  const doubled = simulateOperator({ customerCount: DEFAULT_CUSTOMER_COUNTS.EV_CHARGING_OPERATOR * 2 });
+  // 1대당 부하 = 충전소 합산부하 ÷ 기준 대수이므로, 대상 대수를 바꾸면 전체편익이 그 비율로 늘어난다.
+  assert.ok(Math.abs(doubled.customer.totalAnnualBenefitWon - base.customer.totalAnnualBenefitWon * 2) < 1);
+  assert.ok(Math.abs(doubled.customer.annualBenefitPerCustomerWon - base.customer.annualBenefitPerCustomerWon) < 1e-9);
+});
+
+test("충전사업자는 시나리오 2-1·2-2를 지정해도 시나리오 1로 계산하고 안내한다", () => {
+  const scenarioOne = simulateOperator();
+  for (const shiftMode of ["EV_SCENARIO_2_1", "EV_SCENARIO_2_2", "RES_SCENARIO_2"] as const) {
+    const result = simulateOperator({ shiftMode });
+    assert.equal(result.customer.totalAnnualBenefitWon, scenarioOne.customer.totalAnnualBenefitWon);
+    assert.ok(result.warnings.some((warning) => warning.includes("시나리오 1(최대부하 균등이전)만")));
+  }
+});
+
+test("충전사업자도 봄·가을 주말 11~14시는 기존 50% 할인을 우선한다", () => {
+  const priority = simulateOperator({ weekendDiscountPriority: true });
+  const stacked = simulateOperator({ weekendDiscountPriority: false });
+  assert.ok(stacked.customer.totalAnnualBenefitWon > priority.customer.totalAnnualBenefitWon);
+});
+
+test("충전사업자 선택요금은 봄·가을 단가가 같은 선택Ⅰ~Ⅲ 사이에서 차이가 작다", () => {
+  const totals = (["I", "II", "III"] as const).map((option) => simulateOperator({ operatorTariffOption: option }).customer.totalAnnualBenefitWon);
+  const spread = (Math.max(...totals) - Math.min(...totals)) / Math.min(...totals);
+  assert.ok(spread < 0.05, `선택Ⅰ~Ⅲ 편차 ${(spread * 100).toFixed(1)}%`);
+});
+
+test("충전사업자 2024·2026 분석은 2025년 계절·요일 평균부하로 대체해 계산한다", () => {
+  for (const analysisYear of [2024, 2026] as const) {
+    const result = simulateOperator({ analysisYear });
+    assert.ok(result.eventDays > 0);
+    assert.ok(Number.isFinite(result.customer.totalAnnualBenefitWon) && result.customer.totalAnnualBenefitWon > 0);
+  }
+});
+
+test("충전사업자 현행 연간 전력량요금은 365일 실측부하에 요금표를 적용한 값이다", () => {
+  const result = simulateOperator();
+  // 연 60.2GWh에 저압 선택Ⅰ 평균단가(약 110~130원/kWh)를 곱한 수준이어야 한다.
+  const averageRate = result.utility.currentSalesRevenueWon / CHARGING_OPERATOR_DATA.annualKwh;
+  assert.ok(averageRate > 100 && averageRate < 140, `평균단가 ${averageRate.toFixed(1)}원/kWh`);
+});
+
+test("충전사업자에도 목표 1회당 편익 역산이 작동한다", () => {
+  const input = { ...DEFAULT_SIMULATION_INPUT, customerType: "EV_CHARGING_OPERATOR" as const, customerCount: 27_140 };
+  const current = perEventBenefitWon(input);
+  const solution = findTargetBenefitSettings(input, { targetPerEventBenefitWon: Math.round(current * 1.2), solveDiscount: true, solveShift: false });
+  assert.equal(solution.status, "OK");
+  assert.ok(solution.achievedPerEventBenefitWon >= Math.round(current * 1.2) - 0.5);
 });

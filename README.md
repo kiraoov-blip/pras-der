@@ -5,7 +5,7 @@
 
 | 경로 | 시뮬레이터 | 내용 |
 |------|-----------|------|
-| `/forecast` | 탐라는 전기예보 | 주택용 TOU·전기차 고객의 예보 할인 효과 |
+| `/forecast` | 탐라는 전기예보 | 주택용 TOU·전기차(자가소비용·충전사업자) 고객의 예보 할인 효과 |
 | `/hp` | 히트펌프 | Cosy 요금제 도입 시 고객·한전 손익 |
 | `/ev` | 전기차 충전 | 충전요금 할인과 부하이전 효과 |
 | `/pv-ess` | 태양광·ESS | 자가소비·계통연계 수익 구조 |
@@ -70,7 +70,7 @@ app/
   hp|ev|pv-ess/page.tsx      바닐라 시뮬레이터 라우트
   globals.css                PRAS 디자인 시스템 토큰 + 셸 스타일
 lib/
-  simulator/                 탐라 계산엔진·기준자료·타입
+  simulator/                 탐라 계산엔진·기준자료·타입 (충전사업자 실측부하 포함)
   base-path.ts               GitHub Pages basePath 처리
 public/sim/
   hp|ev|pv-ess/              바닐라 시뮬레이터 원본 (무수정)

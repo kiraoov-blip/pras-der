@@ -2,12 +2,15 @@ export type AnalysisYear = 2024 | 2025 | 2026;
 export type AnalysisSeason = "ALL" | "SHOULDER" | "SUMMER" | "WINTER";
 export type AnalysisDayType = "ALL" | "WEEKDAY" | "WEEKEND";
 export type EvTariffVoltage = "AUTO" | "LOW" | "HIGH";
+/** 전기자동차 충전전력요금(충전서비스 제공사업자용) 선택요금. IV는 전체시간 단일요금. */
+export type ChargingOperatorTariffOption = "I" | "II" | "III" | "IV";
 
 export type CustomerTypeCode =
   | "RESIDENTIAL_TOU"
   | "EV_TOTAL"
   | "EV_SLOW_LOW_VOLTAGE"
-  | "EV_FAST_HIGH_VOLTAGE";
+  | "EV_FAST_HIGH_VOLTAGE"
+  | "EV_CHARGING_OPERATOR";
 
 export type LoadShiftMode =
   | "SCENARIO_1"
@@ -44,6 +47,8 @@ export interface SimulationInput {
   customerType: CustomerTypeCode;
   /** EV charging speed and tariff supply voltage are separate dimensions. */
   evTariffVoltage: EvTariffVoltage;
+  /** 충전사업자용 선택요금(I~IV). 충전사업자 외 고객유형에서는 무시하며, 생략 시 I. */
+  operatorTariffOption?: ChargingOperatorTariffOption;
   customerCount: number;
   discountRate: number;
   /** Share of technically movable load that actually responds (0-1). */
