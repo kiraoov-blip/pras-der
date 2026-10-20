@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Renewable LCOE 시뮬레이터</title>
+<meta name="description" content="재생에너지 균등화 발전단가(LCOE) 시뮬레이터 — 태양광(PV LCOE)·풍력(Wind LCOE, 육상·해상) 중 분석 대상을 선택합니다.">
+<link rel="icon" href="favicon.svg">
+<!--
+  재생에너지 균등화 발전단가 선택 화면 (/renewable-lcoe/).
+  허브(도메인 루트) → 이 화면 → /renewable-lcoe/pv/ 또는 /renewable-lcoe/wind/ 로 들어가는
+  2단계 구조다. PRAS-DER(/pras/)가 허브 아래에서 다시 시뮬레이터를 고르게 하는 것과 같은 방식.
+  레이아웃·카드 구조는 허브(hub/index.html)의 .hero/.landing-grid/.landing-card를 그대로 쓰고,
+  카드 색만 각 시뮬레이터 본체와 같게(태양광 = 앰버, 풍력 = 하늘색) 지역적으로 덮어쓴다.
+-->
+<style>
+  @import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css");
+
+  :root {
+    --navy:#0b1f3a; --blue:#0284c7; --blue-soft:#e0f2fe; --ink:#101c31; --line:#d5deea;
+    --surface:#fff; --canvas:#f3f6fa;
+    /* 태양광(PV LCOE) — 시뮬레이터 본체와 같은 햇볕(앰버) 계열 */
+    --pv-brand:#b45309; --pv-brand-dark:#92400e; --pv-brand-soft:#fef3c7; --pv-brand-line:#fde68a;
+    /* 풍력(Wind LCOE) — 시뮬레이터 본체와 같은 하늘색 계열 */
+    --wind-brand:#0284c7; --wind-brand-dark:#0369a1; --wind-brand-soft:#e0f2fe; --wind-brand-line:#bae6fd;
+  }
+  * { box-sizing:border-box; }
+  html { background:var(--canvas); -webkit-text-size-adjust:100%; text-size-adjust:100%; }
+  body {
+    margin:0; overflow-x:hidden; background:var(--canvas); color:var(--ink);
+    font-family:"Pretendard","Noto Sans KR","Apple SD Gothic Neo",Arial,sans-serif;
+    font-weight:400; letter-spacing:-.02em; -webkit-font-smoothing:antialiased;
+    display:flex; flex-direction:column; min-height:100vh;
+  }
+  a { color:inherit; }
+  .page-shell { width:min(1480px,calc(100% - 48px)); margin:0 auto; }
+
+  /* ── 상단 내비게이션 (시뮬레이터 본체와 같은 구조) ── */
+  .site-nav { background:linear-gradient(90deg,#0a1e38 0%,#0e2a4f 55%,#102e57 100%); border-bottom:1px solid rgba(255,255,255,.08); position:sticky; top:0; z-index:50; }
+  .site-nav-inner { display:flex; align-items:center; gap:20px; height:52px; }
+  .site-brand { display:flex; align-items:baseline; gap:9px; color:#fff; font-size:15px; font-weight:800; text-decoration:none; flex:0 0 auto; }
+  .site-brand span { color:#c9d8ee; font-size:11px; font-weight:800; letter-spacing:.03em; padding:2px 7px; border:1px solid rgba(201,216,238,.4); border-radius:5px; background:rgba(255,255,255,.06); }
+  .site-nav ul { display:flex; align-items:center; gap:2px; list-style:none; margin:0; padding:0; min-width:0; overflow-x:auto; scrollbar-width:none; }
+  .site-nav ul a { display:block; padding:7px 12px; border-radius:8px; color:#c9d8ee; font-size:13px; font-weight:700; text-decoration:none; white-space:nowrap; transition:color .12s,background .12s; }
+  .site-nav ul a:hover { color:#fff; background:rgba(255,255,255,.09); }
+  .site-home-btn { text-decoration:none; margin-left:auto; flex:0 0 auto; display:flex; align-items:center; gap:6px; padding:6px 11px; border-radius:8px; color:#c9d8ee; font-size:12.5px; font-weight:700; white-space:nowrap; border:1px solid rgba(255,255,255,.2); transition:color .12s,background .12s,border-color .12s; }
+  .site-home-btn svg { width:15px; height:15px; }
+  .site-home-btn:hover { color:#fff; background:rgba(255,255,255,.1); border-color:rgba(255,255,255,.35); }
+
+  .hero {
+    color:#fff;
+    background:radial-gradient(circle at 82% 8%,rgba(251,191,36,.22),transparent 28%),
+               radial-gradient(circle at 60% 120%,rgba(56,189,248,.22),transparent 40%),
+               linear-gradient(118deg,#0b223d 0%,#12385f 62%,#124d69 100%);
+    padding:48px 0 42px;
+  }
+  .hero-eyebrow { color:#8fd1e6; font-size:11px; font-weight:800; letter-spacing:.06em; margin:0 0 10px; }
+  .hero h1 { font-size:clamp(20px,2.6vw,32px); line-height:1.28; letter-spacing:-.03em; margin:0 0 12px; font-weight:750; }
+  .hero p { margin:0; color:#bfd6e6; font-size:15px; line-height:1.6; font-weight:500; letter-spacing:-.01em; }
+
+  .workspace { padding:36px 0 48px; flex:1 0 auto; }
+  .landing-intro { margin:0 0 22px; display:grid; gap:6px; }
+  .landing-intro p { margin:0; color:#2168df; font-size:10px; font-weight:800; letter-spacing:.1em; }
+  .landing-intro h2 { margin:0; color:var(--navy); font-size:20px; letter-spacing:-.03em; }
+  .landing-intro span { color:#68768a; font-size:13px; line-height:1.65; word-break:keep-all; max-width:1100px; }
+
+  .landing-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; max-width:1000px; }
+  .landing-card {
+    display:grid; gap:9px; align-content:start; background:var(--surface); border:1px solid var(--line);
+    border-radius:18px; box-shadow:0 3px 12px rgba(24,45,72,.025); padding:26px;
+    text-decoration:none; transition:border-color .15s,box-shadow .15s,transform .15s;
+  }
+  .landing-card:hover { transform:translateY(-2px); }
+  .landing-card:focus-visible { outline:3px solid rgba(33,104,223,.22); outline-offset:2px; }
+  .landing-card-tag { justify-self:start; padding:4px 9px; border-radius:999px; font-size:10px; font-weight:800; letter-spacing:.02em; }
+  .landing-card-head { display:flex; align-items:center; gap:14px; min-width:0; }
+  .landing-card-icon { flex:0 0 auto; display:grid; place-items:center; width:48px; height:48px; border-radius:12px; border:1px solid; transition:background .15s,color .15s,border-color .15s; }
+  .landing-card-icon svg { width:26px; height:26px; display:block; }
+  .landing-card-head strong { min-width:0; overflow-wrap:anywhere; color:var(--navy); font-size:19px; letter-spacing:-.03em; font-weight:800; }
+  .landing-card-sub { margin:0; color:#9aa7b8; font-size:11.5px; font-weight:700; letter-spacing:.01em; }
+  .landing-card p.desc { margin:0; color:#68768a; font-size:13px; line-height:1.65; }
+  .landing-card ul.facts { margin:2px 0 0; padding:0; list-style:none; display:flex; flex-wrap:wrap; gap:6px; }
+  .landing-card ul.facts li { font-size:11.5px; font-weight:700; color:#5b6878; background:#f5f7fa; border:1px solid #e6ebf1; border-radius:999px; padding:3px 9px; }
+  .landing-card-go { font-size:11.5px; font-weight:800; margin-top:5px; }
+
+  .landing-card.pv .landing-card-tag { background:var(--pv-brand-soft); color:var(--pv-brand-dark); }
+  .landing-card.pv .landing-card-icon { background:var(--pv-brand-soft); color:var(--pv-brand-dark); border-color:var(--pv-brand-line); }
+  .landing-card.pv:hover { border-color:#fcd34d; box-shadow:0 6px 20px rgba(180,83,9,.12); }
+  .landing-card.pv:hover .landing-card-icon { background:var(--pv-brand); color:#fff; border-color:var(--pv-brand); }
+  .landing-card.pv .landing-card-go { color:var(--pv-brand-dark); }
+
+  .landing-card.wind .landing-card-tag { background:var(--wind-brand-soft); color:var(--wind-brand-dark); }
+  .landing-card.wind .landing-card-icon { background:var(--wind-brand-soft); color:var(--wind-brand-dark); border-color:var(--wind-brand-line); }
+  .landing-card.wind:hover { border-color:#7dd3fc; box-shadow:0 6px 20px rgba(2,132,199,.12); }
+  .landing-card.wind:hover .landing-card-icon { background:var(--wind-brand); color:#fff; border-color:var(--wind-brand); }
+  .landing-card.wind .landing-card-go { color:var(--wind-brand-dark); }
+
+  .note { margin-top:22px; max-width:1000px; color:#7a8798; font-size:12px; line-height:1.7; }
+
+  @media(max-width:820px) {
+    .landing-grid { grid-template-columns:1fr; }
+    .hero h1 { font-size:22px; line-height:1.36; }
+    .hero p { font-size:13px; }
+  }
+  @media(max-width:640px) {
+    .page-shell { width:calc(100% - 28px); }
+    .site-nav-inner { gap:10px; height:48px; }
+    .site-brand { font-size:14px; }
+    .site-home-btn span { display:none; }
+    .hero { padding:30px 0; }
+    .landing-card { padding:19px; border-radius:14px; }
+  }
+
+  footer { background:#0e2239; color:#aebccb; padding:21px 0; margin-top:auto; }
+  .footer-inner { display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px 20px; font-size:10px; }
+  .footer-inner span { color:#fff; font-weight:800; letter-spacing:.04em; }
+  .footer-inner p { margin:0; }
+</style>
+</head>
+<body>
+
+<nav class="site-nav" aria-label="재생에너지 LCOE 시뮬레이터">
+  <div class="page-shell site-nav-inner">
+    <a href="/renewable-lcoe/" class="site-brand">재생에너지 균등화 발전단가<span>Renewable LCOE</span></a>
+    <ul>
+      <li><a href="/renewable-lcoe/pv/">태양광</a></li>
+      <li><a href="/renewable-lcoe/wind/">풍력</a></li>
+    </ul>
+    <a class="site-home-btn" href="/" aria-label="처음 화면으로">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.6 11.4 12 4.4l8.4 7"/><path d="M5.7 10.2V19a1 1 0 0 0 1 1H9.6v-5.3h4.8V20h2.9a1 1 0 0 0 1-1v-8.8"/></svg>
+      <span>처음으로</span>
+    </a>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="page-shell">
+    <p class="hero-eyebrow">Renewable Energy Levelized Cost of Electricity Simulator</p>
+    <h1>재생에너지 균등화 발전단가 시뮬레이터</h1>
+    <p>분석 조건에 따른 재생에너지 LCOE 및 경제성 분석 — 분석할 발전원을 선택하세요.</p>
+  </div>
+</header>
+
+<div class="page-shell workspace">
+  <div class="landing-intro">
+    <p>시뮬레이터</p>
+    <h2>분석 대상을 선택하세요</h2>
+    <span>두 시뮬레이터는 에너지경제연구원(2024) 「중장기 발전단가(LCOE) 전망 시스템 구축(5/5)」의 전제조건을 기본값으로, 같은 계산 체계(명목 할인율·인플레이션·부채 원리금·누진 법인세)로 LCOE와 BC비율·IRR·NPV·회수기간, 수명기간 현금흐름과 민감도를 산출합니다.</span>
+  </div>
+
+  <div class="landing-grid">
+    <a href="/renewable-lcoe/pv/" class="landing-card pv">
+      <span class="landing-card-tag">PV LCOE</span>
+      <span class="landing-card-head">
+        <span class="landing-card-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="17.2" cy="5.6" r="2.6" />
+            <path d="M3.6 18.4 7.1 11.6h11.2l-2.3 6.8z" />
+            <path d="M9.9 11.6l-1.1 6.8M13.8 11.6l-.6 6.8M5.2 15.1h11.9" />
+            <path d="M11 18.4v2.4M8.6 20.8h4.8" />
+          </svg>
+        </span>
+        <span>
+          <strong>태양광 균등화 발전단가</strong>
+          <p class="landing-card-sub">PV LCOE Simulator</p>
+        </span>
+      </span>
+      <p class="desc">지상형 태양광의 설비비·운영유지비(항목별/비율)·토지비(임대/구매)·금융·법인세를 반영해 LCOE와 경제성을 산정합니다.</p>
+      <ul class="facts"><li>기본 100kW</li><li>이용률 15.4%</li><li>보고서 LCOE 136원/kWh</li></ul>
+      <span class="landing-card-go" aria-hidden="true">시뮬레이터 열기 →</span>
+    </a>
+    <a href="/renewable-lcoe/wind/" class="landing-card wind">
+      <span class="landing-card-tag">Wind LCOE</span>
+      <span class="landing-card-head">
+        <span class="landing-card-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 10.8 11.3 21h1.4z" fill="currentColor" stroke="none" />
+            <path d="M12 9.8c-.5-2.6-.4-5.2 0-7.3.4 2.1.5 4.7 0 7.3zM12.9 10.9c2.4.8 4.5 2.3 6 4-2.2-.5-4.3-1.6-6-4zM11.1 10.9c-1.7 1.9-3.7 3.2-6 4 1.5-1.7 3.6-3.1 6-4z" />
+            <path d="M8 21h8" />
+          </svg>
+        </span>
+        <span>
+          <strong>풍력 균등화 발전단가</strong>
+          <p class="landing-card-sub">Wind LCOE Simulator · 육상 / 해상</p>
+        </span>
+      </span>
+      <p class="desc">육상풍력(20·40MW)과 해상풍력(100MW) 표준설비를 골라 설비비·운영유지비·부지비·금융·법인세를 반영한 LCOE와 경제성을 산정합니다.</p>
+      <ul class="facts"><li>육상 20·40MW</li><li>해상 100MW</li><li>보고서 LCOE 육상 177~179 · 해상 271~300원/kWh</li></ul>
+      <span class="landing-card-go" aria-hidden="true">시뮬레이터 열기 →</span>
+    </a>
+  </div>
+
+  <p class="note">※ 보고서 LCOE는 2024년 기준 명목값이며, 해상풍력은 보고서가 4차년도 추정 결과를 반영한 값입니다. 시뮬레이터는 보고서 전제조건으로 계산 시 육상·태양광 ±2%, 해상 약 +4% 범위로 재현됩니다.</p>
+</div>
+
+<footer>
+  <div class="page-shell footer-inner">
+    <span>재생에너지 균등화 발전단가 시뮬레이터</span>
+    <p>태양광 균등화 발전단가(PV LCOE) · 풍력 균등화 발전단가(Wind LCOE · 육상/해상)</p>
+  </div>
+</footer>
+
+</body>
+</html>

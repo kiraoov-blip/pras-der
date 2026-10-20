@@ -1,0 +1,1254 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Wind LCOE 시뮬레이터</title>
+<link rel="icon" href="favicon.svg">
+<meta name="description" content="육상·해상 풍력발전 설비의 균등화 발전단가(LCOE)·BC비율·IRR·NPV·회수기간을 산정하는 경제성 분석 시뮬레이터">
+<style>
+  html{-webkit-text-size-adjust:100%}
+  :root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+  [hidden]{display:none!important}
+</style>
+</head>
+<body>
+<style>
+@import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css");
+
+:root{
+  color-scheme:light;
+  --navy:#0c4a6e; --blue:#0284c7; --blue-soft:#e0f2fe;
+  --canvas:#f2f7fb; --surface:#ffffff;
+  --ink:#0f2235; --ink-2:#475467; --muted:#667085; --label:#344054;
+  --line:#e6eef5; --line-2:#cfdbe6; --card-line:#d6e4ef;
+  --accent:#0284c7; --accent-soft:#e0f2fe;
+  --hl:#f59e0b; --hl-ink:#b45309; --hl-soft:#fff7e6; --hl-line:#fcd58a;
+  --good:#087f68; --bad:#bf2d1c; --warn-bg:#fffaeb; --warn-ink:#7a2e0e;
+  --up:#b45309; --down:#0f766e;
+  --sans:"Pretendard","Noto Sans KR","Apple SD Gothic Neo",Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{background:var(--canvas);scroll-behavior:smooth;scroll-padding-top:60px;-webkit-text-size-adjust:100%}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important}}
+body{margin:0;background:var(--canvas);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.5;letter-spacing:-.02em;-webkit-font-smoothing:antialiased;display:flex;flex-direction:column;min-height:100vh}
+button,input,select{font:inherit;color:inherit;letter-spacing:inherit;min-width:0}
+button{cursor:pointer}
+:focus-visible{outline:3px solid rgba(2,132,199,.28);outline-offset:2px}
+.page-shell{width:min(1480px,100%);margin:0 auto;padding-inline:20px}
+@media(max-width:640px){.page-shell{padding-inline:14px}}
+
+/* ── Nav ── */
+.site-nav{background:linear-gradient(90deg,#075985 0%,#0369a1 45%,#0284c7 100%);border-bottom:1px solid rgba(255,255,255,.18);position:sticky;top:env(safe-area-inset-top,0px);z-index:50}
+.site-nav-inner{display:flex;align-items:center;gap:20px;height:52px;padding:0 28px}
+.site-brand{display:flex;align-items:baseline;gap:9px;color:#fff;font-size:15px;font-weight:800;letter-spacing:-.02em;text-decoration:none;flex:0 0 auto}
+.site-brand span{color:#92400e;font-size:11px;font-weight:800;letter-spacing:.03em;padding:2px 7px;border:1px solid #fcd58a;border-radius:5px;background:#fef3c7}
+.site-nav ul{display:flex;align-items:center;gap:2px;list-style:none;margin:0;padding:0;min-width:0;overflow-x:auto;scrollbar-width:none}
+.site-nav ul::-webkit-scrollbar{display:none}
+.site-nav ul a{display:block;padding:7px 12px;border-radius:8px;color:#f0f9ff;font-size:13px;font-weight:700;letter-spacing:-.01em;text-decoration:none;white-space:nowrap;transition:color .12s,background .12s}
+.site-nav ul a:hover{color:#fff;background:rgba(255,255,255,.16)}
+.site-nav ul a.active{color:#0369a1;background:#fff;box-shadow:0 1px 3px rgba(3,105,161,.25)}
+.site-home-btn{margin-left:auto;flex:0 0 auto;display:flex;align-items:center;gap:6px;padding:6px 11px;border-radius:8px;color:#fff;font-size:12.5px;font-weight:700;white-space:nowrap;border:1px solid rgba(255,255,255,.45);background:transparent;text-decoration:none;transition:color .12s,background .12s,border-color .12s}
+.site-home-btn svg{width:15px;height:15px}
+.site-home-btn:hover{color:#fff;background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.7)}
+@media(max-width:640px){.site-nav-inner{gap:10px;height:48px;padding:0 14px}.site-brand{font-size:14px}.site-home-btn span{display:none}.site-home-btn{padding:7px 8px}.site-nav ul a{padding:6px 10px;font-size:12px}}
+
+/* ── Hero ── */
+.hero{color:#fff;background:radial-gradient(circle at 80% 12%,rgba(186,230,253,.42),transparent 30%),radial-gradient(circle at 18% 130%,rgba(56,189,248,.35),transparent 40%),linear-gradient(118deg,#035d8f 0%,#0478b8 38%,#0b98d8 72%,#38bdf8 100%);padding:28px 0}
+.hero-inner{padding:0 28px;display:grid;gap:6px}
+.hero h1{text-shadow:0 1px 2px rgba(3,105,161,.25);font-size:clamp(22px,2.5vw,32px);line-height:1.28;letter-spacing:-.04em;margin:0;font-weight:750}
+.hero p{margin:0;color:#f0f9ff;font-size:14px;font-weight:500;letter-spacing:-.01em;line-height:1.45}
+@media(max-width:640px){.hero{padding:16px 0}.hero-inner{padding:0 14px}.hero h1{font-size:20px}.hero p{font-size:12.5px}}
+
+/* ── Workspace ── */
+.workspace{padding-block:22px 54px;flex:1 0 auto}
+.dashboard-layout{display:flex;flex-direction:column;gap:16px}
+
+/* ── Section card ── */
+.sec{background:var(--surface);border:1px solid var(--card-line);border-radius:18px;box-shadow:0 3px 12px rgba(24,45,72,.03);padding:22px;min-width:0}
+.sec-h{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-start;gap:12px 20px;margin-bottom:20px}
+.eyebrow{margin:0 0 5px;color:var(--blue);font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase}
+.sec-h h2{margin:0;font-size:19px;letter-spacing:-.03em;color:var(--navy);font-weight:750}
+.sec-h .desc{margin:5px 0 0;color:#717782;font-size:13px;line-height:1.55}
+@media(max-width:640px){.sec{padding:16px;border-radius:14px}.sec-h h2{font-size:17px}}
+
+/* ── Tools / buttons ── */
+.tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.tools-wrap{display:flex;flex-direction:column;gap:8px;align-items:flex-end}
+.btn{border:1px solid var(--line-2);border-radius:9px;background:#fff;color:#555962;padding:8px 14px;font-size:13px;font-weight:750;white-space:nowrap;transition:border-color .12s,color .12s,background .12s}
+.btn:hover{border-color:#7dd3fc;color:var(--blue)}
+.btn:disabled{opacity:.5;cursor:progress}
+.btn.primary{border-color:#7dd3fc;background:var(--accent-soft);color:#0369a1}
+.btn.primary:hover{border-color:var(--blue);background:#bae6fd}
+.btn.run{background:var(--blue);border-color:var(--blue);color:#fff;padding:10px 22px;font-size:14px}
+.btn.run:hover{background:#0369a1;border-color:#0369a1}
+.text-button{border:0;background:transparent;color:#717782;font-size:12.5px;font-weight:700;padding:6px;border-radius:6px}
+.text-button:hover{color:var(--blue)}
+
+/* ── Form grid & fields ── */
+.grid-in{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 14px}
+.grid-in.top{grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px 14px}
+.grid-in.five{grid-template-columns:repeat(5,minmax(0,1fr));gap:16px 14px}
+.span2{grid-column:1/-1}
+.field{display:grid;gap:7px;min-width:0;align-content:start}
+.field>label{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:13px;font-weight:750;color:var(--label)}
+.field>label .unit{font-weight:700;color:var(--blue);font-size:11.5px}
+.hint{font-size:12px;color:#7e848f;line-height:1.5;font-weight:500}
+select,input[type=number],input[type=text]{width:100%;height:42px;border:1px solid var(--line-2);border-radius:10px;background:#fff;color:var(--ink);padding:0 12px;outline:0;font-size:13.5px}
+input[type=text]{text-align:right}
+input[type=number]{text-align:right;font-variant-numeric:tabular-nums}
+select{text-align:left}
+select:focus,input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(2,132,199,.15)}
+.seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:4px;height:42px;padding:4px;border-radius:11px;background:var(--blue-soft)}
+.seg-btn{border:0;border-radius:8px;background:transparent;color:#4f6b80;font-size:13.5px;font-weight:750}
+.seg-btn:hover{color:var(--blue)}
+.seg-btn.on{background:#fff;color:#0369a1;box-shadow:0 1px 3px rgba(3,105,161,.18)}
+.fixed-ref{height:42px;display:flex;align-items:center;justify-content:flex-end;padding:0 12px;border:1px dashed var(--line-2);border-radius:10px;background:#f5fafd;color:var(--navy);font-size:13.5px;font-weight:750;font-variant-numeric:tabular-nums}
+.cf-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px 16px;margin-bottom:10px}
+.cf-title{margin:0;font-size:13.5px;font-weight:750;color:var(--label)}
+.cf-legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12.5px;color:var(--ink-2);font-weight:600}
+.cf-legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.cf-legend i.ln{width:16px;height:0;border-top:2px solid #0f2235;border-radius:0;vertical-align:3px}
+.cf-legend i.ln.blue{border-top-color:#2a78d6}
+.cf-legend i.ln.dash{border-top:2px dashed #5f6b78}
+.cf-wrap{position:relative}
+.cf-chart{width:100%;min-height:320px}
+.cf-chart svg{display:block}
+.cf-chart .ax{font-size:11px;fill:#7c828d;font-variant-numeric:tabular-nums}
+.cf-chart .ax.be{fill:#0369a1;font-weight:700}
+.cf-chart .ax.lbl{fill:#0f2235;font-weight:750;font-size:12px}
+.cf-tip{position:absolute;top:10px;min-width:190px;background:#fff;border:1px solid var(--card-line);border-radius:10px;box-shadow:0 6px 18px rgba(15,34,53,.12);padding:10px 12px;font-size:12.5px;pointer-events:none;z-index:2}
+.cf-tip .th{font-weight:800;color:var(--navy);margin-bottom:6px}
+.cf-tip .tr{display:flex;align-items:center;gap:6px;color:var(--ink-2);padding:2px 0}
+.cf-tip .tr i{width:9px;height:9px;border-radius:2px;flex:0 0 auto}
+.cf-tip .tr b{margin-left:auto;padding-left:14px;color:var(--ink);font-variant-numeric:tabular-nums}
+.cf-tip .tr.tot{border-top:1px solid var(--line);margin-top:4px;padding-top:6px;font-weight:700}
+.cf-tip .unit{color:#9aa1ab;font-size:11px;margin-top:4px}
+.cf-details{margin-top:14px}
+.cf-details summary{cursor:pointer;font-size:13px;font-weight:700;color:var(--blue);padding:6px 0}
+.cf-details .tbl-wrap{margin-top:8px;max-height:420px;overflow:auto}
+.cf-tbl td:first-child{text-align:center}
+.seg-sm{height:36px;min-width:160px}
+.seg-sm .seg-btn{font-size:13px}
+.cost-bar{display:flex;height:12px;border-radius:99px;overflow:hidden;margin:18px 0 10px;background:var(--line)}
+.cost-bar span{min-width:0}
+.cost-legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12.5px;color:var(--ink-2);font-weight:600}
+.cost-legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.divider{border:0;border-top:1px solid #eaecf0;margin:18px 0}
+.sec-sub{font-size:14px;font-weight:800;letter-spacing:-.02em;color:var(--label);margin:0 0 12px}
+
+/* ── KPI cards (BPLE 공용 규격) ── */
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+.kpi{border:1px solid var(--card-line);border-radius:17px;padding:18px 17px;background:#fff;display:grid;gap:8px;align-content:start;min-height:126px;min-width:0}
+.kpi.lead{background:var(--hl-soft);border-color:var(--hl-line)}
+.kpi .k{margin:0;font-size:12.5px;font-weight:750;color:#676c77;display:flex;align-items:center;flex-wrap:wrap;gap:2px 5px}
+.kpi .v{color:var(--navy);font-size:26px;line-height:1.15;letter-spacing:-.04em;font-weight:800;overflow-wrap:anywhere}
+.kpi.lead .v{color:var(--hl-ink)}
+.kpi.pos .v{color:var(--good)}
+.kpi.good-card{background:#ecfaf5;border-color:#a9e2cf}
+.kpi.bad-card{background:#fff1f0;border-color:#f7c4bf}
+.kpi.neg .v{color:var(--bad)}
+.kpi .v small{font-size:13px;margin-left:4px;color:#717782;font-weight:700;letter-spacing:-.01em}
+.kpi .n{color:#7c828d;font-size:12px;line-height:1.4}
+.kpi .n b{color:var(--navy);font-weight:800}
+.tag{display:inline-block;padding:1px 7px;border-radius:999px;font-size:11px;font-weight:800}
+.tag.ok{background:#e3f6f1;color:var(--good)}
+.tag.ng{background:#fdecea;color:var(--bad)}
+@media(max-width:980px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:520px){.kpis{grid-template-columns:minmax(0,1fr)}}
+
+/* ── Sensitivity table ── */
+.tbl-wrap{border:1px solid var(--card-line);border-radius:12px;overflow:hidden}
+.sens-table{width:100%;border-collapse:collapse;font-size:13px}
+.sens-table thead{background:#f0f8fd;border-bottom:1px solid var(--line)}
+.sens-table th{padding:10px 14px;font-weight:750;color:var(--label);font-size:12px;text-align:left}
+.sens-table th:not(:first-child){text-align:right}
+.sens-table td{padding:9px 14px;border-bottom:1px solid #f2f4f7;color:#344054;font-size:13px}
+.sens-table tr:last-child td{border-bottom:0}
+.sens-table td:not(:first-child){text-align:right;font-variant-numeric:tabular-nums}
+.sens-table tr:hover td{background:#f5fafe}
+.sens-table tr.is-base td{background:var(--hl-soft)}
+.tbl-pos{color:var(--bad);font-weight:700}
+.tbl-neg{color:var(--good);font-weight:700}
+.tbl-base{color:#9fa3ab}
+.sens-table th.c,.sens-table td.c{text-align:center!important}
+.stepper{display:inline-flex;align-items:center;gap:6px}
+.stepper button{width:28px;height:28px;border:1px solid var(--line-2);border-radius:8px;background:#fff;color:var(--ink-2);font-size:15px;font-weight:800;line-height:1}
+.stepper button:hover{border-color:var(--blue);color:var(--blue);background:var(--blue-soft)}
+.stepper span{min-width:62px;text-align:center;font-weight:750;font-variant-numeric:tabular-nums;color:var(--ink-2)}
+.sens-table tr.changed td{background:#f5fbff}
+.sens-table tr.selected td{background:#eaf6fd}
+.sens-table th.sel-col,.sens-table td.sel-col{width:64px;white-space:nowrap}
+.sens-table th:nth-child(2),.sens-table td:nth-child(2){text-align:left!important}
+.sens-chk{width:17px;height:17px;accent-color:var(--blue);cursor:pointer}
+.combo{margin-bottom:14px}
+.combo-empty{border:1px dashed var(--line-2);border-radius:14px;padding:14px 16px;color:var(--muted);font-size:13px;background:#fafcfe}
+.combo-empty b{color:var(--blue)}
+.combo{display:block}
+.combo:has(.combo-main){display:flex;flex-wrap:wrap;gap:12px 20px;align-items:center;border:1px solid var(--hl-line);background:var(--hl-soft);border-radius:16px;padding:16px 18px}
+.combo-k{font-size:12.5px;font-weight:750;color:#676c77}
+.combo-v{font-size:26px;font-weight:800;letter-spacing:-.04em;color:var(--hl-ink);line-height:1.2}
+.combo-v small{font-size:13px;margin-left:4px;color:#717782;font-weight:700}
+.combo-d{font-size:12.5px;font-weight:700;color:var(--ink-2)}
+.combo-d.up{color:var(--bad)} .combo-d.down{color:var(--good)}
+.combo-chips{display:flex;flex-wrap:wrap;gap:6px;flex:1;min-width:220px}
+.chip{background:#fff;border:1px solid var(--hl-line);border-radius:999px;padding:4px 10px;font-size:12px;color:var(--ink-2);font-weight:600}
+.chip b{color:var(--blue);font-weight:800;margin-left:2px}
+.sens-table tr.changed .stepper span{color:var(--blue)}
+.sens-unit{color:#8a929c;font-size:11.5px;margin-left:3px}
+@media(max-width:760px){.tbl-wrap{overflow-x:auto}.sens-table{min-width:760px}}
+
+/* ── Empty / error state ── */
+.empty-state{padding:56px 24px;text-align:center;color:var(--muted)}
+.empty-icon{font-size:40px;margin-bottom:12px;opacity:.4}
+.empty-state p{font-size:14px;margin:0;line-height:1.6}
+.error-msg{background:#fff0ef;color:var(--bad);padding:13px 16px;border-radius:10px;font-size:13px;border-left:4px solid var(--bad)}
+
+/* ── Footer ── */
+footer{background:linear-gradient(90deg,#075985 0%,#0369a1 50%,#0284c7 100%);color:#e0f2fe;border-top:0;padding:20px 28px;font-size:11px;text-align:center;margin-top:auto}
+</style>
+
+<!-- ── Navigation ── -->
+<nav class="site-nav" aria-label="시뮬레이터">
+  <div class="site-nav-inner">
+    <a href="/renewable-lcoe/" class="site-brand" title="재생에너지 균등화 발전단가 선택 화면">풍력 균등화 발전단가<span>Wind LCOE</span></a>
+    <ul id="navList">
+      <li><a href="#s-input" class="active">분석 조건</a></li>
+      <li><a href="#s-result">산정 결과</a></li>
+      <li><a href="#s-econ">경제성 분석</a></li>
+      <li><a href="#s-cf">현금흐름</a></li>
+      <li><a href="#s-sens">민감도 분석</a></li>
+    </ul>
+    <a class="site-home-btn" href="/" aria-label="처음 화면으로">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.6 11.4 12 4.4l8.4 7"/><path d="M5.7 10.2V19a1 1 0 0 0 1 1H9.6v-5.3h4.8V20h2.9a1 1 0 0 0 1-1v-8.8"/></svg>
+      <span>처음으로</span>
+    </a>
+  </div>
+</nav>
+
+<main id="top" style="flex:1 0 auto;display:flex;flex-direction:column">
+  <!-- ── Hero ── -->
+  <header class="hero">
+    <div class="hero-inner">
+      <h1>풍력 균등화 발전단가 시뮬레이터</h1>
+      <p>육상·해상풍력의 분석 조건에 따른 LCOE 및 경제성 분석 시뮬레이터</p>
+    </div>
+  </header>
+
+  <div class="page-shell workspace">
+    <div class="dashboard-layout">
+
+      <!-- ─── 01 분석 조건 ─── -->
+      <section class="sec" id="s-input">
+        <div class="sec-h">
+          <div>
+            <p class="eyebrow">01 · Input</p>
+            <h2>분석 조건</h2>
+            <p class="desc">기본값은 에너지경제연구원(2024) 보고서의 풍력 표준설비 전제조건입니다. 풍력 구분과 기준 설비를 고르면 해당 값이 채워집니다.</p>
+          </div>
+          <div class="tools-wrap">
+            <div class="tools">
+              <button class="btn run" type="button" onclick="calculateLCOE()">📊 LCOE 계산</button>
+              <button class="text-button" type="button" onclick="resetForm()">초기화</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 발전 유형 -->
+        <p class="sec-sub">발전 유형</p>
+        <div class="grid-in top" style="margin-bottom:20px">
+          <div class="field">
+            <label>풍력 구분</label>
+            <div class="seg" role="radiogroup" aria-label="풍력 구분">
+              <button type="button" class="seg-btn on" data-type="onshore" role="radio" aria-checked="true">육상풍력</button>
+              <button type="button" class="seg-btn" data-type="offshore" role="radio" aria-checked="false">해상풍력</button>
+            </div>
+            <span class="hint" id="typeHint">육상 표준설비 기준값을 불러옵니다</span>
+          </div>
+          <div class="field">
+            <label for="preset">기준 설비 <span class="unit">에경연(2024)</span></label>
+            <select id="preset"></select>
+            <span class="hint" id="presetHint">선택하면 아래 입력값이 기준값으로 바뀝니다</span>
+          </div>
+        </div>
+
+        <hr class="divider">
+
+        <!-- 설비 및 비용 -->
+        <p class="sec-sub">설비 및 투자비</p>
+        <div class="grid-in top" style="margin-bottom:20px">
+          <div class="field">
+            <label for="capacity">용량 <span class="unit">MW</span></label>
+            <input type="text" id="capacity" value="20" inputmode="decimal">
+            <span class="hint">Capacity</span>
+          </div>
+          <div class="field">
+            <label for="totalInvest">총투자비용 <span class="unit">백만원</span></label>
+            <input type="text" id="totalInvest" value="58,560" inputmode="decimal">
+            <span class="hint">Total investment cost · 토지비 제외</span>
+          </div>
+          <div class="field">
+            <label>단위 설비비용 <span class="unit">천원/kW</span></label>
+            <div class="fixed-ref" id="outCapex">—</div>
+            <span class="hint">CAPEX · 산출값</span>
+          </div>
+        </div>
+
+        <hr class="divider">
+
+        <!-- 운영유지비 -->
+        <p class="sec-sub">운영 및 유지비용</p>
+        <div class="grid-in top" style="margin-bottom:20px">
+          <div class="field">
+            <label>입력 방식</label>
+            <div class="seg" role="radiogroup" aria-label="운영유지비 입력 방식">
+              <button type="button" class="seg-btn on" data-om="ratio" role="radio" aria-checked="true">투자비 비율</button>
+              <button type="button" class="seg-btn" data-om="item" role="radio" aria-checked="false">항목별 입력</button>
+            </div>
+            <span class="hint" id="omModeHint">총투자비용 × 비율</span>
+          </div>
+          <div class="field om-item om-on" hidden>
+            <label for="omSafety">전기안전관리자 선임 <span class="unit">백만원/년</span></label>
+            <input type="text" id="omSafety" value="126.777" inputmode="decimal">
+            <span class="hint">직접고용 기준</span>
+          </div>
+          <div class="field om-item om-on" hidden>
+            <label for="omInsure">보험료 <span class="unit">백만원/년</span></label>
+            <input type="text" id="omInsure" value="199.315" inputmode="decimal">
+            <span class="hint">엔지니어링공제조합 단가</span>
+          </div>
+          <div class="field om-item" hidden>
+            <label for="omMaint" id="omMaintLabel">유지관리 및 정비·보수 <span class="unit">백만원/년</span></label>
+            <input type="text" id="omMaint" value="713.302" inputmode="decimal">
+            <span class="hint" id="omMaintHint">발전소 운영 업체 조사 결과</span>
+          </div>
+          <div class="field om-ratio">
+            <label for="omRatio">운영 및 관리비율 <span class="unit">%/년</span></label>
+            <input type="number" id="omRatio" value="1.77" min="0" max="20" step="0.01">
+            <span class="hint" id="omRatioHint">총투자비용 대비</span>
+          </div>
+          <div class="field">
+            <label>연간 운영유지비용 <span class="unit">백만원/년</span></label>
+            <div class="fixed-ref" id="outOM">—</div>
+            <span class="hint" id="outOMNote">산출값</span>
+          </div>
+        </div>
+
+        <hr class="divider">
+
+        <!-- 토지비 -->
+        <p class="sec-sub">부지비</p>
+        <div class="grid-in top" style="margin-bottom:20px">
+          <div class="field">
+            <label>부지 확보 방식</label>
+            <div class="seg" role="radiogroup" aria-label="부지 확보 방식">
+              <button type="button" class="seg-btn on" data-land="lease" role="radio" aria-checked="true">임대</button>
+              <button type="button" class="seg-btn" data-land="buy" role="radio" aria-checked="false">구매</button>
+            </div>
+            <span class="hint" id="landModeHint">연간 임대료를 매년 비용으로 반영</span>
+          </div>
+          <div class="field" id="fLandLease">
+            <label for="annualLand" id="landLeaseLabel">연간 부지 임대료 <span class="unit">백만원/년</span></label>
+            <input type="text" id="annualLand" value="104.78" inputmode="decimal">
+            <span class="hint" id="landLeaseHint">Annual land costs</span>
+          </div>
+          <div class="field" id="fLandBuy" hidden>
+            <label for="landBuy">토지 매입비 <span class="unit">백만원</span></label>
+            <input type="text" id="landBuy" value="2,095.6" inputmode="decimal">
+            <span class="hint">필요면적 × 공시지가</span>
+          </div>
+          <div class="field" id="fLandYield" hidden>
+            <label for="landYield">기대이율 <span class="unit">%/년</span></label>
+            <input type="number" id="landYield" value="5" min="0" max="30" step="0.1">
+            <span class="hint">국유재산법 대부요율 1천분의 50</span>
+          </div>
+          <div class="field">
+            <label>연간 부지비용 <span class="unit">백만원/년</span></label>
+            <div class="fixed-ref" id="outLand">—</div>
+            <span class="hint" id="outLandNote">산출값</span>
+          </div>
+        </div>
+
+        <hr class="divider">
+
+        <!-- 발전 특성 -->
+        <p class="sec-sub">발전 특성</p>
+        <div class="grid-in top" style="margin-bottom:20px">
+          <div class="field">
+            <label for="capFactor">이용률 <span class="unit">%</span></label>
+            <input type="number" id="capFactor" value="23" min="0" max="100" step="0.1">
+            <span class="hint" id="cfHint">송전단 기준 · 전력거래소 실적 육상 23%</span>
+          </div>
+          <div class="field">
+            <label for="degradation">연간 성능저하율 <span class="unit">%/년</span></label>
+            <input type="number" id="degradation" value="0.3" min="0" max="5" step="0.01">
+            <span class="hint">Annual degradation rate</span>
+          </div>
+          <div class="field">
+            <label for="lifetime">경제 수명 <span class="unit">년</span></label>
+            <input type="number" id="lifetime" value="20" min="1" max="50" step="1">
+            <span class="hint">Economic lifetime</span>
+          </div>
+        </div>
+
+        <hr class="divider">
+
+        <!-- 재무 조건 -->
+        <p class="sec-sub">재무 조건</p>
+        <div class="grid-in top" style="margin-bottom:20px">
+          <div class="field">
+            <label for="discountRate">할인율 (실질) <span class="unit">%</span></label>
+            <input type="number" id="discountRate" value="4.5" min="0" max="30" step="0.1">
+            <span class="hint">Discount rate (real)</span>
+          </div>
+          <div class="field">
+            <label for="inflation">인플레이션 <span class="unit">%/년</span></label>
+            <input type="number" id="inflation" value="1.85" min="0" max="20" step="0.01">
+            <span class="hint">비용·수입 상승률</span>
+          </div>
+          <div class="field">
+            <label>할인율 (명목) <span class="unit">%</span></label>
+            <div class="fixed-ref" id="outNomRate">—</div>
+            <span class="hint">(1+실질)×(1+인플레이션)−1 · 산출값</span>
+          </div>
+          <div class="field">
+            <label for="interestRate">이자율 (명목) <span class="unit">%</span></label>
+            <input type="number" id="interestRate" value="5" min="0" max="30" step="0.01">
+            <span class="hint">Interest rate (nominal)</span>
+          </div>
+          <div class="field">
+            <label for="debtFraction">부채율 <span class="unit">%</span></label>
+            <input type="number" id="debtFraction" value="80" min="0" max="100" step="1">
+            <span class="hint">Debt fraction</span>
+          </div>
+          <div class="field">
+            <label for="debtTerm">부채 기간 <span class="unit">년</span></label>
+            <input type="number" id="debtTerm" value="15" min="0" max="50" step="1">
+            <span class="hint">원리금균등상환 · PF 대출 통상 10~15년, 보수적 가정</span>
+          </div>
+          <div class="field">
+            <label for="taxMode">법인세율 <span class="unit">누진</span></label>
+            <select id="taxMode">
+              <option value="2026" selected>2026년 이후 세율</option>
+              <option value="2024">2024~2025년 세율 (보고서)</option>
+              <option value="flat">단일세율 직접 입력</option>
+              <option value="none">미적용</option>
+            </select>
+            <span class="hint" id="taxHint">2억 이하 11% · 200억 이하 22% · 3천억 이하 24.2% · 초과 27.5% (지방소득세 포함)</span>
+          </div>
+          <div class="field" id="fTaxFlat" hidden>
+            <label for="taxRate">단일 법인세율 <span class="unit">%</span></label>
+            <input type="number" id="taxRate" value="11" min="0" max="60" step="0.1">
+            <span class="hint">Tax rate</span>
+          </div>
+        </div>
+
+        <hr class="divider">
+
+        <!-- 수익 조건 -->
+        <p class="sec-sub">수익 조건</p>
+        <div class="grid-in top" style="margin-bottom:20px">
+          <div class="field">
+            <label for="smp">계통한계가격 (SMP) <span class="unit">원/kWh</span></label>
+            <input type="number" id="smp" value="81.9" min="0" step="0.1">
+            <span class="hint">에경연(2024) 표 5-1 풍력 전제값 · 이후 인플레이션만큼 상승</span>
+          </div>
+          <div class="field">
+            <label for="recPrice">공급인증서 가격 (REC) <span class="unit">원/kWh</span></label>
+            <input type="number" id="recPrice" value="75" min="0" step="0.1">
+            <span class="hint">표 5-1 풍력 전제값 · 75,000원/REC(1MWh) ÷ 1,000</span>
+          </div>
+          <div class="field">
+            <label for="recWeight">가중치 <span class="unit">배</span></label>
+            <input type="number" id="recWeight" value="1.2" min="0" max="5" step="0.1">
+            <span class="hint" id="recWHint">표 5-1: 육상풍력 1.2 · 해상풍력 2.5</span>
+          </div>
+        </div>
+
+        <hr class="divider">
+
+        <!-- 추가 조건 -->
+        <p class="sec-sub">추가 조건</p>
+        <div class="grid-in top">
+          <div class="field">
+            <label for="decommPerKW">해체·철거비 <span class="unit">원/kW</span></label>
+            <input type="text" id="decommPerKW" value="0" inputmode="decimal">
+            <span class="hint">수명 마지막 해에 반영</span>
+          </div>
+          <div class="field">
+            <label for="selfUse">소내 소비율 <span class="unit">%</span></label>
+            <input type="number" id="selfUse" value="0" min="0" max="100" step="0.1">
+            <span class="hint">발전량에서 차감 (송전단 기준)</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ─── 02 산정 결과 ─── -->
+      <section class="sec" id="s-result">
+        <div class="sec-h">
+          <div>
+            <p class="eyebrow">02 · Result</p>
+            <h2>산정 결과</h2>
+          </div>
+        </div>
+
+        <div id="resultArea">
+          <div class="empty-state">
+            <div class="empty-icon">🌬️</div>
+            <p>파라미터를 입력하고 <strong>LCOE 계산</strong> 버튼을 누르면<br>균등화 발전단가와 경제성 지표가 표시됩니다.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ─── 03 경제성 분석 ─── -->
+      <section class="sec" id="s-econ" hidden>
+        <div class="sec-h">
+          <div>
+            <p class="eyebrow">03 · Economic Analysis</p>
+            <h2>경제성 분석</h2>
+            <p class="desc">BC비율·NPV는 LCOE와 같은 기준(부채·이자·누진 법인세 반영, 명목 할인율)으로, IRR·회수기간은 차입 전 프로젝트 세후 현금흐름 기준으로 산정합니다. SMP·REC와 비용은 인플레이션만큼 매년 상승합니다.</p>
+          </div>
+        </div>
+        <div class="kpis" id="kpisEcon"></div>
+      </section>
+
+      <!-- ─── 04 현금흐름 ─── -->
+      <section class="sec" id="s-cf" hidden>
+        <div class="sec-h">
+          <div>
+            <p class="eyebrow">04 · Cash Flow</p>
+            <h2>수명기간 현금흐름</h2>
+            <p class="desc">연도별 보기는 현금 유입(위)·유출(아래)과 순현금흐름(선)을, 누적 보기는 투자 회수 시점을 보여줍니다. 가로축은 운전 연차(0년차 = 투자 시점)이며, 그래프에 마우스를 올리면 금액이 표시됩니다.</p>
+          </div>
+          <div class="tools-wrap"><div class="tools">
+            <div class="seg seg-sm" role="radiogroup" aria-label="그래프 보기">
+              <button type="button" class="seg-btn on" data-cf="annual" role="radio" aria-checked="true">연도별</button>
+              <button type="button" class="seg-btn" data-cf="cum" role="radio" aria-checked="false">누적</button>
+            </div>
+          </div></div>
+        </div>
+        <div class="cf-head"><p class="cf-title" id="cfTitle"></p><div class="cf-legend" id="cfLegend"></div></div>
+        <div class="cf-wrap"><div id="cfChart" class="cf-chart"></div><div id="cfTip" class="cf-tip" hidden></div></div>
+        <details class="cf-details"><summary>연도별 현금흐름 표로 보기 (단위: 억원)</summary><div class="tbl-wrap" id="cfTable"></div></details>
+      </section>
+
+      <!-- ─── 05 민감도 분석 ─── -->
+      <section class="sec" id="s-sens" hidden>
+        <div class="sec-h">
+          <div>
+            <p class="eyebrow">05 · Sensitivity</p>
+            <h2>민감도 분석</h2>
+            <p class="desc">각 행의 LCOE는 그 항목만 바꿨을 때의 결과이고, 체크한 항목들은 위 상자에서 동시에 반영한 결과로 보여줍니다. 비율 항목은 ±1%p, 금액·수량 항목은 ±1%, 기간은 ±1년, 가중치는 ±0.1씩 바뀝니다.</p>
+          </div>
+          <div class="tools-wrap"><div class="tools"><button class="btn" type="button" onclick="resetSens()">변화 초기화</button></div></div>
+        </div>
+        <div class="combo" id="sensCombo"></div>
+        <div class="tbl-wrap">
+          <table class="sens-table">
+            <thead>
+              <tr>
+                <th class="c sel-col">선택</th>
+                <th>파라미터</th>
+                <th>기준값</th>
+                <th class="c">변화</th>
+                <th>변경값</th>
+                <th>LCOE (원/kWh)</th>
+                <th>기준 대비</th>
+              </tr>
+            </thead>
+            <tbody id="sensitivityBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+    </div><!-- /dashboard-layout -->
+  </div><!-- /workspace -->
+</main>
+
+<footer>
+  <p>💡 본 시뮬레이터는 참고용이며, 실제 사업 평가 시 전문가 검토가 필요합니다. — 풍력 균등화 발전단가 시뮬레이터 · 기본값·계산 체계는 에너지경제연구원(2024) 「중장기 발전단가(LCOE) 전망 시스템 구축(5/5)」 육상·해상풍력 전제조건 준용</p>
+</footer>
+
+<script>
+/* ══════════════════════════════════════════════════════════════
+   계산 체계 — 에너지경제연구원(2024) 「중장기 발전단가(LCOE) 전망 시스템 구축(5/5)」
+   풍력(육상 20·40MW, 해상 100MW) 전제조건(표 5-1, 3-14, 3-19, 3-20)과 KESIS LCOE 시뮬레이션 입력 체계를 준용
+   입력 금액 단위: 백만원, 용량: MW
+
+   명목 할인율 i_n = (1 + 실질 할인율)(1 + 인플레이션) − 1
+   비용(운영유지비·토지비)과 수입(SMP·REC)은 인플레이션만큼 매년 상승
+
+   LCOE = [자기자본 + Σ_t (운영유지비 + 토지비 + 이자 + 원금 + 법인세)_t / (1+i_n)^t]
+          / Σ_t 발전량_t / (1+i_n)^t
+
+   법인세_t = 누진세율( SMP·REC 수입 − 운영유지비 − 토지비 − 이자 − 감가상각 )
+   감가상각 = 총투자비용 ÷ 경제수명 (정액법, 토지 제외)
+══════════════════════════════════════════════════════════════ */
+/* 에경연(2024) 표 5-1·3-14·3-19·3-20 풍력 표준설비 전제조건 (금액 단위: 백만원) */
+const PRESETS = {
+  on20:  { type:'onshore',  label:'육상풍력 20MW', ref:178.7,
+           capacity:20,  totalInvest:58560,  omRatio:1.77, omSafety:126.777, omInsure:199.315, omMaint:713.302,
+           annualLand:104.78, landBuy:2095.6, capFactor:23, recWeight:1.2 },
+  on40:  { type:'onshore',  label:'육상풍력 40MW', ref:177,
+           capacity:40,  totalInvest:116400, omRatio:1.75, omSafety:227.592, omInsure:379.648, omMaint:1426.603,
+           annualLand:209.56, landBuy:4191.2, capFactor:23, recWeight:1.2 },
+  offLo: { type:'offshore', label:'해상풍력 100MW · 설비비 하한', ref:271,
+           capacity:100, totalInvest:550000, omRatio:2.27, omSafety:0, omInsure:0, omMaint:12506.916,
+           annualLand:549, landBuy:0, capFactor:29.4, recWeight:2.5 },
+  offHi: { type:'offshore', label:'해상풍력 100MW · 설비비 상한', ref:300,
+           capacity:100, totalInvest:646800, omRatio:1.93, omSafety:0, omInsure:0, omMaint:12506.916,
+           annualLand:549, landBuy:0, capFactor:29.4, recWeight:2.5 },
+};
+const COMMON = { landYield:5, degradation:0.3, lifetime:20, discountRate:4.5, inflation:1.85, interestRate:5,
+  debtFraction:80, debtTerm:15, taxMode:'2026', taxRate:11, smp:81.9, recPrice:75, decommPerKW:0, selfUse:0 };
+const COMMA_FIELDS = ['capacity','totalInvest','omSafety','omInsure','omMaint','annualLand','landBuy','decommPerKW'];
+let windType = 'onshore', presetKey = 'on20';
+/* 과세표준 구간별 법인세율(지방소득세 포함) */
+const TAX_TABLES = {
+  '2024': [[2e8, .099], [2e10, .209], [3e11, .231], [Infinity, .264]],
+  '2026': [[2e8, .110], [2e10, .220], [3e11, .242], [Infinity, .275]],
+};
+let omMode = 'ratio', landMode = 'lease';
+const M = 1e6;   // 백만원 → 원
+
+function num(id, def) {
+  const raw = String(document.getElementById(id).value).replace(/,/g,'').trim();
+  if (raw === '') return def;
+  const n = parseFloat(raw);
+  return isNaN(n) ? def : n;
+}
+function f1(v) { return v.toLocaleString('ko-KR', {minimumFractionDigits:1, maximumFractionDigits:1}); }
+function fmt(n) { return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+function won(v) {
+  const t = (v/1e8).toFixed(1).split('.');
+  return `${t[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',')}.${t[1]}<small>억원</small>`;
+}
+
+function corpTax(base, p) {
+  if (base <= 0 || p.taxMode === 'none') return 0;
+  const shift = p.taxShift || 0;
+  if (p.taxMode === 'flat') return base * Math.max(p.taxFlat + shift, 0);
+  let tax = 0, lo = 0;
+  for (const [hi, rate] of TAX_TABLES[p.taxMode]) {
+    if (base > lo) tax += (Math.min(base, hi) - lo) * Math.max(rate + shift, 0);
+    lo = hi;
+  }
+  return tax;
+}
+
+const NUM_IDS = {capacity:20,totalInvest:58560,omSafety:0,omInsure:0,omMaint:0,omRatio:1.77,
+  annualLand:0,landBuy:0,landYield:5,capFactor:23,degradation:0.3,lifetime:20,discountRate:4.5,inflation:1.85,
+  interestRate:5,debtFraction:80,debtTerm:15,taxRate:11,smp:81.9,recPrice:75,recWeight:1.2,decommPerKW:0,selfUse:0};
+
+function annualOMFrom(get) {
+  return omMode === 'item'
+    ? (windType === 'onshore' ? get('omSafety') + get('omInsure') : 0) + get('omMaint')
+    : get('totalInvest') * get('omRatio') / 100;
+}
+function annualLandFrom(get) {
+  return landMode === 'lease' ? get('annualLand') : get('landBuy') * get('landYield') / 100;
+}
+
+/* 화면 입력값 → 원시값 객체 */
+function rawValues() {
+  const v = {};
+  for (const [id, def] of Object.entries(NUM_IDS)) v[id] = num(id, def);
+  v.taxMode = document.getElementById('taxMode').value;
+  v.taxShift = 0;
+  return v;
+}
+/* 원시값 → 계산 파라미터 */
+function toParams(v) {
+  const get = id => v[id];
+  return {
+    kw: v.capacity * 1000, totalInvest: v.totalInvest * M,
+    annualOM: annualOMFrom(get) * M, annualLand: annualLandFrom(get) * M, omMode, landMode,
+    cf: v.capFactor / 100, deg: v.degradation / 100, life: Math.max(Math.round(v.lifetime), 1),
+    r: v.discountRate / 100, inf: v.inflation / 100, i: v.interestRate / 100,
+    debtFrac: v.debtFraction / 100, debtTerm: Math.round(v.debtTerm),
+    taxMode: v.taxMode, taxFlat: v.taxRate / 100, taxShift: v.taxShift / 100,
+    smp: v.smp, rec: v.recPrice, w: v.recWeight,
+    decommPerKW: v.decommPerKW, selfUse: v.selfUse / 100,
+  };
+}
+function readInputs() { return toParams(rawValues()); }
+
+/* 산출값 즉시 갱신 */
+function updateDerived() {
+  const get = id => num(id, 0);
+  const kw = get('capacity') * 1000, inv = get('totalInvest');
+  const om = annualOMFrom(get), land = annualLandFrom(get);
+  const f1 = v => v.toLocaleString('ko-KR', {maximumFractionDigits:1});
+  document.getElementById('outCapex').textContent = kw > 0 ? f1(inv * M / kw / 1000) : '—';
+  document.getElementById('outOM').textContent = f1(om);
+  document.getElementById('outOMNote').textContent = kw > 0 && inv > 0
+    ? `${fmt(om * M / kw)}원/kW·년 · 투자비의 ${(om / inv * 100).toFixed(2)}%` : '산출값';
+  document.getElementById('outLand').textContent = f1(land);
+  document.getElementById('outLandNote').textContent = kw > 0 ? `${fmt(land * M / kw)}원/kW·년` : '산출값';
+  const rn = (1 + get('discountRate')/100) * (1 + get('inflation')/100) - 1;
+  document.getElementById('outNomRate').textContent = (rn * 100).toFixed(2);
+}
+
+function model(p) {
+  const N = p.life;
+  const rn = (1 + p.r) * (1 + p.inf) - 1;                // 명목 할인율
+  const capex = p.totalInvest;
+  const term  = Math.min(Math.max(p.debtTerm, 0), N);
+  const debt  = term > 0 ? capex * p.debtFrac : 0;
+  const equity = capex - debt;
+  const pmt = debt > 0 ? (p.i === 0 ? debt / term : debt * p.i / (1 - Math.pow(1 + p.i, -term))) : 0;
+  const dep = capex / N;
+  const decomm = p.kw * p.decommPerKW;
+  const unitRev = p.smp + p.w * p.rec;
+
+  let bal = debt, pvCost = equity, pvEn = 0, pvEnReal = 0, pvRev = 0, lifeEnergy = 0, yr1 = 0;
+  const pv = { capex: equity, om: 0, land: 0, finance: 0, tax: 0, decomm: 0 };
+  const projCF = [-capex];
+  let cum = 0, payback = null, cumEq = -equity, cumProj = -capex;
+  const rows = [{ y:0, rev:0, om:0, land:0, debt:0, tax:0, decomm:0, equity, net:-equity, cumEq, cumProj }];
+
+  for (let y = 1; y <= N; y++) {
+    const esc = Math.pow(1 + p.inf, y - 1);
+    const E   = p.kw * 8760 * p.cf * Math.max(1 - (y - 1) * p.deg, 0) * (1 - p.selfUse);
+    if (y === 1) yr1 = E;
+    const om  = p.annualOM * esc;
+    const ld  = p.annualLand * esc;
+    const dc  = y === N ? decomm * esc : 0;
+    const interest  = y <= term ? bal * p.i : 0;
+    const principal = y <= term ? pmt - interest : 0;
+    bal -= principal;
+    const rev = E * unitRev * esc;
+    const tax = corpTax(rev - om - ld - dc - interest - dep, p);
+    const DF  = Math.pow(1 + rn, -y);
+
+    pv.om += om * DF; pv.land += ld * DF; pv.decomm += dc * DF;
+    pv.finance += (interest + principal) * DF; pv.tax += tax * DF;
+    pvCost += (om + ld + dc + interest + principal + tax) * DF;
+    pvEn   += E * DF;
+    pvEnReal += E * esc * (1 + p.inf) * DF;
+    pvRev  += rev * DF;
+    lifeEnergy += E;
+
+    // 프로젝트(무차입) 세후 현금흐름
+    const cf = rev - om - ld - dc - corpTax(rev - om - ld - dc - dep, p);
+    projCF.push(cf);
+    const net = rev - om - ld - dc - interest - principal - tax;
+    cumEq += net; cumProj += cf;
+    rows.push({ y, rev, om, land:ld, debt:interest + principal, tax, decomm:dc, equity:0, net, cumEq, cumProj });
+    if (payback === null) {
+      const prev = cum; cum += cf;
+      if (cum >= capex) payback = cf !== 0 ? y - 1 + (capex - prev) / cf : y;
+    }
+  }
+
+  return {
+    p, rn, capex, debt, equity, unitRev, yr1, lifeEnergy, pvCost, pvRev, pv,
+    lcoe: pvEn > 0 ? pvCost / pvEn : 0,
+    lcoeReal: pvEnReal > 0 ? pvCost / pvEnReal : 0,
+    npv: pvRev - pvCost,
+    bcr: pvCost > 0 ? pvRev / pvCost : 0,
+    irr: irr(projCF),
+    payback, rows,
+  };
+}
+
+function irr(cf) {
+  const npv = r => cf.reduce((s, c, t) => s + c / Math.pow(1 + r, t), 0);
+  let lo = -0.99, hi = 1.0, flo = npv(lo), fhi = npv(hi);
+  if (flo * fhi > 0) return NaN;
+  for (let k = 0; k < 200; k++) {
+    const mid = (lo + hi) / 2, fm = npv(mid);
+    if (Math.abs(fm) < 1e-6) return mid * 100;
+    if (flo * fm < 0) { hi = mid; fhi = fm; } else { lo = mid; flo = fm; }
+  }
+  return (lo + hi) / 2 * 100;
+}
+
+function calculateLCOE() {
+  try {
+    const p = readInputs();
+    if (p.kw <= 0) throw new Error('용량은 0보다 커야 합니다');
+    if (p.totalInvest <= 0) throw new Error('총투자비용은 0보다 커야 합니다');
+    if (p.life < 1) throw new Error('경제 수명은 1년 이상이어야 합니다');
+    if (p.cf <= 0) throw new Error('이용률은 0보다 커야 합니다');
+    showResults(model(p));
+  } catch (e) { showError(e.message); }
+}
+
+function showResults(r) {
+  document.getElementById('s-econ').hidden = false;
+  document.getElementById('s-sens').hidden = false;
+  document.getElementById('s-cf').hidden = false;
+  const p = r.p;
+  renderCashflow(r);
+  const lifeTxt = r.lifeEnergy >= 1e6
+    ? `${f1(r.lifeEnergy/1e6)}<small>GWh</small>` : `${f1(r.lifeEnergy/1e3)}<small>MWh</small>`;
+  const share = v => (v / r.pvCost * 100).toFixed(1);
+
+  document.getElementById('resultArea').innerHTML = `
+    <div class="kpis">
+      <div class="kpi lead">
+        <div class="k">균등화 발전단가 (LCOE)</div>
+        <div class="v">${r.lcoe.toFixed(1)}<small>원/kWh</small></div>
+        <div class="n">명목 기준 · 실질 <b>${r.lcoeReal.toFixed(1)}</b> 원/kWh${PRESETS[presetKey] && PRESETS[presetKey].ref ? ` · 보고서 ${PRESETS[presetKey].ref}` : ''}</div>
+      </div>
+      <div class="kpi">
+        <div class="k">용량</div>
+        <div class="v">${(p.kw/1000).toLocaleString('ko-KR',{maximumFractionDigits:1})}<small>MW</small></div>
+        <div class="n">1차년도 발전량 ${(r.yr1/1e6).toFixed(1)} GWh</div>
+      </div>
+      <div class="kpi">
+        <div class="k">총투자비용</div>
+        <div class="v">${f1(r.capex/1e8)}<small>억원</small></div>
+        <div class="n">부채 ${f1(r.debt/1e8)}억 · 자기자본 ${f1(r.equity/1e8)}억</div>
+      </div>
+      <div class="kpi">
+        <div class="k">수명기간 총 발전량</div>
+        <div class="v">${lifeTxt}</div>
+        <div class="n">${p.life}년 · 성능저하 반영</div>
+      </div>
+    </div>
+    <div class="cost-bar" aria-label="LCOE 비용 구성">
+      <span style="flex:${r.pv.capex + r.pv.finance};background:#0284c7"></span>
+      <span style="flex:${r.pv.om};background:#38bdf8"></span>
+      <span style="flex:${r.pv.land};background:#7dd3fc"></span>
+      <span style="flex:${r.pv.tax};background:#f59e0b"></span>
+      <span style="flex:${r.pv.decomm};background:#94a3b8"></span>
+    </div>
+    <div class="cost-legend">
+      <span><i style="background:#0284c7"></i>자본·금융비 ${share(r.pv.capex + r.pv.finance)}%</span>
+      <span><i style="background:#38bdf8"></i>운영유지비 ${share(r.pv.om)}%</span>
+      <span><i style="background:#7dd3fc"></i>부지비 ${share(r.pv.land)}%</span>
+      <span><i style="background:#f59e0b"></i>법인세 ${share(r.pv.tax)}%</span>
+      ${r.pv.decomm > 0 ? `<span><i style="background:#94a3b8"></i>해체비 ${share(r.pv.decomm)}%</span>` : ''}
+    </div>`;
+
+  const bcrOk = r.bcr >= 1, npvOk = r.npv >= 0, payOk = r.payback !== null;
+  document.getElementById('kpisEcon').innerHTML = `
+    <div class="kpi ${bcrOk?'pos good-card':'neg bad-card'}">
+      <div class="k">BC 비율 <span class="tag ${bcrOk?'ok':'ng'}">${bcrOk?'경제성 확보':'경제성 미흡'}</span></div>
+      <div class="v">${r.bcr.toFixed(2)}</div>
+      <div class="n">수입 현재가 ÷ 비용 현재가</div>
+    </div>
+    <div class="kpi">
+      <div class="k">내부수익률 (IRR)</div>
+      <div class="v">${isNaN(r.irr) ? '—' : r.irr.toFixed(1) + '<small>%</small>'}</div>
+      <div class="n">프로젝트 세후 · 명목 할인율 ${(r.rn*100).toFixed(2)}%</div>
+    </div>
+    <div class="kpi ${npvOk?'pos good-card':'neg bad-card'}">
+      <div class="k">순현재가치 (NPV) <span class="tag ${npvOk?'ok':'ng'}">${npvOk?'수익':'손실'}</span></div>
+      <div class="v">${won(r.npv)}</div>
+      <div class="n">수입 현재가 ${f1(r.pvRev/1e8)}억원</div>
+    </div>
+    <div class="kpi ${payOk?'':'neg'}">
+      <div class="k">투자 회수기간</div>
+      <div class="v">${payOk ? r.payback.toFixed(1)+'<small>년</small>' : '회수불가'}</div>
+      <div class="n">비할인 누적 세후 현금흐름 기준</div>
+    </div>`;
+
+  sensBaseRaw = rawValues(); sensBaseLCOE = r.lcoe; sensSteps = {}; sensSel = new Set();
+  renderSens();
+
+  document.getElementById('s-result').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+
+/* ── 민감도 분석 (파라미터별 단계 조정) ── */
+let sensBaseRaw = null, sensBaseLCOE = 0, sensSteps = {}, sensSel = new Set();
+/* kind: pp = %p, rel = 기준값 대비 %, yr = 년, abs = 고정 증감 */
+function sensRows(v) {
+  const rows = [
+    ['capacity','용량','MW','rel'],
+    ['totalInvest','총투자비용','백만원','rel'],
+  ];
+  if (omMode === 'ratio') rows.push(['omRatio','운영 및 관리비율','%','pp']);
+  else if (windType === 'onshore') rows.push(['omSafety','전기안전관리자 선임','백만원/년','rel'],['omInsure','보험료','백만원/년','rel'],['omMaint','유지관리 및 정비·보수','백만원/년','rel']);
+  else rows.push(['omMaint','운영유지비','백만원/년','rel']);
+  if (landMode === 'lease') rows.push(['annualLand', windType === 'onshore' ? '연간 부지 임대료' : '연간 부지 사용료','백만원/년','rel']);
+  else rows.push(['landBuy','토지 매입비','백만원','rel'],['landYield','기대이율','%','pp']);
+  rows.push(
+    ['capFactor','이용률','%','pp'], ['degradation','연간 성능저하율','%','pp'], ['lifetime','경제 수명','년','yr'],
+    ['discountRate','할인율 (실질)','%','pp'], ['inflation','인플레이션','%','pp'], ['interestRate','이자율 (명목)','%','pp'],
+    ['debtFraction','부채율','%','pp'], ['debtTerm','부채 기간','년','yr']);
+  if (v.taxMode === 'flat') rows.push(['taxRate','법인세율','%','pp']);
+  else if (v.taxMode !== 'none') rows.push(['taxShift','법인세율 (전 구간)','%p','pp']);
+  rows.push(['smp','계통한계가격 (SMP)','원/kWh','rel'], ['recPrice','공급인증서 가격 (REC)','원/kWh','rel'],
+    ['recWeight','REC 가중치','배','abs', 0.1], ['decommPerKW','해체·철거비','원/kW','abs', 1000], ['selfUse','소내 소비율','%','pp']);
+  return rows;
+}
+function sensValue(base, kind, steps, absStep) {
+  let x;
+  if (kind === 'rel') x = base * (1 + steps / 100);
+  else if (kind === 'abs') x = base + steps * absStep;
+  else x = base + steps;  // pp, yr
+  return x;
+}
+function fmtVal(x, id, unit) {
+  if (id === 'taxShift') return x === 0 ? '구간별 세율' : (x > 0 ? '+' : '') + x + '%p';
+  if (unit === '원/kW') return fmt(x);
+  if (unit.startsWith('백만원')) return x.toLocaleString('ko-KR', {maximumFractionDigits:1});
+  return parseFloat(x.toFixed(2)).toString();
+}
+function stepLabel(steps, kind, absStep) {
+  if (steps === 0) return '기준';
+  const sg = steps > 0 ? '+' : '−', a = Math.abs(steps);
+  if (kind === 'pp') return `${sg}${a}%p`;
+  if (kind === 'rel') return `${sg}${a}%`;
+  if (kind === 'yr') return `${sg}${a}년`;
+  return `${sg}${parseFloat((a * absStep).toFixed(2)).toLocaleString('ko-KR')}`;
+}
+function clampOK(id, x) {
+  if (x < 0 && id !== 'taxShift') return false;
+  if (id === 'capacity' || id === 'totalInvest' || id === 'capFactor' || id === 'lifetime') return x > 0;
+  if (id === 'debtFraction' || id === 'selfUse' || id === 'capFactor') return x <= 100;
+  return true;
+}
+function renderSens() {
+  if (!sensBaseRaw) return;
+  const body = document.getElementById('sensitivityBody');
+  let html = '';
+  for (const [id, label, unit, kind, absStep] of sensRows(sensBaseRaw)) {
+    const steps = sensSteps[id] || 0;
+    const base = sensBaseRaw[id];
+    const x = sensValue(base, kind, steps, absStep);
+    const v = {...sensBaseRaw, [id]: x};
+    const lcoe = model(toParams(v)).lcoe;
+    const chg = (lcoe - sensBaseLCOE) / sensBaseLCOE * 100;
+    const changed = steps !== 0;
+    const cls = !changed || Math.abs(chg) < 0.05 ? 'tbl-base' : chg > 0 ? 'tbl-pos' : 'tbl-neg';
+    const sel = sensSel.has(id);
+    html += `<tr class="${changed ? 'changed' : ''}${sel ? ' selected' : ''}">
+      <td class="c sel-col"><input type="checkbox" class="sens-chk" data-sel="${id}" ${sel ? 'checked' : ''} aria-label="${label} 동시 적용"></td>
+      <td>${label}</td>
+      <td>${fmtVal(base, id, unit)}<span class="sens-unit">${id === 'taxShift' ? '' : unit}</span></td>
+      <td class="c"><div class="stepper"><button type="button" data-id="${id}" data-d="-1" aria-label="${label} 감소">−</button><span>${stepLabel(steps, kind, absStep)}</span><button type="button" data-id="${id}" data-d="1" aria-label="${label} 증가">+</button></div></td>
+      <td>${changed ? fmtVal(x, id, unit) + `<span class="sens-unit">${id === 'taxShift' ? '' : unit}</span>` : '—'}</td>
+      <td>${lcoe.toFixed(1)}</td>
+      <td class="${cls}">${!changed ? '—' : (chg > 0 ? '+' : '') + chg.toFixed(1) + '%'}</td>
+    </tr>`;
+  }
+  body.innerHTML = html;
+  renderCombo();
+}
+function stepSens(id, d) {
+  const row = sensRows(sensBaseRaw).find(r => r[0] === id);
+  const next = (sensSteps[id] || 0) + d;
+  const x = sensValue(sensBaseRaw[id], row[3], next, row[4]);
+  if (!clampOK(id, x)) return;
+  sensSteps[id] = next;
+  if (next !== 0) sensSel.add(id);   // 값을 바꾸면 자동으로 동시 적용 대상에 포함
+  renderSens();
+}
+function resetSens() { sensSteps = {}; sensSel = new Set(); renderSens(); }
+
+/* 선택된 파라미터의 변화를 한꺼번에 반영한 결과 */
+function renderCombo() {
+  const box = document.getElementById('sensCombo');
+  const rows = sensRows(sensBaseRaw).filter(r => sensSel.has(r[0]) && (sensSteps[r[0]] || 0) !== 0);
+  if (!rows.length) {
+    box.innerHTML = `<div class="combo-empty">왼쪽 체크박스로 파라미터를 선택하면, 선택한 항목의 변화를 <b>동시에</b> 반영한 LCOE가 여기에 표시됩니다. 값을 −/+로 바꾸면 자동으로 선택됩니다.</div>`;
+    return;
+  }
+  const v = {...sensBaseRaw};
+  rows.forEach(([id, , , kind, absStep]) => { v[id] = sensValue(sensBaseRaw[id], kind, sensSteps[id], absStep); });
+  const m = model(toParams(v));
+  const chg = (m.lcoe - sensBaseLCOE) / sensBaseLCOE * 100;
+  const cls = Math.abs(chg) < 0.05 ? '' : chg > 0 ? 'up' : 'down';
+  const chips = rows.map(([id, label, , kind, absStep]) => `<span class="chip">${label} <b>${stepLabel(sensSteps[id], kind, absStep)}</b></span>`).join('');
+  box.innerHTML = `
+    <div class="combo-main">
+      <div class="combo-k">선택 ${rows.length}개 동시 적용 LCOE</div>
+      <div class="combo-v">${m.lcoe.toFixed(1)}<small>원/kWh</small></div>
+      <div class="combo-d ${cls}">기준 ${sensBaseLCOE.toFixed(1)} 대비 ${(chg > 0 ? '+' : '') + chg.toFixed(1)}% · BC ${m.bcr.toFixed(2)}</div>
+    </div>
+    <div class="combo-chips">${chips}</div>`;
+}
+
+
+/* ── 현금흐름 그래프 ── */
+const CF_SERIES = [
+  { key:'rev',     label:'판매수입 (SMP+REC)', color:'#2a78d6', sign: 1 },
+  { key:'om',      label:'운영유지비',          color:'#eb6834', sign:-1 },
+  { key:'land',    label:'부지비',              color:'#1baf7a', sign:-1 },
+  { key:'debt',    label:'원리금 상환',          color:'#e87ba4', sign:-1 },
+  { key:'tax',     label:'법인세',              color:'#eda100', sign:-1 },
+  { key:'decomm',  label:'해체비',              color:'#8b8f96', sign:-1 },
+  { key:'equity',  label:'자기자본 투입',        color:'#184f95', sign:-1 },
+];
+let cfView = 'annual', cfLast = null;
+const fmtMan = (v, d = 1) => (v / 1e8).toLocaleString('ko-KR', {minimumFractionDigits:d, maximumFractionDigits:d});
+
+function niceStep(range, target) {
+  const raw = range / target, mag = Math.pow(10, Math.floor(Math.log10(raw)));
+  const n = raw / mag;
+  return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 2.5 ? 2.5 : n <= 5 ? 5 : 10) * mag;
+}
+
+function renderCashflow(r) {
+  cfLast = r;
+  const rows = r.rows;
+  const used = CF_SERIES.filter(s => rows.some(d => d[s.key] > 0));
+  document.getElementById('cfLegend').innerHTML = (cfView === 'annual'
+    ? used.map(s => `<span><i style="background:${s.color}"></i>${s.label}</span>`).join('') +
+      `<span><i class="ln"></i>순현금흐름</span>`
+    : `<span><i class="ln blue"></i>누적 순현금흐름 (자기자본)</span><span><i class="ln dash"></i>누적 순현금흐름 (프로젝트)</span>`);
+  document.getElementById('cfTitle').textContent = cfView === 'annual'
+    ? '연도별 현금 유입·유출 (자기자본 관점, 명목)' : '누적 현금흐름 (명목, 비할인)';
+  cfView === 'annual' ? drawAnnual(rows, used) : drawCumulative(rows, r);
+  renderCfTable(rows);
+}
+
+function chartFrame(minV, maxV) {
+  const box = document.getElementById('cfChart');
+  const W = Math.max(box.clientWidth, 320), H = 320;
+  const m = { l: 64, r: 14, t: 26, b: 30 };
+  const step = niceStep(maxV - minV || 1, 6);
+  const lo = Math.floor(minV / step) * step, hi = Math.ceil(maxV / step) * step;
+  const y = v => m.t + (hi - v) / (hi - lo) * (H - m.t - m.b);
+  let grid = '';
+  for (let v = lo; v <= hi + step / 2; v += step) {
+    const yy = y(v).toFixed(1);
+    grid += `<line x1="${m.l}" x2="${W - m.r}" y1="${yy}" y2="${yy}" stroke="${Math.abs(v) < step/1e6 ? '#9aa3ad' : '#e6edf3'}" stroke-width="1"/>
+      <text x="${m.l - 8}" y="${+yy + 4}" text-anchor="end" class="ax">${fmtMan(v, step < 1e8 ? 1 : 0)}</text>`;
+  }
+  return { box, W, H, m, y, grid };
+}
+
+function xAxis(f, n, xc) {
+  let t = '';
+  const every = n > 26 ? 5 : n > 13 ? 2 : 1;
+  for (let i = 0; i < n; i++) if (i % every === 0 || i === n - 1)
+    t += `<text x="${xc(i).toFixed(1)}" y="${f.H - 10}" text-anchor="middle" class="ax">${i}</text>`;
+  return t;
+}
+
+function drawAnnual(rows, used) {
+  let maxV = 0, minV = 0;
+  rows.forEach(d => {
+    const pos = used.filter(s => s.sign > 0).reduce((a, s) => a + d[s.key], 0);
+    const neg = used.filter(s => s.sign < 0).reduce((a, s) => a + d[s.key], 0);
+    maxV = Math.max(maxV, pos); minV = Math.min(minV, -neg);
+  });
+  const f = chartFrame(minV, maxV), n = rows.length;
+  const band = (f.W - f.m.l - f.m.r) / n, bw = Math.max(Math.min(band * 0.62, 26), 4);
+  const xc = i => f.m.l + band * (i + 0.5);
+  let bars = '', line = '', hits = '';
+  rows.forEach((d, i) => {
+    let up = 0, dn = 0;
+    used.forEach(s => {
+      const v = d[s.key]; if (!(v > 0)) return;
+      let y0, y1;
+      if (s.sign > 0) { y0 = f.y(up + v); y1 = f.y(up); up += v; } else { y0 = f.y(-dn); y1 = f.y(-dn - v); dn += v; }
+      const h = Math.max(y1 - y0 - 1, 0.5);   // 1px 간격(세그먼트 구분)
+      bars += `<rect x="${(xc(i) - bw/2).toFixed(1)}" y="${(y0 + 0.5).toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="2" fill="${s.color}"/>`;
+    });
+    line += `${i ? 'L' : 'M'}${xc(i).toFixed(1)},${f.y(d.net).toFixed(1)}`;
+    hits += `<rect class="hit" data-i="${i}" x="${(xc(i) - band/2).toFixed(1)}" y="${f.m.t}" width="${band.toFixed(1)}" height="${f.H - f.m.t - f.m.b}" fill="transparent"/>`;
+  });
+  const dots = rows.map((d, i) => `<circle cx="${xc(i).toFixed(1)}" cy="${f.y(d.net).toFixed(1)}" r="3" fill="#0f2235" stroke="#fff" stroke-width="1.5"/>`).join('');
+  f.box.innerHTML = `<svg width="${f.W}" height="${f.H}" role="img" aria-label="연도별 현금흐름 막대 그래프">
+    ${f.grid}${bars}<path d="${line}" fill="none" stroke="#0f2235" stroke-width="2"/>${dots}
+    <line class="xh" x1="0" x2="0" y1="${f.m.t}" y2="${f.H - f.m.b}" stroke="#0f2235" stroke-opacity=".25" stroke-dasharray="3 3" visibility="hidden"/>
+    ${xAxis(f, n, xc)}
+    <text x="${f.m.l - 8}" y="11" text-anchor="end" class="ax">(억원)</text>
+    ${hits}</svg>`;
+  bindTip(rows, xc, d => {
+    const items = used.filter(s => d[s.key] > 0).map(s =>
+      `<div class="tr"><i style="background:${s.color}"></i>${s.label}<b>${s.sign > 0 ? '' : '−'}${fmtMan(d[s.key])}</b></div>`).join('');
+    return `<div class="th">${d.y}년차</div>${items}<div class="tr tot">순현금흐름<b>${fmtMan(d.net)}</b></div>`;
+  });
+}
+
+function drawCumulative(rows, r) {
+  const vals = rows.flatMap(d => [d.cumEq, d.cumProj]);
+  const f = chartFrame(Math.min(0, ...vals), Math.max(0, ...vals)), n = rows.length;
+  const band = (f.W - f.m.l - f.m.r) / n;
+  const xc = i => f.m.l + band * (i + 0.5);
+  const path = k => rows.map((d, i) => `${i ? 'L' : 'M'}${xc(i).toFixed(1)},${f.y(d[k]).toFixed(1)}`).join('');
+  const zero = f.y(0).toFixed(1);
+  const area = path('cumEq') + `L${xc(n-1).toFixed(1)},${zero}L${xc(0).toFixed(1)},${zero}Z`;
+  // 회수 시점(누적이 0을 넘는 시점) 표시
+  const cross = (k, color, label, dy) => {
+    for (let i = 1; i < n; i++) if (rows[i-1][k] < 0 && rows[i][k] >= 0) {
+      const t = rows[i-1][k] / (rows[i-1][k] - rows[i][k]);
+      const bx = xc(i-1) + t * band;
+      return `<line x1="${bx.toFixed(1)}" x2="${bx.toFixed(1)}" y1="${f.m.t}" y2="${f.H - f.m.b}" stroke="${color}" stroke-opacity=".7" stroke-dasharray="4 3"/>
+        <text x="${(bx + 6).toFixed(1)}" y="${f.m.t + dy}" class="ax be" style="fill:${color}">${label} ${(i - 1 + t).toFixed(1)}년</text>`;
+    }
+    return '';
+  };
+  const be = cross('cumEq', '#1f5fae', '자기자본 회수', 12) + cross('cumProj', '#4b5561', '프로젝트 회수', 28);
+  const hits = rows.map((d, i) => `<rect class="hit" data-i="${i}" x="${(xc(i) - band/2).toFixed(1)}" y="${f.m.t}" width="${band.toFixed(1)}" height="${f.H - f.m.t - f.m.b}" fill="transparent"/>`).join('');
+  const last = rows[n-1];
+  f.box.innerHTML = `<svg width="${f.W}" height="${f.H}" role="img" aria-label="누적 현금흐름 선 그래프">
+    ${f.grid}<path d="${area}" fill="#2a78d6" fill-opacity=".10"/>
+    <path d="${path('cumProj')}" fill="none" stroke="#5f6b78" stroke-width="2" stroke-dasharray="5 4"/>
+    <path d="${path('cumEq')}" fill="none" stroke="#2a78d6" stroke-width="2"/>
+    ${be}
+    <circle cx="${xc(n-1).toFixed(1)}" cy="${f.y(last.cumEq).toFixed(1)}" r="4" fill="#2a78d6" stroke="#fff" stroke-width="2"/>
+    <text x="${(xc(n-1) - 8).toFixed(1)}" y="${(f.y(last.cumEq) + (last.cumEq < last.cumProj ? 18 : -10)).toFixed(1)}" text-anchor="end" class="ax lbl">${fmtMan(last.cumEq)}억원</text>
+    <line class="xh" x1="0" x2="0" y1="${f.m.t}" y2="${f.H - f.m.b}" stroke="#0f2235" stroke-opacity=".25" stroke-dasharray="3 3" visibility="hidden"/>
+    ${xAxis(f, n, xc)}
+    <text x="${f.m.l - 8}" y="11" text-anchor="end" class="ax">(억원)</text>
+    ${hits}</svg>`;
+  bindTip(rows, xc, d => `<div class="th">${d.y}년차</div>
+    <div class="tr"><i style="background:#2a78d6"></i>누적 (자기자본)<b>${fmtMan(d.cumEq)}</b></div>
+    <div class="tr"><i style="background:#5f6b78"></i>누적 (프로젝트)<b>${fmtMan(d.cumProj)}</b></div>
+    <div class="tr tot">당해 순현금흐름<b>${fmtMan(d.net)}</b></div>`);
+}
+
+function bindTip(rows, xc, html) {
+  const box = document.getElementById('cfChart'), tip = document.getElementById('cfTip');
+  const svg = box.querySelector('svg'), xh = svg.querySelector('.xh');
+  const show = (i, cx) => {
+    tip.innerHTML = html(rows[i]) + '<div class="unit">단위: 억원</div>';
+    tip.hidden = false;
+    xh.setAttribute('x1', xc(i)); xh.setAttribute('x2', xc(i)); xh.setAttribute('visibility', 'visible');
+    const bw = box.clientWidth, tw = tip.offsetWidth;
+    let left = xc(i) + 14; if (left + tw > bw) left = xc(i) - tw - 14;
+    tip.style.left = Math.max(left, 0) + 'px';
+  };
+  svg.querySelectorAll('.hit').forEach(h => {
+    h.addEventListener('mouseenter', () => show(+h.dataset.i));
+    h.addEventListener('click', () => show(+h.dataset.i));
+  });
+  svg.addEventListener('mouseleave', () => { tip.hidden = true; xh.setAttribute('visibility', 'hidden'); });
+}
+
+function renderCfTable(rows) {
+  const head = ['연차','판매수입','운영유지비','부지비','원리금','법인세','해체비','자기자본','순현금흐름','누적(자기자본)'];
+  const body = rows.map(d => `<tr><td>${d.y}</td><td>${fmtMan(d.rev)}</td><td>${fmtMan(d.om)}</td><td>${fmtMan(d.land)}</td>
+    <td>${fmtMan(d.debt)}</td><td>${fmtMan(d.tax)}</td><td>${fmtMan(d.decomm)}</td><td>${fmtMan(d.equity)}</td>
+    <td class="${d.net < 0 ? 'tbl-pos' : ''}">${fmtMan(d.net)}</td><td class="${d.cumEq < 0 ? 'tbl-pos' : ''}">${fmtMan(d.cumEq)}</td></tr>`).join('');
+  document.getElementById('cfTable').innerHTML =
+    `<table class="sens-table cf-tbl"><thead><tr>${head.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table>`;
+}
+
+function setCfView(v) {
+  cfView = v; setSeg('cf', v);
+  if (cfLast) renderCashflow(cfLast);
+}
+
+const EMPTY_HTML = `
+  <div class="empty-state">
+    <div class="empty-icon">🌬️</div>
+    <p>분석 조건을 입력하고 <strong>LCOE 계산</strong> 버튼을 누르면<br>균등화 발전단가와 경제성 지표가 표시됩니다.</p>
+  </div>`;
+
+function showError(msg) {
+  document.getElementById('s-econ').hidden = true;
+  document.getElementById('s-sens').hidden = true;
+  document.getElementById('s-cf').hidden = true;
+  document.getElementById('resultArea').innerHTML = `<div class="error-msg">⚠️ ${msg}</div>`;
+}
+
+function setSeg(attr, mode) {
+  document.querySelectorAll(`.seg-btn[data-${attr}]`).forEach(b => {
+    const on = b.dataset[attr] === mode;
+    b.classList.toggle('on', on); b.setAttribute('aria-checked', on);
+  });
+}
+function setOMMode(mode) {
+  omMode = mode; setSeg('om', mode);
+  document.querySelectorAll('.om-item').forEach(el => el.hidden = mode !== 'item');
+  document.querySelectorAll('.om-ratio').forEach(el => el.hidden = mode !== 'ratio');
+  document.querySelectorAll('.om-on').forEach(el => el.hidden = mode !== 'item' || windType !== 'onshore');
+  document.getElementById('omModeHint').textContent = mode === 'item'
+    ? (windType === 'onshore' ? '3개 항목 연간 금액의 합계' : '단지운영·계획정비·고장정비 합계') : '총투자비용 × 비율';
+  updateDerived();
+}
+function setLandMode(mode) {
+  landMode = mode; setSeg('land', mode);
+  document.getElementById('fLandLease').hidden = mode !== 'lease';
+  document.getElementById('fLandBuy').hidden   = mode !== 'buy';
+  document.getElementById('fLandYield').hidden = mode !== 'buy';
+  document.getElementById('landModeHint').textContent = mode === 'lease'
+    ? '연간 임대료를 매년 비용으로 반영' : '매입비 × 기대이율을 연간 기회비용으로 반영';
+  updateDerived();
+}
+function setTaxMode() {
+  document.getElementById('fTaxFlat').hidden = document.getElementById('taxMode').value !== 'flat';
+  const m = document.getElementById('taxMode').value;
+  document.getElementById('taxHint').textContent = {
+    '2024':'2억 이하 9.9% · 200억 이하 20.9% · 3천억 이하 23.1% · 초과 26.4%',
+    '2026':'2억 이하 11% · 200억 이하 22% · 3천억 이하 24.2% · 초과 27.5%',
+    'flat':'모든 과세표준에 같은 세율 적용', 'none':'법인세 0' }[m] + (m==='2024'||m==='2026' ? ' (지방소득세 포함)' : '');
+}
+
+function fillPresetOptions() {
+  const sel = document.getElementById('preset');
+  sel.innerHTML = Object.entries(PRESETS).filter(([, v]) => v.type === windType)
+    .map(([k, v]) => `<option value="${k}"${k === presetKey ? ' selected' : ''}>${v.label}</option>`).join('');
+}
+function applyPreset(key) {
+  presetKey = key;
+  const pr = PRESETS[key], vals = {...COMMON, ...pr};
+  for (const [id, v] of Object.entries(vals)) {
+    const el = document.getElementById(id); if (!el || typeof v === 'object') continue;
+    el.value = COMMA_FIELDS.includes(id) ? Number(v).toLocaleString('ko-KR', {maximumFractionDigits:3}) : v;
+  }
+  document.getElementById('presetHint').textContent = `보고서 LCOE ${pr.ref}원/kWh (2024년 기준${pr.type === 'offshore' ? ', 해상은 4차년도 추정 반영' : ''})`;
+  setOMMode('ratio'); setLandMode('lease'); setTaxMode();
+}
+function setWindType(type, keepPreset) {
+  windType = type; setSeg('type', type);
+  const on = type === 'onshore';
+  if (!keepPreset) presetKey = on ? 'on20' : 'offLo';
+  fillPresetOptions();
+  document.getElementById('typeHint').textContent = on ? '육상 표준설비 기준값을 불러옵니다' : '해상 표준설비 기준값을 불러옵니다';
+  document.querySelector('.seg-btn[data-land="buy"]').hidden = !on;   // 해상은 공유수면 사용료(임대)만
+  document.getElementById('landLeaseLabel').innerHTML = (on ? '연간 부지 임대료' : '연간 부지 사용료') + ' <span class="unit">백만원/년</span>';
+  document.getElementById('landLeaseHint').textContent = on ? '공시지가 × 필요면적 × 기대이율 5%' : '공유수면 점사용료 0.9 + 개폐소·육상송전선로 임차 4.6 백만원/MW';
+  document.getElementById('omMaintLabel').innerHTML = (on ? '유지관리 및 정비·보수' : '운영유지비 (단지운영·정비)') + ' <span class="unit">백만원/년</span>';
+  document.getElementById('omMaintHint').textContent = on ? '발전소 운영 업체 조사 결과' : '2014년 11.4천원/kW에 물가상승률 반영';
+  document.getElementById('cfHint').textContent = on ? '송전단 기준 · 전력거래소 실적 육상 23%' : '송전단 기준 · 전력거래소 실적 해상 29.4%';
+  applyPreset(presetKey);
+}
+
+function resetForm() {
+  applyPreset(presetKey);
+  document.getElementById('s-econ').hidden = true;
+  document.getElementById('s-sens').hidden = true;
+  document.getElementById('s-cf').hidden = true;
+  document.getElementById('resultArea').innerHTML = EMPTY_HTML;
+}
+
+function setupInputs() {
+  COMMA_FIELDS.forEach(id => {
+    const el = document.getElementById(id);
+    el.addEventListener('blur',  function(){ const raw=this.value.replace(/,/g,'').trim(); const v=parseFloat(raw); if(raw!=='' && !isNaN(v)) this.value=v.toLocaleString('ko-KR'); });
+    el.addEventListener('focus', function(){ this.value=this.value.replace(/,/g,''); this.select(); });
+  });
+  document.querySelectorAll('#s-input input').forEach(el => el.addEventListener('input', updateDerived));
+  document.querySelectorAll('.seg-btn[data-om]').forEach(b => b.addEventListener('click', () => setOMMode(b.dataset.om)));
+  document.querySelectorAll('.seg-btn[data-land]').forEach(b => b.addEventListener('click', () => setLandMode(b.dataset.land)));
+  document.getElementById('taxMode').addEventListener('change', setTaxMode);
+  document.querySelectorAll('.seg-btn[data-type]').forEach(b => b.addEventListener('click', () => setWindType(b.dataset.type)));
+  document.getElementById('preset').addEventListener('change', e => applyPreset(e.target.value));
+  document.querySelectorAll('.seg-btn[data-cf]').forEach(b => b.addEventListener('click', () => setCfView(b.dataset.cf)));
+  let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => cfLast && renderCashflow(cfLast), 150); });
+  document.getElementById('sensitivityBody').addEventListener('click', e => {
+    const b = e.target.closest('button[data-id]'); if (b) stepSens(b.dataset.id, +b.dataset.d);
+  });
+  document.getElementById('sensitivityBody').addEventListener('change', e => {
+    const c = e.target.closest('input[data-sel]'); if (!c) return;
+    c.checked ? sensSel.add(c.dataset.sel) : sensSel.delete(c.dataset.sel);
+    renderSens();
+  });
+  updateDerived();
+}
+
+function setupNavSpy() {
+  const ids = ['s-input','s-result','s-econ','s-cf','s-sens'];
+  const obs = new IntersectionObserver(entries => entries.forEach(e => {
+    if (!e.isIntersecting) return;
+    document.querySelectorAll('.site-nav ul a').forEach(a => a.classList.toggle('active', a.getAttribute('href') === '#' + e.target.id));
+  }), {rootMargin:'-20% 0px -70% 0px'});
+  ids.forEach(id => obs.observe(document.getElementById(id)));
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.tagName === 'INPUT') calculateLCOE(); });
+document.addEventListener('DOMContentLoaded', () => { setupInputs(); setWindType('onshore'); setupNavSpy(); });
+</script>
+</body>
+</html>
