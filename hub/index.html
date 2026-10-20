@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>요금분석 시뮬레이터</title>
-<meta name="description" content="에너지 시뮬레이터 모음 — 분산에너지자원 요금·편익 분석(PRAS-DER), 계시별 요금제 수익 분석(PRAS-TOU), TOU 고객 요금·에너지관리(CARE-Jeju), 국가별 전기요금 비교(IEA Prices and Taxes), 국가별 발전·설비·배출 비교(EMBER Electricity), 한국전력통계 분석(KEPCO Statistics), 전력수급기본계획 비교(BPLE 1-11)">
+<meta name="description" content="에너지 시뮬레이터 모음 — 분산에너지자원 요금·편익 분석(PRAS-DER), 계시별 요금제 수익 분석(PRAS-TOU), TOU 고객 요금·에너지관리(CARE-Jeju), 국가별 전기요금 비교(IEA Prices and Taxes), 국가별 발전·설비·배출 비교(EMBER Electricity), 한국전력통계 분석(KEPCO Statistics), 전력수급기본계획 비교(BPLE 1-11), 태양광 균등화 발전단가(Solar LCOE)">
 <!-- 이전에는 PRAS-DER의 파란 파비콘(/pras/favicon.svg)을 허브도 그대로 썼는데,
      그러면 브라우저 탭에서 허브와 PRAS-DER가 똑같은 파란 아이콘으로 보여
      구분이 안 됐다. 허브 전용 회색 계열 파비콘을 새로 만들어(hub/favicon.svg,
@@ -59,6 +59,9 @@
        PRAS-DER(파랑)·PRAS-TOU(세이지)·CARE-Jeju(주황)·IEA(보라)·EMBER(와인)·
        KEPCO(네이비)와 겹치지 않는 자리로, 시뮬레이터 본체와 같은 틸(청록)을 쓴다. */
     --bple-brand:#0e7a8a; --bple-brand-dark:#0a5a66; --bple-brand-soft:#e7f3f5; --bple-brand-line:#bcdde2;
+    /* Solar LCOE 카드 전용 로컬 토큰 — 시뮬레이터 본체와 같은 하늘색 + 앰버(태양) 포인트.
+       BPLE(틸)·PRAS-DER(파랑)보다 밝은 스카이 계열이라 서로 구분된다. */
+    --lcoe-brand:#0284c7; --lcoe-brand-dark:#0369a1; --lcoe-brand-soft:#e0f2fe; --lcoe-brand-line:#bae6fd; --lcoe-sun:#f59e0b;
   }
   * { box-sizing:border-box; }
   html { background:var(--canvas); -webkit-text-size-adjust:100%; text-size-adjust:100%; }
@@ -97,6 +100,7 @@
   /* 카드가 7개(+ BPLE 1-11)가 되면 3열은 3+3+1로 마지막 줄에 한 장만 남는다.
      4열로 올리면 4+3이 되어 외톨이 카드가 없어진다 — 카드 4장이던 시절과 같은
      폭(1480px 컨테이너에서 ~345px)이라 이미 검증된 배치다. */
+  /* 카드가 8개(+ Solar LCOE)가 되면 4열에서 4+4로 꽉 찬다. 열 수는 그대로 둔다. */
   .landing-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:16px; }
   .landing-card {
     display:grid; gap:9px; align-content:start; background:var(--surface); border:1px solid var(--line);
@@ -158,6 +162,14 @@
   .landing-card.bple:hover .landing-card-icon { background:var(--bple-brand); color:#fff; border-color:var(--bple-brand); }
   .landing-card.bple .landing-card-go { color:var(--bple-brand-dark); }
 
+  /* Solar LCOE 카드: 브랜드색만 로컬로 덮어씀(구조·spacing은 동일, 하늘색 + 앰버 포인트) */
+  .landing-card.lcoe .landing-card-tag { background:var(--lcoe-brand-soft); color:var(--lcoe-brand-dark); }
+  .landing-card.lcoe .landing-card-icon { background:var(--lcoe-brand-soft); color:var(--lcoe-brand-dark); border-color:var(--lcoe-brand-line); }
+  .landing-card.lcoe .landing-card-icon .pt { fill:var(--lcoe-sun); stroke:none; }
+  .landing-card.lcoe:hover { border-color:#7dd3fc; box-shadow:0 6px 20px rgba(2,132,199,.12); }
+  .landing-card.lcoe:hover .landing-card-icon { background:var(--lcoe-brand); color:#fff; border-color:var(--lcoe-brand); }
+  .landing-card.lcoe .landing-card-go { color:var(--lcoe-brand-dark); }
+
   /* PRAS-TOU 카드: 브랜드색만 로컬로 덮어씀(구조·spacing은 동일, 파스텔 회색+초록) */
   .landing-card.tou .landing-card-tag { background:var(--tou-brand-soft); color:var(--tou-brand-dark); }
   .landing-card.tou .landing-card-icon { background:var(--tou-brand-soft); color:var(--tou-brand-dark); border-color:var(--tou-brand-line); }
@@ -207,7 +219,7 @@
 <div class="page-shell workspace">
   <div class="landing-intro">
     <p>시뮬레이터 선택</p>
-    <span>국내 시뮬레이터 세 종은 시간대별(TOU) 요금체계를 기준으로 분산자원 · 전력판매 매출 · 가정 고객을 분석하고, IEA 시뮬레이터는 국가별 전기요금 수준을, EMBER 시뮬레이터는 국가별 발전량·설비용량·배출량을 비교합니다. KEPCO Statistics 시뮬레이터는 한국전력통계로 국내 판매·요금·발전·설비의 장기 추이를 분석합니다. BPLE 시뮬레이터는 1~11차 전력수급기본계획의 수요전망과 전원구성을 비교합니다.</span>
+    <span>국내 시뮬레이터 세 종은 시간대별(TOU) 요금체계를 기준으로 분산자원 · 전력판매 매출 · 가정 고객을 분석하고, IEA 시뮬레이터는 국가별 전기요금 수준을, EMBER 시뮬레이터는 국가별 발전량·설비용량·배출량을 비교합니다. KEPCO Statistics 시뮬레이터는 한국전력통계로 국내 판매·요금·발전·설비의 장기 추이를 분석합니다. BPLE 시뮬레이터는 1~11차 전력수급기본계획의 수요전망과 전원구성을 비교합니다. Solar LCOE 시뮬레이터는 분석 조건에 따른 태양광 균등화 발전단가와 경제성을 산정합니다.</span>
   </div>
 
   <div class="landing-grid">
@@ -359,13 +371,33 @@
       <p class="desc">제1~11차 전력수급기본계획 비교 시뮬레이터 — 계획별 수요전망·설비예비율·전원구성을 원문 수치로 비교하고, 수요·예비율·전원구성 전제를 바꿔 설비 과부족과 발전량·온실가스 배출을 재계산합니다.</p>
       <span class="landing-card-go" aria-hidden="true">시뮬레이터 열기 →</span>
     </a>
+    <a href="/lcoe/" class="landing-card lcoe">
+      <span class="landing-card-tag">Solar LCOE</span>
+      <span class="landing-card-head">
+        <span class="landing-card-icon" aria-hidden="true">
+          <!-- 태양(앰버 포인트)과 태양광 패널 — 태양광 발전단가를 상징한다. -->
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <circle class="pt" cx="17.2" cy="5.6" r="2.6" />
+            <path d="M3.6 18.4 7.1 11.6h11.2l-2.3 6.8z" />
+            <path d="M9.9 11.6l-1.1 6.8M13.8 11.6l-.6 6.8M5.2 15.1h11.9" />
+            <path d="M11 18.4v2.4M8.6 20.8h4.8" />
+          </svg>
+        </span>
+        <span>
+          <strong>태양광 균등화 발전단가</strong>
+          <p class="landing-card-sub">Solar LCOE Simulator</p>
+        </span>
+      </span>
+      <p class="desc">분석 조건에 따른 LCOE 및 경제성 분석 시뮬레이터 — 에너지경제연구원(2024) 전제조건을 기준으로 LCOE·BC비율·IRR·NPV와 수명기간 현금흐름, 민감도를 확인합니다.</p>
+      <span class="landing-card-go" aria-hidden="true">시뮬레이터 열기 →</span>
+    </a>
   </div>
 </div>
 
 <footer>
   <div class="page-shell footer-inner">
     <span>전기 사용 및 요금 분석 시뮬레이터</span>
-    <p>분산에너지자원(PRAS-DER) · 계시별 요금제 수익 분석(PRAS-TOU) · 가정용 TOU 요금·에너지관리(CARE-Jeju) · 국가별 전기요금 비교(IEA Prices and Taxes) · 국가별 발전·설비 비교(EMBER Electricity) · 한국전력통계 분석(KEPCO Statistics) · 전력수급기본계획 비교(BPLE 1-11)</p>
+    <p>분산에너지자원(PRAS-DER) · 계시별 요금제 수익 분석(PRAS-TOU) · 가정용 TOU 요금·에너지관리(CARE-Jeju) · 국가별 전기요금 비교(IEA Prices and Taxes) · 국가별 발전·설비 비교(EMBER Electricity) · 한국전력통계 분석(KEPCO Statistics) · 전력수급기본계획 비교(BPLE 1-11) · 태양광 균등화 발전단가(Solar LCOE)</p>
   </div>
 </footer>
 
