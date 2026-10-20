@@ -127,6 +127,7 @@ jobs:
           cp -r bple public-root/bple
           # lcoe(태양광 균등화 발전단가)도 같은 방식의 정적 폴더다. index.html 한 장 + favicon,
           # 외부 의존성은 Pretendard 웹폰트(CDN)뿐이라 폴더째 복사하면 된다.
+          cp -r renewable-lcoe public-root/renewable-lcoe
           cp -r lcoe public-root/lcoe
 
       - name: Upload GitHub Pages artifact
