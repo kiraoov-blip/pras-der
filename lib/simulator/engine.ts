@@ -9,6 +9,7 @@ import type {
   SimulationResult,
   TargetBenefitSolution,
   TargetBenefitSolveOptions,
+  TouPeriod,
 } from "./types";
 import { SELECTABLE_APPLIANCES } from "./appliances";
 import {
@@ -19,7 +20,7 @@ import {
 } from "./reference-data.generated";
 import { CHARGING_OPERATOR_DATA } from "./charging-operator-data.generated";
 
-export const ENGINE_VERSION = "2.9.0-seasonal-appliance-scale";
+export const ENGINE_VERSION = "2.10.0-shift-by-period";
 
 type BaseCustomerType = Exclude<CustomerTypeCode, "EV_TOTAL">;
 /** 계절별 대표 부하곡선을 쓰는 고객유형. 충전사업자는 날짜별 실측부하를 쓴다. */
@@ -42,7 +43,27 @@ type HourlyRoute = {
   sourceSavingWon?: number;
   /** 옮겨 온 양의 원래 날 SMP 구입비(원) — 구입비 변화에서 뺀다. */
   sourceSmpCostWon?: number;
+  /** 옮겨 온 양을 원래 날의 경·중·최 시간대로 나눈 값(kWh, 1대당). */
+  sourceByPeriodKwh?: Record<TouPeriod, number>;
 };
+
+export const TOU_PERIODS: readonly TouPeriod[] = ["OFF_PEAK", "MID_PEAK", "ON_PEAK"];
+
+/**
+ * 제주 계시별 시간대 구분(계절 공통): 평일 경부하 22~08시, 중간부하 08~16시, 최대부하 16~22시.
+ * 토요일은 최대부하를 중간부하로, 일요일·공휴일은 전 시간을 경부하로 본다.
+ * 주택용 TOU는 요일 구분 없이 평일 시간대를 쓴다(tariffRates와 같은 규칙).
+ */
+export function touPeriodFor(type: BaseCustomerType, dayType: ReferenceDayType, hour: number): TouPeriod {
+  const weekday: TouPeriod = hour < 8 || hour >= 22 ? "OFF_PEAK" : hour < 16 ? "MID_PEAK" : "ON_PEAK";
+  if (type === "RESIDENTIAL_TOU" || dayType === "WEEKDAY") return weekday;
+  if (dayType === "SATURDAY") return weekday === "ON_PEAK" ? "MID_PEAK" : weekday;
+  return "OFF_PEAK";
+}
+
+function emptyPeriodKwh(): Record<TouPeriod, number> {
+  return { OFF_PEAK: 0, MID_PEAK: 0, ON_PEAK: 0 };
+}
 type SelectedEvent = ReferenceEvent & { hours: number[] };
 type LoadProfileMap = Record<RepresentativeCustomerType, Record<ReferenceSeason, readonly number[]>>;
 type ApplianceProfileMap = Record<string, Record<ApplianceCode, readonly number[]>>;
@@ -644,12 +665,13 @@ function operatorWeekSource(
   year: AnalysisYear,
   evTariffVoltage: EvTariffVoltage,
   operatorOption: ChargingOperatorTariffOption,
-): { kwh: number; billWon: number; eventDaysInWeek: number } {
+): { kwh: number; billWon: number; eventDaysInWeek: number; byPeriodKwh: Record<TouPeriod, number> } {
   const eventDates = new Set(EVENTS[String(year) as `${AnalysisYear}`].map((item) => item.date));
   const monday = isoWeekStart(event.date);
   let kwh = 0;
   let billWon = 0;
   let eventDaysInWeek = 0;
+  const byPeriodKwh = emptyPeriodKwh();
   for (let offset = 0; offset < 7; offset += 1) {
     const date = addDays(monday, offset);
     if (eventDates.has(date)) { eventDaysInWeek += 1; continue; }
@@ -659,9 +681,10 @@ function operatorWeekSource(
     const dayType = operatorDayType(date);
     const load = actual ? perOperatorUser(actual) : operatorAverageProfile(season, dayType);
     kwh += load.reduce((sum, value) => sum + value, 0);
+    load.forEach((value, hour) => { byPeriodKwh[touPeriodFor("EV_CHARGING_OPERATOR", dayType, hour)] += value; });
     billWon += dot(load, tariffRates("EV_CHARGING_OPERATOR", season, dayType, evTariffVoltage, operatorOption));
   }
-  return { kwh, billWon, eventDaysInWeek: Math.max(1, eventDaysInWeek) };
+  return { kwh, billWon, eventDaysInWeek: Math.max(1, eventDaysInWeek), byPeriodKwh };
 }
 
 /**
@@ -697,6 +720,9 @@ function operatorEventRoute(
     dayShiftedKwh: added,
     sourceSavingWon: source.billWon * (added / source.kwh),
     sourceSmpCostWon: added * typicalSmp,
+    sourceByPeriodKwh: Object.fromEntries(
+      TOU_PERIODS.map((period) => [period, source.byPeriodKwh[period] * (added / source.kwh)]),
+    ) as Record<TouPeriod, number>,
   };
 }
 
@@ -824,6 +850,8 @@ export function runSimulation(rawInput: SimulationInput): SimulationResult {
   let benefitPerCustomer = 0;
   let movedKwhPerCustomer = 0;
   let dayShiftedKwhPerCustomer = 0;
+  const decreaseByPeriod = emptyPeriodKwh();
+  const increaseByPeriod = emptyPeriodKwh();
   let smpCostChangePerCustomer = 0;
   let annualCurrentBill = 0;
   const chartBase = Array.from({ length: 24 }, () => 0);
@@ -848,6 +876,17 @@ export function runSimulation(rawInput: SimulationInput): SimulationResult {
         * occurrenceWeight * weight;
       movedKwhPerCustomer += route.movedKwh * occurrenceWeight * weight;
       dayShiftedKwhPerCustomer += (route.dayShiftedKwh ?? 0) * occurrenceWeight * weight;
+      for (let hour = 0; hour < 24; hour += 1) {
+        const change = (route.shifted[hour] - route.base[hour]) * occurrenceWeight * weight;
+        const period = touPeriodFor(type, event.dayType, hour);
+        if (change > 0) increaseByPeriod[period] += change;
+        else decreaseByPeriod[period] -= change;
+      }
+      if (route.sourceByPeriodKwh) {
+        TOU_PERIODS.forEach((period) => {
+          decreaseByPeriod[period] += (route.sourceByPeriodKwh?.[period] ?? 0) * occurrenceWeight * weight;
+        });
+      }
       smpCostChangePerCustomer += (route.shifted.reduce(
         (sum, value, hour) => sum + (value - route.base[hour]) * event.smp[hour],
         0,
@@ -960,6 +999,11 @@ export function runSimulation(rawInput: SimulationInput): SimulationResult {
     grid: {
       shiftedEnergyMwh,
       dayShiftedEnergyMwh: dayShiftedKwhPerCustomer * targetCustomers / 1_000,
+      shiftByPeriod: Object.fromEntries(TOU_PERIODS.map((period) => {
+        const decreaseMwh = decreaseByPeriod[period] * targetCustomers / 1_000;
+        const increaseMwh = increaseByPeriod[period] * targetCustomers / 1_000;
+        return [period, { decreaseMwh, increaseMwh, netMwh: increaseMwh - decreaseMwh }];
+      })) as SimulationResult["grid"]["shiftByPeriod"],
       eventWindowLoadIncreaseMwh: shiftedEnergyMwh,
       curtailmentReductionMwh: shiftedEnergyMwh * CURTAILMENT_AVOIDANCE_FACTOR,
     },

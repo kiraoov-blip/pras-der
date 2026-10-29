@@ -51,8 +51,15 @@ function formatWon(value: number) {
   return `${value > 0 ? "+" : ""}${formatInteger(value)}원`;
 }
 
+const TOU_PERIOD_LABEL = { OFF_PEAK: "경부하", MID_PEAK: "중간부하", ON_PEAK: "최대부하" } as const;
+
 function formatMwh(value: number) {
   return `${formatOneDecimal(value)}MWh`;
+}
+
+function formatSignedMwh(value: number) {
+  if (Math.abs(value) < 0.05) return "0.0MWh";
+  return `${value > 0 ? "+" : "−"}${formatOneDecimal(Math.abs(value))}MWh`;
 }
 
 function formatTenThousandWon(value: number) {
@@ -259,6 +266,9 @@ export default function Home() {
         ["기준기간 이전 전력량", formatMwh(result.grid.shiftedEnergyMwh)],
         ["발령시간 증가부하", formatMwh(result.grid.eventWindowLoadIncreaseMwh)],
         ["출력제어 회피 가능량", formatMwh(result.grid.curtailmentReductionMwh)],
+        ["최대부하 순변화", formatSignedMwh(result.grid.shiftByPeriod.ON_PEAK.netMwh)],
+        ["중간부하 순변화", formatSignedMwh(result.grid.shiftByPeriod.MID_PEAK.netMwh)],
+        ["경부하 순변화", formatSignedMwh(result.grid.shiftByPeriod.OFF_PEAK.netMwh)],
       ],
     },
   };
@@ -587,6 +597,17 @@ export default function Home() {
               </svg>
             </div>
             <p className="chart-note">{scopeLabel} 부하곡선입니다. 점에 커서를 올리거나 키보드로 선택하면 시간별 현행·이전 후 사용량을 확인할 수 있으며, {isOperator && result.grid.dayShiftedEnergyMwh > 0 ? "같은 시간대 이동분은 하루 에너지 총량이 같고, 충전일 이동분만큼 발령일 사용량이 늘어납니다(그만큼 같은 주 다른 날 사용량이 줄어듭니다)." : "부하이전 전후의 24시간 에너지 총량은 동일합니다."}</p>
+            <div className="period-shift" aria-label="시간대별 부하 이전량">
+              <p className="period-shift-title">시간대별 부하 이전량 <small>기준기간 합계, MWh</small></p>
+              <table>
+                <thead><tr><th>시간대</th><th>감소</th><th>증가</th><th>순변화</th></tr></thead>
+                <tbody>{(["OFF_PEAK", "MID_PEAK", "ON_PEAK"] as const).map((period) => {
+                  const row = result.grid.shiftByPeriod[period];
+                  return <tr key={period}><th scope="row"><i className={`period-dot period-${period}`} />{TOU_PERIOD_LABEL[period]}</th><td>{row.decreaseMwh > 0.05 ? `−${formatOneDecimal(row.decreaseMwh)}` : "-"}</td><td>{row.increaseMwh > 0.05 ? `+${formatOneDecimal(row.increaseMwh)}` : "-"}</td><td className={row.netMwh > 0.05 ? "up" : row.netMwh < -0.05 ? "down" : ""}>{Math.abs(row.netMwh) > 0.05 ? `${row.netMwh > 0 ? "+" : "−"}${formatOneDecimal(Math.abs(row.netMwh))}` : "0.0"}</td></tr>;
+                })}</tbody>
+              </table>
+              <p className="chart-note">경·중·최는 발령일의 요일 기준입니다(평일 경부하 22~08시·중간부하 08~16시·최대부하 16~22시, 토요일 최대부하는 중간부하, 일요일·공휴일은 전 시간 경부하{customerType === "주택용 TOU" ? ", 주택용은 요일 구분 없이 평일 기준" : ""}).{customerType === "주택용 TOU" ? "" : " 그래서 일요일·공휴일 발령분은 같은 경부하 안에서 시간만 옮겨질 수 있습니다."}{isOperator && result.grid.dayShiftedEnergyMwh > 0 ? " 충전일 이동분의 감소는 원래 충전하던 날의 시간대로 나눴습니다." : ""}</p>
+            </div>
           </article>
 
           <article className="section-card result-card">

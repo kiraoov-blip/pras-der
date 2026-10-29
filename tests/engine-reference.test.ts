@@ -232,6 +232,35 @@ test("가전별 이전비중은 최대치에서 0까지 독립적으로 조절�
   nearly(halfResponse.grid.shiftedEnergyMwh * 2, maximum.grid.shiftedEnergyMwh, 1e-9);
 });
 
+test("부하이전량을 경·중·최 시간대로 나누면 감소·증가 합계가 전체 이전량과 같다", () => {
+  const periods = ["OFF_PEAK", "MID_PEAK", "ON_PEAK"] as const;
+  const cases: Partial<SimulationInput>[] = [
+    { shiftMode: "SCENARIO_1" },
+    { shiftMode: "RES_SCENARIO_2" },
+    { customerType: "EV_SLOW_LOW_VOLTAGE", shiftMode: "EV_SCENARIO_2_2" },
+    { customerType: "EV_FAST_HIGH_VOLTAGE", shiftMode: "EV_SCENARIO_2_1" },
+    { customerType: "EV_TOTAL", shiftMode: "SCENARIO_1" },
+    { customerType: "EV_CHARGING_OPERATOR", customerCount: 27_140, operatorDayShiftRate: 0.5 },
+  ];
+  for (const overrides of cases) {
+    const result = simulate({ shiftRate: 0.5, ...overrides });
+    const byPeriod = result.grid.shiftByPeriod;
+    const decrease = periods.reduce((total, period) => total + byPeriod[period].decreaseMwh, 0);
+    const increase = periods.reduce((total, period) => total + byPeriod[period].increaseMwh, 0);
+    nearly(decrease, result.grid.shiftedEnergyMwh, 1e-6);
+    nearly(increase, result.grid.shiftedEnergyMwh, 1e-6);
+    for (const period of periods) nearly(byPeriod[period].netMwh, byPeriod[period].increaseMwh - byPeriod[period].decreaseMwh, 1e-9);
+  }
+  // 주택용 시나리오 1은 최대부하에서 빼서 평일 발령시간(중간부하)에 넣는다
+  const residential = simulate({ shiftMode: "SCENARIO_1", shiftRate: 0.5 });
+  nearly(residential.grid.shiftByPeriod.ON_PEAK.decreaseMwh, residential.grid.shiftedEnergyMwh, 1e-6);
+  nearly(residential.grid.shiftByPeriod.MID_PEAK.increaseMwh, residential.grid.shiftedEnergyMwh, 1e-6);
+  // 완속 충전은 심야 경부하에서만 빠진다
+  const slow = simulate({ customerType: "EV_SLOW_LOW_VOLTAGE", shiftMode: "EV_SCENARIO_2_1", shiftRate: 0.5 });
+  nearly(slow.grid.shiftByPeriod.OFF_PEAK.decreaseMwh, slow.grid.shiftedEnergyMwh, 1e-6);
+  assert.equal(slow.grid.shiftByPeriod.ON_PEAK.decreaseMwh, 0);
+});
+
 test("EV 2-1과 2-2는 완속·급속을 모두 계산하고 충전빈도를 구분한다", () => {
   const slow21 = simulate({ customerType: "EV_SLOW_LOW_VOLTAGE", shiftMode: "EV_SCENARIO_2_1" });
   const slow22 = simulate({ customerType: "EV_SLOW_LOW_VOLTAGE", shiftMode: "EV_SCENARIO_2_2" });

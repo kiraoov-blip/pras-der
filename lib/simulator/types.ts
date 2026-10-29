@@ -90,10 +90,26 @@ export interface RevenueNeutralDiscountResult {
   neutralPointWithinRange: boolean;
 }
 
+/** 요금 시간대 구분: 경부하·중간부하·최대부하 */
+export type TouPeriod = "OFF_PEAK" | "MID_PEAK" | "ON_PEAK";
+
+/** 한 시간대에서 기준기간 동안 줄어든 양·늘어난 양·순변화(MWh). 감소는 양수로 표시한다. */
+export interface PeriodShift {
+  decreaseMwh: number;
+  increaseMwh: number;
+  netMwh: number;
+}
+
 export interface GridResult {
   shiftedEnergyMwh: number;
   /** shiftedEnergyMwh 중 다른 날에서 발령일로 옮겨 온 양(충전사업자 충전일 이동). 그 외 0. */
   dayShiftedEnergyMwh: number;
+  /**
+   * 부하이전을 경·중·최 시간대별로 나눈 값. 각 발령일의 요일구분(평일·토요일·일요일 및 공휴일)
+   * 시간대 기준이며, 충전사업자 충전일 이동분의 감소는 원래 충전하던 날의 시간대로 나눈다.
+   * 세 시간대 감소 합계와 증가 합계는 모두 shiftedEnergyMwh와 같다.
+   */
+  shiftByPeriod: Record<TouPeriod, PeriodShift>;
   eventWindowLoadIncreaseMwh: number;
   curtailmentReductionMwh: number;
 }

@@ -179,3 +179,18 @@ body>main>.workspace{flex:1 0 auto}
 .page-shell.workspace{width:min(1480px,100%)}
 
 .shift-value.day-shift-value{margin-top:20px;padding-top:16px;border-top:1px solid rgba(255,255,255,.16)}
+
+/* 시간대별(경·중·최) 부하 이전량 표 */
+.period-shift{margin-top:14px;border-top:1px solid var(--line);padding-top:12px}
+.period-shift-title{margin:0 0 8px;font-size:12px;font-weight:750;color:var(--navy)}
+.period-shift-title small{font-size:10px;font-weight:600;color:#7d8999;margin-left:4px}
+.period-shift table{width:100%;border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-nums}
+.period-shift th,.period-shift td{padding:7px 8px;border-bottom:1px solid #edf1f6;text-align:right}
+.period-shift thead th{font-size:10px;font-weight:700;color:#7d8999;background:#f7f9fc}
+.period-shift thead th:first-child,.period-shift tbody th{text-align:left}
+.period-shift tbody th{font-weight:700;color:var(--navy);white-space:nowrap}
+.period-shift td.up{color:var(--blue);font-weight:750}
+.period-shift td.down{color:var(--red);font-weight:750}
+.period-dot{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.period-OFF_PEAK{background:#8fd0b4}.period-MID_PEAK{background:#f2c85c}.period-ON_PEAK{background:#f1836f}
+@media(max-width:520px){.period-shift table{font-size:11px}.period-shift th,.period-shift td{padding:6px 5px}}
