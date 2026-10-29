@@ -15,6 +15,7 @@ import {
   getEvTariffRates,
   perEventBenefitWon,
   runSimulation,
+  APPLIANCE_TO_CUSTOMER_SCALE,
 } from "../lib/simulator/engine.ts";
 import { ALL_APPLIANCE_CODES } from "../lib/simulator/appliances.ts";
 import { REFERENCE_DATA } from "../lib/simulator/reference-data.generated.ts";
@@ -181,6 +182,23 @@ test("주택용 13개 가전 선택은 실제 이동경로를 바꾸며 선택�
   assert.ok(withoutHeatPump.grid.shiftedEnergyMwh < allSelected.grid.shiftedEnergyMwh);
   nearly(sum(allSelected.baseLoadProfile), sum(allSelected.shiftedLoadProfile), 1e-9);
   assert.ok(allSelected.shiftedLoadProfile.every((value) => value >= -1e-12));
+});
+
+test("시나리오 2 가전 환산계수는 계절별로 대표 고객 사용량에 맞춘다", () => {
+  // 계수 = 대표 고객 계절 하루 사용량 ÷ 4인 가구 가전 모델 하루 사용량(평일 5·주말 2 가중)
+  nearly(APPLIANCE_TO_CUSTOMER_SCALE.SHOULDER, 16.7083 / ((13.932 * 5 + 24.082 * 2) / 7), 1e-3);
+  nearly(APPLIANCE_TO_CUSTOMER_SCALE.SUMMER, 23.1300 / ((23.082 * 5 + 40.082 * 2) / 7), 1e-3);
+  nearly(APPLIANCE_TO_CUSTOMER_SCALE.WINTER, 17.4166 / ((25.192 * 5 + 39.512 * 2) / 7), 1e-3);
+  for (const value of Object.values(APPLIANCE_TO_CUSTOMER_SCALE)) assert.ok(value > 0 && value <= 1);
+  assert.ok(APPLIANCE_TO_CUSTOMER_SCALE.WINTER < APPLIANCE_TO_CUSTOMER_SCALE.SUMMER);
+  assert.ok(APPLIANCE_TO_CUSTOMER_SCALE.SUMMER < APPLIANCE_TO_CUSTOMER_SCALE.SHOULDER);
+
+  // 2025 실적·할인율 50%·이전율 50%·13개 가전 전체 기준값
+  const result = simulate({ shiftMode: "RES_SCENARIO_2", shiftRate: 0.5, selectedAppliances: [...ALL_APPLIANCE_CODES] });
+  nearly(result.customer.annualBenefitPerCustomerWon, 22_282.41, 0.01);
+  nearly(result.grid.shiftedEnergyMwh, 157.683, 0.001);
+  // 계수는 시나리오 2에만 쓰인다: 시나리오 1 결과는 그대로다
+  nearly(simulate({ shiftMode: "SCENARIO_1", shiftRate: 0.5 }).customer.annualBenefitPerCustomerWon, 19_641, 1);
 });
 
 test("가전별 이전비중은 최대치에서 0까지 독립적으로 조절되고 즉시 결과에 반영된다", () => {

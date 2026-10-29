@@ -311,7 +311,7 @@ export default function Home() {
     : customerType === "주택용 TOU"
     ? [
       { mode: "SCENARIO_1", title: "시나리오 1 · 전체부하 균등이전", description: "가전 보유 여부와 무관하게 최대부하 시간대 전체 부하에서 발령시간 수만큼 균등 이전" },
-      { mode: "RES_SCENARIO_2", title: "시나리오 2 · 가전 선택형 이전", description: "체크한 13개 주요 가전의 이전 가능 사용량에만 이전율 적용" },
+      { mode: "RES_SCENARIO_2", title: "시나리오 2 · 가전 선택형 이전", description: "체크한 13개 주요 가전의 이전 가능 사용량에만 이전율 적용(4인 가구 가전 사용량은 계절별 환산계수로 대표 고객 규모에 맞춤)" },
     ]
     : [
       { mode: "SCENARIO_1", title: "시나리오 1 · 전체부하 균등이전", description: "계약종별 전체 부하에서 발령시간 수만큼 최대부하 시간대 사용량을 균등 이전" },

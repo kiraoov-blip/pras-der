@@ -19,7 +19,7 @@ import {
 } from "./reference-data.generated";
 import { CHARGING_OPERATOR_DATA } from "./charging-operator-data.generated";
 
-export const ENGINE_VERSION = "2.8.0-ev-charging-operator";
+export const ENGINE_VERSION = "2.9.0-seasonal-appliance-scale";
 
 type BaseCustomerType = Exclude<CustomerTypeCode, "EV_TOTAL">;
 /** 계절별 대표 부하곡선을 쓰는 고객유형. 충전사업자는 날짜별 실측부하를 쓴다. */
@@ -116,7 +116,32 @@ const ENERGY_CHARGE_2025_WON: Record<RepresentativeCustomerType, number> = {
   EV_FAST_HIGH_VOLTAGE: 584_640.2439547501,
 };
 
-const APPLIANCE_TO_CUSTOMER_SCALE = 0.625;
+/**
+ * 주택용 시나리오 2 가전 환산계수(계절별).
+ *
+ * 가전 부하곡선 시나리오 원자료는 4인 가구(공동주택, 전기취사·건조기·에어컨·
+ * 전기보조난방 보유) 기준 41종 가전의 하루 사용량이다. 이를 대표 주택 고객
+ * (월 584kWh, 제주 주택용 2024년 부하 모양)에 결합할 때 계절별로
+ *
+ *   계수 = 대표 고객 계절 하루 사용량 ÷ 가전 모델 계절 하루 사용량(평일 5일·주말 2일 가중)
+ *
+ * 를 곱해 규모를 맞춘다. 종전에는 출처가 확인되지 않는 단일값 0.625를 썼다.
+ * 가전 모델은 히트펌프 난방 때문에 겨울 사용량이 가장 크지만 실제 제주 주택은
+ * 겨울이 여름보다 적으므로, 계절별 계수가 이 차이를 바로잡는다.
+ */
+export const APPLIANCE_MODEL_DAILY_KWH: Record<ReferenceSeason, { weekday: number; weekend: number }> = {
+  // 원자료: 260527 가전 부하곡선 시나리오 6개 파일, 각 파일 첫 시트(10~12시) 41종 하루 합계
+  SHOULDER: { weekday: 13.932, weekend: 24.082 },
+  SUMMER: { weekday: 23.082, weekend: 40.082 },
+  WINTER: { weekday: 25.192, weekend: 39.512 },
+};
+export const APPLIANCE_TO_CUSTOMER_SCALE: Record<ReferenceSeason, number> = Object.fromEntries(
+  (["SHOULDER", "SUMMER", "WINTER"] as const).map((season) => {
+    const customerDaily = LOAD_PROFILES.RESIDENTIAL_TOU[season].reduce((total, kwh) => total + kwh, 0);
+    const { weekday, weekend } = APPLIANCE_MODEL_DAILY_KWH[season];
+    return [season, customerDaily / ((weekday * 5 + weekend * 2) / 7)];
+  }),
+) as Record<ReferenceSeason, number>;
 const CURTAILMENT_AVOIDANCE_FACTOR = 0.85;
 const PEAK_HOURS = [16, 17, 18, 19, 20, 21] as const;
 const EV_SLOW_CHARGE_HOURS = [23, 0, 1, 2, 3, 4] as const;
@@ -250,7 +275,7 @@ function applianceMaximumShares(events: readonly SelectedEvent[]): Record<Applia
     const eventSet = new Set(event.hours);
     SELECTABLE_APPLIANCES.forEach(({ code }) => {
       maximumKwh[code] += APPLIANCE_PROFILES[profileKey][code].reduce(
-        (sum, kwh, hour) => sum + (!eventSet.has(hour) ? kwh * APPLIANCE_TO_CUSTOMER_SCALE : 0),
+        (sum, kwh, hour) => sum + (!eventSet.has(hour) ? kwh * APPLIANCE_TO_CUSTOMER_SCALE[event.season] : 0),
         0,
       );
     });
@@ -322,6 +347,7 @@ function residentialApplianceScenario(
   const rates = tariffRates("RESIDENTIAL_TOU", season, dayType);
   const eventSet = new Set(eventHours);
   const profileKey = `${season}_${dayType === "WEEKDAY" ? "WEEKDAY" : "WEEKEND"}`;
+  const scale = APPLIANCE_TO_CUSTOMER_SCALE[season];
   let movedKwh = 0;
 
   selectedAppliances.forEach((code) => {
@@ -335,9 +361,9 @@ function residentialApplianceScenario(
     let applianceMoved = 0;
     sourceHours.forEach(({ hour, kwh }) => {
       const removed = Math.min(kwh, remaining);
-      shifted[hour] -= removed * APPLIANCE_TO_CUSTOMER_SCALE;
+      shifted[hour] -= removed * scale;
       remaining -= removed;
-      applianceMoved += removed * APPLIANCE_TO_CUSTOMER_SCALE;
+      applianceMoved += removed * scale;
     });
     movedKwh += applianceMoved;
     distribute(shifted, eventHours, applianceMoved);
