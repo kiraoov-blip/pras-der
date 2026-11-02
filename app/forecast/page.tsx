@@ -100,6 +100,11 @@ export default function Home() {
   const [resultTab, setResultTab] = useState<ResultTab>("고객");
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [hoveredHour, setHoveredHour] = useState<number | null>(null);
+  // 시간대별 이전 분석: 출발 시간대(0 = 00~01시 … 23 = 23~24시) 선택. 기본은 저녁 19~22시.
+  const [sourceHours, setSourceHours] = useState<number[]>([19, 20, 21]);
+  // 주택용 시나리오 2: 가전마다 출발 시간대를 따로 고르는 모드와 가전별 선택값(없으면 공통 선택을 따름)
+  const [perApplianceMode, setPerApplianceMode] = useState(false);
+  const [applianceHours, setApplianceHours] = useState<Partial<Record<ApplianceCode, number[]>>>({});
   const [neutralDiscountResult, setNeutralDiscountResult] = useState<RevenueNeutralDiscountResult | null>(null);
   const [targetPerEvent, setTargetPerEvent] = useState<number | null>(null);
   const [solveDiscount, setSolveDiscount] = useState(true);
@@ -153,6 +158,13 @@ export default function Home() {
     },
   }), [analysisYear, seasonFilter, dayTypeFilter, customerCode, evTariffVoltage, operatorTariffOption, operatorDayShift, customerCount, discount, shiftRate, scenario, selectedAppliances, applianceShiftRates, weekendPriority, eventMode, startHour, endHour, smpThreshold]);
   const result = useMemo(() => runSimulation(simulationInput), [simulationInput]);
+  // 가전별 시간대 지정: 가전마다 고른 원래 사용 시간만 옮기는 경우로 엔진을 다시 돌린다.
+  // (13개 가전이 함께 빠질 때 가구 사용량 한도로 줄어드는 몫이 달라지므로 단순 합산이 아니라 재계산한다.)
+  const applianceHoursResult = useMemo(() => {
+    if (!(customerType === "주택용 TOU" && scenario === "RES_SCENARIO_2" && perApplianceMode)) return null;
+    const applianceSourceHours = Object.fromEntries(ALL_APPLIANCE_CODES.map((code) => [code, applianceHours[code] ?? sourceHours]));
+    return runSimulation({ ...simulationInput, applianceSourceHours });
+  }, [customerType, scenario, perApplianceMode, applianceHours, sourceHours, simulationInput]);
 
   const maxProfile = Math.max(...result.baseLoadProfile, ...result.shiftedLoadProfile) * 1.08;
   const averageEventHours = result.eventDays ? result.eventHours / result.eventDays : 0;
@@ -163,6 +175,68 @@ export default function Home() {
   const perEventBenefit = result.eventDays
     ? result.customer.annualBenefitPerCustomerWon / result.eventDays
     : 0;
+  const attribution = result.shiftAttribution;
+  const sourceHourSet = new Set(sourceHours);
+  const pickHours = (values: number[]) => values.reduce((total, value, hour) => total + (sourceHourSet.has(hour) ? value : 0), 0);
+  const hourlyMovedMwh = attribution.sameDay.movedMwh.map((value, hour) => value + attribution.otherDays.movedMwh[hour]);
+  const isApplianceScenario = customerType === "주택용 TOU" && scenario === "RES_SCENARIO_2";
+  const perApplianceActive = isApplianceScenario && perApplianceMode;
+  const sumHours = (values: number[], hours: ReadonlySet<number>) => values.reduce((total, value, hour) => total + (hours.has(hour) ? value : 0), 0);
+  const applianceRows = SELECTABLE_APPLIANCES
+    .map(({ code, label }) => {
+      const values = attribution.appliances[code];
+      const hours = new Set(perApplianceActive ? (applianceHours[code] ?? sourceHours) : sourceHours);
+      // 이 가전이 실제로 옮겨 간 양이 있는 출발 시간(가전별 선택 칸으로 보여줄 시간)
+      const availableHours = values ? values.movedMwh.flatMap((value, hour) => (value > 1e-9 ? [hour] : [])) : [];
+      // 가전별 지정 중에는 재계산 결과(고른 시간만 옮긴 경우)를 쓴다
+      const restricted = applianceHoursResult?.shiftAttribution.appliances[code];
+      const sumAll = (list: number[] | undefined) => (list ?? []).reduce((total, value) => total + value, 0);
+      return {
+        code,
+        label,
+        hours,
+        availableHours,
+        totalMovedMwh: sumAll(values?.movedMwh),
+        movedMwh: perApplianceActive ? sumAll(restricted?.movedMwh) : values ? sumHours(values.movedMwh, hours) : 0,
+        benefitWon: perApplianceActive ? sumAll(restricted?.benefitWon) : values ? sumHours(values.benefitWon, hours) : 0,
+      };
+    })
+    .filter((row) => (perApplianceActive ? row.availableHours.length > 0 : row.movedMwh > 1e-9))
+    // 가전별 지정 중에는 순서가 바뀌지 않도록 전체 이전량 순으로 고정한다
+    .sort((left, right) => (perApplianceActive ? right.totalMovedMwh - left.totalMovedMwh : right.movedMwh - left.movedMwh));
+  const selectedSameDayMwh = perApplianceActive
+    ? applianceRows.reduce((total, row) => total + row.movedMwh, 0)
+    : pickHours(attribution.sameDay.movedMwh);
+  const selectedOtherDayMwh = perApplianceActive ? 0 : pickHours(attribution.otherDays.movedMwh);
+  const selectedMovedMwh = selectedSameDayMwh + selectedOtherDayMwh;
+  const selectedBenefitWon = perApplianceActive
+    ? applianceRows.reduce((total, row) => total + row.benefitWon, 0)
+    : pickHours(attribution.sameDay.benefitWon) + pickHours(attribution.otherDays.benefitWon);
+  const totalShiftBenefitWon = result.customer.totalAnnualBenefitWon - attribution.discountEffectWon;
+  const perCustomer = (value: number) => (result.targetCustomers ? value / result.targetCustomers : 0);
+  const perEvent = (value: number) => (result.eventDays ? perCustomer(value) / result.eventDays : 0);
+  const toggleApplianceHour = (code: ApplianceCode, hour: number) => setApplianceHours((current) => {
+    const hours = current[code] ?? sourceHours;
+    const next = hours.includes(hour) ? hours.filter((value) => value !== hour) : [...hours, hour].sort((left, right) => left - right);
+    return { ...current, [code]: next };
+  });
+  const applySourceHours = (hours: number[]) => {
+    const sorted = [...hours].sort((left, right) => left - right);
+    setSourceHours(sorted);
+    if (perApplianceActive) setApplianceHours(Object.fromEntries(ALL_APPLIANCE_CODES.map((code) => [code, sorted])));
+  };
+  const periodClass = (hour: number) => `period-${hour < 8 || hour >= 22 ? "OFF_PEAK" : hour < 16 ? "MID_PEAK" : "ON_PEAK"}`;
+  const toggleSourceHour = (hour: number) => setSourceHours((current) => (
+    current.includes(hour) ? current.filter((value) => value !== hour) : [...current, hour].sort((left, right) => left - right)
+  ));
+  const hourRange = (from: number, to: number) => Array.from({ length: (to - from + 24) % 24 || 24 }, (_, index) => (from + index) % 24);
+  const sourceHourPresets: Array<[string, number[]]> = [
+    ["19~22시", hourRange(19, 22)],
+    ["최대부하 16~22시", hourRange(16, 22)],
+    ["심야 22~08시", hourRange(22, 8)],
+    ["전체", hourRange(0, 24)],
+    ["선택 해제", []],
+  ];
 
   // 목표 편익 슬라이더 상한: 할인율·수요이전율을 모두 100%로 올렸을 때의 1회당 편익
   const targetSliderMax = useMemo(() => {
@@ -615,6 +689,61 @@ export default function Home() {
             <div className="result-intro"><p>{activeResult.eyebrow}</p><h2>{activeResult.title}</h2></div>
             <div className="result-list">{activeResult.items.map(([label, value]) => <div key={label}><span>{label}</span><strong className="calculated">{value}</strong></div>)}</div>
           </article>
+        </section>
+
+        <section className="section-card source-hour-card" aria-label="시간대별 이전 분석">
+          <div className="section-heading compact">
+            <div><p>SHIFT BY HOUR</p><h2>시간대별 이전 분석</h2></div>
+          </div>
+          <p className="source-hour-intro">원래 사용하던 시간대를 고르면, 그 시간대에서 발령시간으로 옮겨 간 사용량과 그에 따른 편익을 따로 보여줍니다{customerType === "주택용 TOU" && scenario === "RES_SCENARIO_2" ? " (가전별 포함)" : ""}.</p>
+          {isApplianceScenario ? <label className="per-appliance-toggle">
+            <input type="checkbox" checked={perApplianceMode} onChange={(event) => {
+              setPerApplianceMode(event.target.checked);
+              if (event.target.checked) setApplianceHours(Object.fromEntries(ALL_APPLIANCE_CODES.map((code) => [code, sourceHours])));
+            }} />
+            <span><b>가전별로 시간대 지정</b> 가전마다 옮길 원래 사용 시간대를 따로 고르고, 고른 시간의 사용량만 옮기는 경우로 다시 계산합니다(예: 식기세척기 21~22시, 의류건조기 22~24시)</span>
+          </label> : null}
+          <div className="source-hour-presets">{sourceHourPresets.map(([label, hours]) => {
+            const active = !perApplianceActive && hours.length === sourceHours.length && hours.every((hour) => sourceHourSet.has(hour));
+            return <button key={label} type="button" className={active ? "active" : ""} onClick={() => applySourceHours(hours)}>{label}</button>;
+          })}{perApplianceActive ? <span className="preset-hint">← 누르면 모든 가전에 같은 시간대를 적용</span> : null}</div>
+          {perApplianceActive ? null : <div className="source-hour-grid" role="group" aria-label="출발 시간대 선택">{hourlyMovedMwh.map((moved, hour) => {
+            const checked = sourceHourSet.has(hour);
+            return <label key={hour} className={`source-hour-chip ${periodClass(hour)}${checked ? " checked" : ""}${moved > 0.05 ? "" : " empty"}`}>
+              <input type="checkbox" checked={checked} onChange={() => toggleSourceHour(hour)} />
+              <b>{String(hour).padStart(2, "0")}~{String(hour + 1).padStart(2, "0")}</b>
+              <span>{moved > 0.05 ? formatOneDecimal(moved) : "-"}</span>
+            </label>;
+          })}</div>}
+          <p className="chart-note source-hour-legend">{perApplianceActive
+            ? "아래 표에서 가전마다 출발 시간대를 고르세요. 칸 숫자는 시작 시각(21 = 21~22시)이고, 그 가전이 실제로 옮겨 간 양이 있는 시간만 보여줍니다. 칸 색은 평일 기준 시간대(초록 경부하·노랑 중간부하·빨강 최대부하), 선택한 시간대는 파란색입니다."
+            : "칸 아래 숫자는 그 시간대에서 옮겨 간 양(MWh, 기준기간 합계)입니다. 칸 색은 평일 기준 시간대(초록 경부하·노랑 중간부하·빨강 최대부하)이고, 선택한 시간대는 파란색으로 표시됩니다."}</p>
+          <div className="source-hour-metrics">
+            <article><p>선택 시간대 이전량</p><strong>{formatOneDecimal(selectedMovedMwh)}<small>MWh</small></strong><span>{perApplianceActive ? "현재 시나리오 전체 이전량 대비 " : "전체 이전량의 "}{result.grid.shiftedEnergyMwh > 0 ? (selectedMovedMwh / result.grid.shiftedEnergyMwh * 100).toFixed(1) : "0.0"}%{isOperator && selectedOtherDayMwh > 0.05 ? ` · 같은 날 ${formatOneDecimal(selectedSameDayMwh)} + 다른 날 ${formatOneDecimal(selectedOtherDayMwh)}` : ""}</span></article>
+            <article><p>고객당 연 편익(이전 효과)</p><strong>{formatInteger(perCustomer(selectedBenefitWon))}<small>원</small></strong><span>1{customerUnit}당 · 선택 시간대에서 옮긴 몫</span></article>
+            <article><p>고객당 1회당 편익</p><strong>{formatInteger(perEvent(selectedBenefitWon))}<small>원</small></strong><span>연 편익 ÷ 발령 {formatInteger(result.eventDays)}일</span></article>
+            <article><p>대상고객 전체 편익</p><strong>{formatInteger(selectedBenefitWon / 10_000)}<small>만원</small></strong><span>선택 시간대 이전 효과 합계</span></article>
+          </div>
+          <p className="chart-note">고객당 전체 편익 {formatInteger(result.customer.annualBenefitPerCustomerWon)}원 = 할인 효과 {formatInteger(perCustomer(attribution.discountEffectWon))}원(발령시간에 원래 쓰던 양) + 이전 효과 {formatInteger(perCustomer(totalShiftBenefitWon))}원(전 시간대 합계). 이전 효과는 옮긴 양 × (원래 시간 단가 − 발령시간 할인단가)로 계산합니다.{isOperator ? " 충전사업자의 다른 날 몫은 같은 주 원래 충전하던 날의 같은 시간대에서 옮겨 온 양입니다." : ""}</p>
+          {isApplianceScenario ? <div className="source-hour-table">
+            <table>
+              <thead><tr><th>가전</th>{perApplianceActive ? <th className="hours-col">출발 시간대</th> : null}<th>이전량<small>kWh/가구·년</small></th><th>연 편익<small>원/가구</small></th><th>1회당<small>원/가구</small></th><th>비중</th></tr></thead>
+              <tbody>
+                {applianceRows.length ? applianceRows.map((row) => <tr key={row.code}>
+                  <th scope="row">{row.label}</th>
+                  {perApplianceActive ? <td className="hours-col"><div className="mini-hour-chips" role="group" aria-label={`${row.label} 출발 시간대`}>{row.availableHours.map((hour) => {
+                    const checked = row.hours.has(hour);
+                    return <button key={hour} type="button" aria-pressed={checked} title={`${String(hour).padStart(2, "0")}~${String(hour + 1).padStart(2, "0")}시`} className={`mini-hour-chip ${periodClass(hour)}${checked ? " checked" : ""}`} onClick={() => toggleApplianceHour(row.code, hour)}>{String(hour).padStart(2, "0")}</button>;
+                  })}</div></td> : null}
+                  <td>{formatOneDecimal(perCustomer(row.movedMwh) * 1_000)}</td>
+                  <td>{formatInteger(perCustomer(row.benefitWon))}</td>
+                  <td>{formatInteger(perEvent(row.benefitWon))}</td>
+                  <td>{selectedSameDayMwh > 0 ? (row.movedMwh / selectedSameDayMwh * 100).toFixed(1) : "0.0"}%</td>
+                </tr>) : <tr><td colSpan={perApplianceActive ? 6 : 5} className="empty-row">선택한 시간대에서 옮겨 간 가전 사용량이 없습니다.</td></tr>}
+              </tbody>
+              {applianceRows.length ? <tfoot><tr><th scope="row">합계</th>{perApplianceActive ? <td className="hours-col" /> : null}<td>{formatOneDecimal(perCustomer(selectedSameDayMwh) * 1_000)}</td><td>{formatInteger(perCustomer(selectedBenefitWon))}</td><td>{formatInteger(perEvent(selectedBenefitWon))}</td><td>100%</td></tr></tfoot> : null}
+            </table>
+          </div> : null}
         </section>
 
         {result.warnings.length ? <section className="assumption-strip"><strong>적용 가정</strong><ul>{result.warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul></section> : null}

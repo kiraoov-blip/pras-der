@@ -192,5 +192,59 @@ body>main>.workspace{flex:1 0 auto}
 .period-shift td.up{color:var(--blue);font-weight:750}
 .period-shift td.down{color:var(--red);font-weight:750}
 .period-dot{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:6px;vertical-align:-1px}
-.period-OFF_PEAK{background:#8fd0b4}.period-MID_PEAK{background:#f2c85c}.period-ON_PEAK{background:#f1836f}
+.period-OFF_PEAK{background:#c8dccf}.period-MID_PEAK{background:#ffd98a}.period-ON_PEAK{background:#f3a0a0}
 @media(max-width:520px){.period-shift table{font-size:11px}.period-shift th,.period-shift td{padding:6px 5px}}
+
+/* 시간대별 이전 분석(출발 시간대 선택) */
+.source-hour-card{display:flex;flex-direction:column;gap:12px}
+.source-hour-card .section-heading{margin-bottom:0}
+.source-hour-intro{margin:0;color:#5f6e82;font-size:12px;line-height:1.55}
+.source-hour-presets{display:flex;flex-wrap:wrap;gap:6px}
+.source-hour-presets button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:6px 12px;font-size:11px;font-weight:700;color:#4d5c70;cursor:pointer}
+.source-hour-presets button:hover{border-color:var(--blue);color:var(--blue)}
+.source-hour-presets button.active{background:var(--navy);border-color:var(--navy);color:#fff}
+.source-hour-grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:5px}
+.source-hour-chip{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 2px 7px;border:1px solid var(--line);border-radius:9px;background:#fff;cursor:pointer;font-variant-numeric:tabular-nums;transition:background .15s,border-color .15s,box-shadow .15s}
+/* 경부하(초록)·중간부하(노랑)·최대부하(빨강)를 칸 전체 색으로 구분 */
+/* PRAS-TOU와 같은 시간대 색(--off #c8dccf, --mid #ffd98a, --peak #f3a0a0) */
+.source-hour-chip.period-OFF_PEAK{background:#c8dccf;border-color:#a9c4b2}.source-hour-chip.period-MID_PEAK{background:#ffd98a;border-color:#e8bd62}.source-hour-chip.period-ON_PEAK{background:#f3a0a0;border-color:#de8282}
+.source-hour-chip input{position:absolute;opacity:0;pointer-events:none}
+.source-hour-chip b{font-size:10.5px;color:var(--navy);font-weight:750;white-space:nowrap}
+.source-hour-chip span{font-size:10px;color:#7d8999}
+.source-hour-chip span{color:#4f5d6e}
+.source-hour-chip.empty span{color:#6f7c8c}
+/* 선택한 시간대는 시간대 색 대신 파란색으로 표시 */
+.source-hour-chip.checked{background:#dbe8ff;border-color:var(--blue);box-shadow:inset 0 0 0 1.5px var(--blue)}
+.source-hour-chip.checked b,.source-hour-chip.checked span{color:#1a56c2}
+.source-hour-chip:focus-within{outline:2px solid var(--blue);outline-offset:1px}
+.source-hour-legend{margin-top:-4px}
+.source-hour-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.source-hour-metrics article{border:1px solid var(--line);border-radius:14px;padding:13px 14px;display:grid;gap:5px;background:#fbfcfe}
+.source-hour-metrics p{margin:0;font-size:11px;font-weight:750;color:#607087}
+.source-hour-metrics strong{font-size:22px;font-weight:800;color:var(--navy);letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.source-hour-metrics strong small{font-size:11px;margin-left:3px;color:#617187}
+.source-hour-metrics span{font-size:10px;color:#718198;line-height:1.4}
+.source-hour-table{overflow-x:auto}
+.source-hour-table table{width:100%;border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-nums}
+.source-hour-table th,.source-hour-table td{padding:8px 9px;border-bottom:1px solid #edf1f6;text-align:right;white-space:nowrap}
+.source-hour-table thead th{font-size:10.5px;font-weight:700;color:#6c7a8e;background:#f7f9fc;vertical-align:bottom}
+.source-hour-table thead th small{display:block;font-size:9.5px;font-weight:600;color:#9aa5b4;margin-top:2px}
+.source-hour-table th:first-child{text-align:left}
+.source-hour-table tbody th{font-weight:700;color:var(--navy)}
+.source-hour-table tfoot th,.source-hour-table tfoot td{font-weight:800;color:var(--navy);border-top:2px solid var(--line);border-bottom:0}
+.source-hour-table .empty-row{text-align:center;color:#8792a1;padding:16px}
+@media(max-width:980px){.source-hour-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:720px){.source-hour-grid{grid-template-columns:repeat(6,minmax(0,1fr));gap:4px}.source-hour-chip b{font-size:10px}.source-hour-metrics strong{font-size:19px}.source-hour-table table{font-size:11px}.source-hour-table th,.source-hour-table td{padding:7px 6px}}
+
+/* 가전별 출발 시간대 지정 */
+.per-appliance-toggle{display:flex;align-items:flex-start;gap:9px;padding:10px 12px;border:1px solid #b9d5ff;border-radius:12px;background:#f4f8ff;cursor:pointer;font-size:11.5px;color:#4d5c70;line-height:1.5}
+.per-appliance-toggle input{margin-top:2px;width:16px;height:16px;accent-color:var(--blue);flex:none}
+.per-appliance-toggle b{color:var(--navy);margin-right:6px;font-size:12px}
+.preset-hint{align-self:center;font-size:10.5px;color:#7d8999;margin-left:4px}
+.source-hour-table td.hours-col,.source-hour-table th.hours-col{text-align:left;white-space:normal;min-width:180px}
+.mini-hour-chips{display:flex;flex-wrap:wrap;gap:3px}
+.mini-hour-chip{min-width:28px;padding:4px 0;border:1px solid transparent;border-radius:6px;font-size:10.5px;font-weight:750;color:#3e4b5c;cursor:pointer;font-variant-numeric:tabular-nums;line-height:1.2}
+.mini-hour-chip.period-OFF_PEAK{background:#c8dccf;border-color:#a9c4b2}.mini-hour-chip.period-MID_PEAK{background:#ffd98a;border-color:#e8bd62}.mini-hour-chip.period-ON_PEAK{background:#f3a0a0;border-color:#de8282}
+.mini-hour-chip.checked{background:#dbe8ff;border-color:var(--blue);color:#1a56c2;box-shadow:inset 0 0 0 1px var(--blue)}
+.mini-hour-chip:focus-visible{outline:2px solid var(--blue);outline-offset:1px}
+@media(max-width:720px){.source-hour-table td.hours-col,.source-hour-table th.hours-col{min-width:150px}.mini-hour-chip{min-width:25px;font-size:10px}}

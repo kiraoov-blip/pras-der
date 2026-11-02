@@ -20,7 +20,7 @@ import {
 } from "./reference-data.generated";
 import { CHARGING_OPERATOR_DATA } from "./charging-operator-data.generated";
 
-export const ENGINE_VERSION = "2.10.0-shift-by-period";
+export const ENGINE_VERSION = "2.12.0-appliance-source-hours";
 
 type BaseCustomerType = Exclude<CustomerTypeCode, "EV_TOTAL">;
 /** 계절별 대표 부하곡선을 쓰는 고객유형. 충전사업자는 날짜별 실측부하를 쓴다. */
@@ -45,6 +45,11 @@ type HourlyRoute = {
   sourceSmpCostWon?: number;
   /** 옮겨 온 양을 원래 날의 경·중·최 시간대로 나눈 값(kWh, 1대당). */
   sourceByPeriodKwh?: Record<TouPeriod, number>;
+  /** 충전일 이동: 옮겨 온 양을 원래 날의 시간대(0~23시)로 나눈 값(kWh)과 그 양의 원래 날 요금(원). */
+  sourceHourlyKwh?: number[];
+  sourceHourlyBillWon?: number[];
+  /** 주택용 시나리오 2: 가전별로 각 시간에서 뺀 양(kWh, 대표고객 규모·응답률 반영 후). */
+  applianceSourceKwh?: Partial<Record<ApplianceCode, number[]>>;
 };
 
 export const TOU_PERIODS: readonly TouPeriod[] = ["OFF_PEAK", "MID_PEAK", "ON_PEAK"];
@@ -370,12 +375,17 @@ function residentialApplianceScenario(
   const profileKey = `${season}_${dayType === "WEEKDAY" ? "WEEKDAY" : "WEEKEND"}`;
   const scale = APPLIANCE_TO_CUSTOMER_SCALE[season];
   let movedKwh = 0;
+  const applianceSource: Partial<Record<ApplianceCode, number[]>> = {};
 
   selectedAppliances.forEach((code) => {
+    const removedByHour = Array.from({ length: 24 }, () => 0);
+    applianceSource[code] = removedByHour;
     const appliance = APPLIANCE_PROFILES[profileKey][code];
+    const allowedHours = input.applianceSourceHours?.[code];
+    const allowed = allowedHours ? new Set(allowedHours) : null;
     const sourceHours = appliance
       .map((kwh, hour) => ({ hour, kwh, rate: rates[hour] }))
-      .filter(({ hour, kwh }) => !eventSet.has(hour) && kwh > 0)
+      .filter(({ hour, kwh }) => !eventSet.has(hour) && kwh > 0 && (!allowed || allowed.has(hour)))
       .sort((left, right) => right.rate - left.rate || right.hour - left.hour);
     let remaining = sourceHours.reduce((sum, item) => sum + item.kwh, 0)
       * applianceSettingRate(input, code);
@@ -383,6 +393,7 @@ function residentialApplianceScenario(
     sourceHours.forEach(({ hour, kwh }) => {
       const removed = Math.min(kwh, remaining);
       shifted[hour] -= removed * scale;
+      removedByHour[hour] += removed * scale;
       remaining -= removed;
       applianceMoved += removed * scale;
     });
@@ -395,11 +406,23 @@ function residentialApplianceScenario(
     const correction = -value;
     shifted[hour] = 0;
     movedKwh -= correction;
+    // 대표고객 사용량보다 많이 뺀 시간은 가전별 차감량을 같은 비율로 줄인다.
+    const removedAtHour = Object.values(applianceSource).reduce((total, values) => total + (values?.[hour] ?? 0), 0);
+    if (removedAtHour > 0) {
+      const keep = Math.max(0, 1 - correction / removedAtHour);
+      Object.values(applianceSource).forEach((values) => { if (values) values[hour] *= keep; });
+    }
     eventHours.forEach((destination) => { shifted[destination] -= correction / eventHours.length; });
   });
   const responseRate = Math.max(0, Math.min(1, input.shiftRate));
   const responseShifted = shifted.map((value, hour) => base[hour] + (value - base[hour]) * responseRate);
-  return { base, shifted: responseShifted, movedKwh: Math.max(0, movedKwh) * responseRate };
+  Object.values(applianceSource).forEach((values) => values?.forEach((value, hour) => { values[hour] = value * responseRate; }));
+  return {
+    base,
+    shifted: responseShifted,
+    movedKwh: Math.max(0, movedKwh) * responseRate,
+    applianceSourceKwh: applianceSource,
+  };
 }
 
 function moveEnergy(
@@ -665,13 +688,22 @@ function operatorWeekSource(
   year: AnalysisYear,
   evTariffVoltage: EvTariffVoltage,
   operatorOption: ChargingOperatorTariffOption,
-): { kwh: number; billWon: number; eventDaysInWeek: number; byPeriodKwh: Record<TouPeriod, number> } {
+): {
+  kwh: number;
+  billWon: number;
+  eventDaysInWeek: number;
+  byPeriodKwh: Record<TouPeriod, number>;
+  hourlyKwh: number[];
+  hourlyBillWon: number[];
+} {
   const eventDates = new Set(EVENTS[String(year) as `${AnalysisYear}`].map((item) => item.date));
   const monday = isoWeekStart(event.date);
   let kwh = 0;
   let billWon = 0;
   let eventDaysInWeek = 0;
   const byPeriodKwh = emptyPeriodKwh();
+  const hourlyKwh = Array.from({ length: 24 }, () => 0);
+  const hourlyBillWon = Array.from({ length: 24 }, () => 0);
   for (let offset = 0; offset < 7; offset += 1) {
     const date = addDays(monday, offset);
     if (eventDates.has(date)) { eventDaysInWeek += 1; continue; }
@@ -682,9 +714,14 @@ function operatorWeekSource(
     const load = actual ? perOperatorUser(actual) : operatorAverageProfile(season, dayType);
     kwh += load.reduce((sum, value) => sum + value, 0);
     load.forEach((value, hour) => { byPeriodKwh[touPeriodFor("EV_CHARGING_OPERATOR", dayType, hour)] += value; });
-    billWon += dot(load, tariffRates("EV_CHARGING_OPERATOR", season, dayType, evTariffVoltage, operatorOption));
+    const rates = tariffRates("EV_CHARGING_OPERATOR", season, dayType, evTariffVoltage, operatorOption);
+    billWon += dot(load, rates);
+    load.forEach((value, hour) => {
+      hourlyKwh[hour] += value;
+      hourlyBillWon[hour] += value * rates[hour];
+    });
   }
-  return { kwh, billWon, eventDaysInWeek: Math.max(1, eventDaysInWeek), byPeriodKwh };
+  return { kwh, billWon, eventDaysInWeek: Math.max(1, eventDaysInWeek), byPeriodKwh, hourlyKwh, hourlyBillWon };
 }
 
 /**
@@ -723,6 +760,8 @@ function operatorEventRoute(
     sourceByPeriodKwh: Object.fromEntries(
       TOU_PERIODS.map((period) => [period, source.byPeriodKwh[period] * (added / source.kwh)]),
     ) as Record<TouPeriod, number>,
+    sourceHourlyKwh: source.hourlyKwh.map((value) => value * (added / source.kwh)),
+    sourceHourlyBillWon: source.hourlyBillWon.map((value) => value * (added / source.kwh)),
   };
 }
 
@@ -851,6 +890,14 @@ export function runSimulation(rawInput: SimulationInput): SimulationResult {
   let movedKwhPerCustomer = 0;
   let dayShiftedKwhPerCustomer = 0;
   const decreaseByPeriod = emptyPeriodKwh();
+  const zeros24 = () => Array.from({ length: 24 }, () => 0);
+  let discountEffectPerCustomer = 0;
+  const sameDayMoved = zeros24();
+  const sameDayBenefit = zeros24();
+  const otherDayMoved = zeros24();
+  const otherDayBenefit = zeros24();
+  const applianceMoved: Partial<Record<ApplianceCode, number[]>> = {};
+  const applianceBenefit: Partial<Record<ApplianceCode, number[]>> = {};
   const increaseByPeriod = emptyPeriodKwh();
   let smpCostChangePerCustomer = 0;
   let annualCurrentBill = 0;
@@ -881,6 +928,40 @@ export function runSimulation(rawInput: SimulationInput): SimulationResult {
         const period = touPeriodFor(type, event.dayType, hour);
         if (change > 0) increaseByPeriod[period] += change;
         else decreaseByPeriod[period] -= change;
+      }
+      // 편익 분해: 할인 효과 + 출발 시간별 이전 편익(옮긴 양 × (원래 단가 − 도착 시간 평균 할인단가)).
+      {
+        const w = occurrenceWeight * weight;
+        let addedKwh = 0;
+        let destinationCost = 0;
+        for (let hour = 0; hour < 24; hour += 1) {
+          discountEffectPerCustomer += route.base[hour] * (currentRates[hour] - newRates[hour]) * w;
+          const change = route.shifted[hour] - route.base[hour];
+          if (change > 0) {
+            addedKwh += change;
+            destinationCost += change * newRates[hour];
+          }
+        }
+        const destinationRate = addedKwh > 0 ? destinationCost / addedKwh : 0;
+        for (let hour = 0; hour < 24; hour += 1) {
+          const removed = Math.max(0, route.base[hour] - route.shifted[hour]);
+          sameDayMoved[hour] += removed * w;
+          sameDayBenefit[hour] += removed * (newRates[hour] - destinationRate) * w;
+          if (route.sourceHourlyKwh && route.sourceHourlyBillWon) {
+            otherDayMoved[hour] += route.sourceHourlyKwh[hour] * w;
+            otherDayBenefit[hour] += (route.sourceHourlyBillWon[hour] - route.sourceHourlyKwh[hour] * destinationRate) * w;
+          }
+        }
+        Object.entries(route.applianceSourceKwh ?? {}).forEach(([code, values]) => {
+          if (!values) return;
+          const key = code as ApplianceCode;
+          const moved = (applianceMoved[key] ??= zeros24());
+          const benefit = (applianceBenefit[key] ??= zeros24());
+          values.forEach((kwh, hour) => {
+            moved[hour] += kwh * w;
+            benefit[hour] += kwh * (newRates[hour] - destinationRate) * w;
+          });
+        });
       }
       if (route.sourceByPeriodKwh) {
         TOU_PERIODS.forEach((period) => {
@@ -983,6 +1064,21 @@ export function runSimulation(rawInput: SimulationInput): SimulationResult {
     monthlyEventDays,
     baseLoadProfile: chartBase,
     shiftedLoadProfile: chartShifted,
+    shiftAttribution: {
+      discountEffectWon: discountEffectPerCustomer * targetCustomers,
+      sameDay: {
+        movedMwh: sameDayMoved.map((kwh) => kwh * targetCustomers / 1_000),
+        benefitWon: sameDayBenefit.map((won) => won * targetCustomers),
+      },
+      otherDays: {
+        movedMwh: otherDayMoved.map((kwh) => kwh * targetCustomers / 1_000),
+        benefitWon: otherDayBenefit.map((won) => won * targetCustomers),
+      },
+      appliances: Object.fromEntries(Object.keys(applianceMoved).map((code) => [code, {
+        movedMwh: (applianceMoved[code as ApplianceCode] ?? []).map((kwh) => kwh * targetCustomers / 1_000),
+        benefitWon: (applianceBenefit[code as ApplianceCode] ?? []).map((won) => won * targetCustomers),
+      }])),
+    },
     customer: {
       currentAnnualBillWon: annualCurrentBill,
       newAnnualBillWon: annualCurrentBill - benefitPerCustomer,

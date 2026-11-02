@@ -63,6 +63,11 @@ export interface SimulationInput {
   /** Appliance-specific realization ratio (0-1) against each appliance's maximum movable load. */
   applianceShiftRates?: Partial<Record<ApplianceCode, number>>;
   weekendDiscountPriority: boolean;
+  /**
+   * 주택용 시나리오 2: 가전별로 옮길 원래 사용 시간(0 = 00~01시 … 23 = 23~24시).
+   * 지정한 가전은 이 시간의 사용량만 발령시간으로 옮기고, 지정하지 않은 가전은 발령시간 밖 전체를 쓴다.
+   */
+  applianceSourceHours?: Partial<Record<ApplianceCode, number[]>>;
   eventRule: EventRule;
 }
 
@@ -114,6 +119,29 @@ export interface GridResult {
   curtailmentReductionMwh: number;
 }
 
+/** 시간별(0 = 00~01시 … 23 = 23~24시) 이전량·편익. 대상 고객 전체 합계. */
+export interface HourlyShiftBreakdown {
+  /** 그 시간대에서 빠져나가 발령시간으로 옮겨 간 양(MWh). */
+  movedMwh: number[];
+  /** 그 시간대에서 옮긴 데 따른 편익(원) = 옮긴 양 × (원래 단가 − 발령시간 할인단가). */
+  benefitWon: number[];
+}
+
+/**
+ * 고객 편익 분해. 전체 편익 = 할인 효과 + Σ(같은 날 이전 편익) + Σ(다른 날 이전 편익).
+ * 시간대 선택 집계는 이전 편익만 나눌 수 있다(할인 효과는 발령시간에 원래 쓰던 양에 붙는다).
+ */
+export interface ShiftAttribution {
+  /** 발령시간에 원래 쓰던 양에 붙는 할인 효과(원, 대상 고객 전체). */
+  discountEffectWon: number;
+  /** 같은 날 안에서 옮긴 양의 출발 시간대별 값. */
+  sameDay: HourlyShiftBreakdown;
+  /** 충전사업자 충전일 이동: 같은 주 다른 날의 출발 시간대별 값. 그 외 고객유형은 0. */
+  otherDays: HourlyShiftBreakdown;
+  /** 주택용 시나리오 2: 가전별 출발 시간대별 값(sameDay를 가전별로 나눈 것). */
+  appliances: Partial<Record<ApplianceCode, HourlyShiftBreakdown>>;
+}
+
 export interface SimulationResult {
   engineVersion: string;
   eventDays: number;
@@ -130,6 +158,7 @@ export interface SimulationResult {
   baseLoadProfile: number[];
   shiftedLoadProfile: number[];
   customer: CustomerResult;
+  shiftAttribution: ShiftAttribution;
   utility: UtilityResult;
   grid: GridResult;
   warnings: string[];

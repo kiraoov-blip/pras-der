@@ -261,6 +261,73 @@ test("부하이전량을 경·중·최 시간대로 나누면 감소·증가 합
   assert.equal(slow.grid.shiftByPeriod.ON_PEAK.decreaseMwh, 0);
 });
 
+test("출발 시간대별·가전별 분해를 모두 더하면 전체 편익·이전량과 같다", () => {
+  const total = (values: number[]) => values.reduce((sum, value) => sum + value, 0);
+  const cases: Partial<SimulationInput>[] = [
+    { shiftMode: "SCENARIO_1" },
+    { shiftMode: "RES_SCENARIO_2" },
+    { shiftMode: "RES_SCENARIO_2", shiftRate: 1, seasonFilter: "SHOULDER", dayTypeFilter: "WEEKEND" },
+    { customerType: "EV_SLOW_LOW_VOLTAGE", shiftMode: "EV_SCENARIO_2_1" },
+    { customerType: "EV_SLOW_LOW_VOLTAGE", shiftMode: "EV_SCENARIO_2_2" },
+    { customerType: "EV_FAST_HIGH_VOLTAGE", shiftMode: "EV_SCENARIO_2_2" },
+    { customerType: "EV_TOTAL", shiftMode: "SCENARIO_1" },
+    { customerType: "EV_CHARGING_OPERATOR", customerCount: 27_140, operatorDayShiftRate: 0.5 },
+    { customerType: "EV_CHARGING_OPERATOR", customerCount: 27_140, shiftRate: 1, operatorDayShiftRate: 1, weekendDiscountPriority: false },
+  ];
+  for (const overrides of cases) {
+    const result = simulate({ shiftRate: 0.5, ...overrides });
+    const attribution = result.shiftAttribution;
+    nearly(
+      attribution.discountEffectWon + total(attribution.sameDay.benefitWon) + total(attribution.otherDays.benefitWon),
+      result.customer.totalAnnualBenefitWon,
+      1e-3,
+    );
+    nearly(total(attribution.sameDay.movedMwh) + total(attribution.otherDays.movedMwh), result.grid.shiftedEnergyMwh, 1e-9);
+    const appliances = Object.values(attribution.appliances);
+    if (appliances.length) {
+      nearly(appliances.reduce((sum, item) => sum + total(item?.movedMwh ?? []), 0), total(attribution.sameDay.movedMwh), 1e-9);
+      nearly(appliances.reduce((sum, item) => sum + total(item?.benefitWon ?? []), 0), total(attribution.sameDay.benefitWon), 1e-3);
+    }
+    if (overrides.customerType !== "EV_CHARGING_OPERATOR") assert.equal(total(attribution.otherDays.movedMwh), 0);
+  }
+  // 할인 효과는 이전율과 무관하다(발령시간에 원래 쓰던 양에만 붙는다)
+  nearly(
+    simulate({ shiftMode: "RES_SCENARIO_2", shiftRate: 0 }).shiftAttribution.discountEffectWon,
+    simulate({ shiftMode: "RES_SCENARIO_2", shiftRate: 1 }).shiftAttribution.discountEffectWon,
+    1e-6,
+  );
+  // 완속 2-1은 심야(23~05시)에서만 빠진다
+  const slow = simulate({ customerType: "EV_SLOW_LOW_VOLTAGE", shiftMode: "EV_SCENARIO_2_1", shiftRate: 0.5 });
+  const nightHours = new Set([23, 0, 1, 2, 3, 4]);
+  slow.shiftAttribution.sameDay.movedMwh.forEach((value, hour) => { if (!nightHours.has(hour)) assert.equal(value, 0); });
+});
+
+test("주택용 시나리오 2는 가전별로 지정한 원래 사용 시간만 옮긴다", () => {
+  const picked = { DISHWASHER: [21], CLOTHES_DRYER: [22, 23], CLOTHING_CARE: [20], WASHER: [21, 22] };
+  const applianceSourceHours = Object.fromEntries(ALL_APPLIANCE_CODES.map((code) => [code, picked[code as keyof typeof picked] ?? []]));
+  const restricted = simulate({ shiftMode: "RES_SCENARIO_2", shiftRate: 0.5, applianceSourceHours });
+  const onlyPicked = simulate({
+    shiftMode: "RES_SCENARIO_2",
+    shiftRate: 0.5,
+    selectedAppliances: Object.keys(picked) as (keyof typeof picked)[],
+    applianceSourceHours: picked,
+  });
+  // 고르지 않은 가전(빈 목록)은 옮기지 않으므로, 고른 가전만 선택한 것과 결과가 같다
+  nearly(restricted.grid.shiftedEnergyMwh, onlyPicked.grid.shiftedEnergyMwh, 1e-9);
+  nearly(restricted.customer.totalAnnualBenefitWon, onlyPicked.customer.totalAnnualBenefitWon, 1e-6);
+  nearly(restricted.grid.shiftedEnergyMwh, 26.208, 1e-3);
+  for (const [code, hours] of Object.entries(picked)) {
+    const moved = restricted.shiftAttribution.appliances[code as keyof typeof picked]?.movedMwh ?? [];
+    moved.forEach((value, hour) => { if (!hours.includes(hour)) assert.equal(value, 0); });
+  }
+  // 지정하지 않으면 종전과 같다
+  nearly(
+    simulate({ shiftMode: "RES_SCENARIO_2", shiftRate: 0.5 }).grid.shiftedEnergyMwh,
+    simulate({ shiftMode: "RES_SCENARIO_2", shiftRate: 0.5, applianceSourceHours: {} }).grid.shiftedEnergyMwh,
+    1e-12,
+  );
+});
+
 test("EV 2-1과 2-2는 완속·급속을 모두 계산하고 충전빈도를 구분한다", () => {
   const slow21 = simulate({ customerType: "EV_SLOW_LOW_VOLTAGE", shiftMode: "EV_SCENARIO_2_1" });
   const slow22 = simulate({ customerType: "EV_SLOW_LOW_VOLTAGE", shiftMode: "EV_SCENARIO_2_2" });
