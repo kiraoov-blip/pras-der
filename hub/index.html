@@ -206,9 +206,35 @@
   .footer-inner { display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px 20px; font-size:10px; }
   .footer-inner span { color:#fff; font-weight:800; letter-spacing:.04em; }
   .footer-inner p { margin:0; }
+
+/* SIM-UNIFY:START — 시뮬레이터 공통 화면 규격 v1
+   상단바 52px(640px 이하 48px)·항상 위에 고정 / 제목 띠 위아래 24px(16px)·좌우 30px(14px)
+   제목 23~33px(20px) / 부제 14px(12px) / 휴대폰 기준 폭 640px — 모든 시뮬레이터 동일 */
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)}
+.site-nav{background:linear-gradient(90deg,#081a2f 0%,#0b223d 60%,#0e2a4a 100%);border-bottom:1px solid rgba(255,255,255,.08)}
+.site-nav-inner{display:flex;align-items:center;gap:26px;max-width:1480px;margin:0 auto;padding:0 30px}
+.site-brand{display:flex;align-items:baseline;gap:9px;color:#fff;font-weight:800;letter-spacing:-.02em;text-decoration:none}
+.site-brand span{color:#8fd1e6;font-size:11px;font-weight:800;letter-spacing:.06em;padding:2px 6px;border:1px solid rgba(143,209,230,.4);border-radius:5px}
+@media(max-width:640px){.site-nav-inner{gap:14px;padding:0 14px}.site-brand span{font-size:10px;padding:1px 5px}}
+.site-nav{position:sticky!important;top:0!important;z-index:50!important}
+.site-nav{padding-top:env(safe-area-inset-top,0px)}
+.site-nav-inner{height:52px!important}
+.site-brand{font-size:15px!important}
+@media(max-width:640px){.site-nav-inner{height:48px!important}.site-brand{font-size:14px!important}}
+.page-shell{width:auto!important;margin:0 auto!important;max-width:1480px;padding-left:30px;padding-right:30px}
+@media(max-width:640px){.page-shell{padding-left:14px;padding-right:14px}}
+.hero-eyebrow{font-size:11px!important;margin:0 0 6px!important}.hero h1{margin:0 0 6px!important;white-space:normal!important}.hero p{white-space:normal!important}
+@media(max-width:640px){.hero-eyebrow{font-size:10px!important}}
+.hero{padding:24px 0!important}
+.hero h1{font-size:clamp(23px,2.5vw,33px)!important;line-height:1.28!important}
+.hero p:not(.hero-eyebrow){font-size:14px!important;line-height:1.45!important}
+@media(max-width:640px){.hero{padding:16px 0!important}.hero h1{font-size:20px!important;line-height:1.38!important}.hero p:not(.hero-eyebrow){font-size:12px!important}}
+/* SIM-UNIFY:END */
 </style>
 </head>
 <body>
+<nav class="site-nav" aria-label="시뮬레이터 허브"><div class="site-nav-inner"><a href="/" class="site-brand">전력 시뮬레이터<span>HUB</span></a></div></nav>
 
 <header class="hero">
   <div class="page-shell">
