@@ -350,6 +350,10 @@ label.chk input{width:16px;height:16px;margin:0;flex:none;accent-color:#3a3f47}
 <style>
 #kpisMain .kpi .n .ex{white-space:normal;color:#5b6270;font-weight:600}
 .kpi .k small{font-weight:600;color:#8a909a}
+.data-src{display:flex;gap:10px;align-items:baseline;margin:0 0 12px;padding:9px 12px;border-radius:10px;background:#f6f6f7;color:#555962;font-size:12.5px;line-height:1.5}
+#tbl th:nth-child(2),#tbl td:nth-child(2),#tbl th:last-child,#tbl td:last-child{text-align:right}
+#tbl td:nth-child(2){white-space:nowrap;color:inherit;font-size:inherit;line-height:inherit}
+.data-src b{flex:none;font-size:11.5px;font-weight:800;color:#2b2f35;background:#fdf4d8;border:1px solid #f0db96;border-radius:6px;padding:1px 7px}
 </style>
 
 <nav class="site-nav" aria-label="시뮬레이터">
@@ -545,8 +549,8 @@ label.chk input{width:16px;height:16px;margin:0;flex:none;accent-color:#3a3f47}
             </div>
           </div>
           <div class="sec-b">
+            <p class="data-src" id="dataSrc"></p>
             <div class="tbl-wrap"><div class="tbl-scroll"><table id="tbl"><thead></thead><tbody></tbody></table></div></div>
-            <ul class="flaglist" id="dataFlags" hidden></ul>
             <textarea class="copy" id="copyBox" hidden readonly aria-label="복사용 표 데이터"></textarea>
           </div>
         </section>
@@ -978,22 +982,24 @@ const DT=[
  {id:'mfgk',n:'제조업 업종별 판매량 · 한국은행 업종 구분 (MWh)',t:'mfgk',cols:[...KIND.map(([k])=>[k,k]),['합계','합계']]},
  {id:'gva',n:'실질 부가가치 (십억원, 2020년 연쇄가격)',t:'gva',cols:[['제조업','제조업'],...KIND.map(([k])=>[k,k]),['농림어업','농림어업'],['광업','광업'],['광공업','광공업'],['서비스업','서비스업'],['교육서비스','교육서비스'],['공공행정','공공행정·국방·사회보장'],['서비스업(교육 제외)','서비스업(교육 제외)'],['서비스업(공공행정 제외)','서비스업(공공행정 제외)'],['GDP','국내총생산']]},
  {id:'cust',n:'주택용 고객호수 (호)',t:'cust',cols:[['res','주택용']]}];
+const SRCTXT={calc:'한국전력통계 판매전력량 ÷ 한국은행 실질 부가가치로 계산',bok:'한국은행 ECOS 「경제활동별 GDP 및 GNI(원계열, 실질, 연간)」 · 2020년 기준 연쇄가격 · 2025년은 잠정치',intl:'Ember 「Yearly electricity data」 전력수요 · 세계은행 WDI 실질 GDP · 권역은 회원국 합계'};
+const DSRC={hh:'한국전력통계 판매전력량 ÷ 주택용 고객호수로 계산',intl_dem:'Ember 「Yearly electricity data」 전력수요(발전량 + 순수입) · 권역은 회원국 합계'};
 function tableData(){
-  const d=DT.find(x=>x.id===S.dTable), cols=d.src?[...SRC.map(([k,n])=>[k,n]),['total','사업자 계'],['_nu','상용자가'],['_tot','총계']]:d.cols, tab=d.src||d.t;
-  const get=(c,y)=>d.src?(c==='_nu'?at(tab,'nonutil',y):c==='_tot'?at(tab,'tot',y):srcRaw(tab,c,y)):at(tab,c,y);
-  const rows=YEARS.slice().reverse().map(y=>[y,EDS[D.edition[tab][YI[y]]]||'',...cols.map(([c])=>get(c,y))]).filter(r=>r.slice(2).some(v=>v!=null));
-  return {name:d.n,head:['연도','자료',...cols.map(c=>c[1])],rows,ftab:tab,dp:d.dp};
+  const d=DT.find(x=>x.id===S.dTable), cols=d.cols, tab=d.t;
+  const rows=YEARS.slice().reverse().map(y=>[y,...cols.map(([c])=>at(tab,c,y))]).filter(r=>r.slice(1).some(v=>v!=null));
+  // 자료 출처: 표 안의 열 대신 표 위에 따로 적는다(같은 출처가 이어지는 연도를 묶어서)
+  const ys=rows.map(r=>r[0]).sort((a,b)=>a-b), seg=[];
+  ys.forEach(y=>{const e=D.edition[tab][YI[y]]||''; const l=seg[seg.length-1]; if(l&&l.e===e&&l.b===y-1) l.b=y; else seg.push({e,a:y,b:y})});
+  const lab=e=>DSRC[d.id]&&(e==='calc'||e==='intl')?DSRC[d.id]:SRCTXT[e]||('「한국전력통계」 '+((D.meta.editions||{})[e]||EDS[e]||e));
+  const src=seg.length===1?lab(seg[0].e):seg.map(g=>`${g.a===g.b?g.a:g.a+'–'+g.b}년 ${lab(g.e).replace('「한국전력통계」 ','')}`).join(' · ');
+  return {name:d.n,head:['연도',...cols.map(c=>c[1])],rows,ftab:tab,dp:d.dp,src:seg.length>1?'「한국전력통계」 '+src:src};
 }
 function renderTable(){
   const t=tableData();
-  $('#dataDesc').textContent=`${t.name} · 원자료 단위 그대로 · ${t.rows.length}개 연도 (1961년은 참고값, 자료 열은 값을 가져온 판)`;
+  $('#dataDesc').textContent=`${t.name} · 원자료 단위 그대로 · ${t.rows.length}개 연도`;
+  $('#dataSrc').innerHTML=`<b>자료</b>${esc(t.src)}`;
   $('#tbl thead').innerHTML='<tr>'+t.head.map(h=>`<th>${esc(h)}</th>`).join('')+'</tr>';
-  const ft=t.ftab, fl=FL[ft]||{};
-  $('#tbl tbody').innerHTML=t.rows.map(r=>`<tr class="${r[0]===S.year?'base':''}">`+r.map((v,i)=>`<td>${i===0&&fl[v]?`${v}<span class="fm" title="${esc(fl[v])}">※</span>`:i<2?v:(v==null?'–':nf(v,t.dp!=null?t.dp:Math.abs(v)<1000&&!Number.isInteger(v)?2:0))}</td>`).join('')+'</tr>').join('');
-  const fy=Object.keys(fl).filter(y=>t.rows.some(r=>r[0]==y)).sort();
-  const extra=(D.notes||{})[ft]?`<li>1983년 이전 시도별 값은 옛 행정구역 기준입니다: ${esc(D.notes[ft])}.</li>`:'';
-  $('#dataFlags').hidden=!fy.length&&!extra;
-  $('#dataFlags').innerHTML=fy.map(y=>`<li><b>※ ${y}년</b> ${esc(fl[y])}</li>`).join('')+extra;
+  $('#tbl tbody').innerHTML=t.rows.map(r=>`<tr class="${r[0]===S.year?'base':''}">`+r.map((v,i)=>`<td>${i===0?v:(v==null?'–':nf(v,t.dp!=null?t.dp:Math.abs(v)<1000&&!Number.isInteger(v)?2:0))}</td>`).join('')+'</tr>').join('');
 }
 function copyTable(){ const t=tableData(), txt=[t.head,...t.rows.map(r=>r.map(v=>v==null?'':v))].map(r=>r.join('\t')).join('\n'), box=$('#copyBox');
   const fb=()=>{box.hidden=false;box.value=txt;box.focus();box.select();toast('자동 복사가 막혀 아래 상자에 표시했습니다. Ctrl+C로 복사하세요')};
