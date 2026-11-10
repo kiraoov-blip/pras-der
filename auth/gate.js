@@ -9,7 +9,7 @@
  * - 관리자는 '관리자 로그인'에서 사번 + 비밀번호로 입장
  * - 한 번 승인되면 통행증이 이 브라우저에 저장되어 잠긴 시뮬레이터 모두에 다시 묻지 않고 들어간다
  * - 주소 끝에 ?sg-logout 을 붙여 열면 이 브라우저의 통행증을 지운다
- * - 유포 방지(관리자는 제외): 화면·인쇄물에 이름·사번·날짜 워터마크, 그림(PNG) 저장물에 워터마크,
+ * - 유포 방지(관리자와, 시트 '사용자'의 '워터마크 제외'에 체크된 사람은 표시 제외 — 기록은 남음): 화면·인쇄물에 이름·사번·날짜 워터마크, 그림(PNG) 저장물에 워터마크,
  *   엑셀 저장물에 '이용자' 시트, 30자 이상 복사 시 출처 문구 덧붙임, 내려받기·복사·인쇄를 승인 서버 시트에 기록
  *
  * ※ 화면 잠금(A 수준)이다. 페이지 파일과 데이터는 공개 저장소에 그대로 있으므로
@@ -83,10 +83,12 @@
   if (!hasLocal) doc.classList.add('sg-lock');
 
   /* ---------- 유포 방지: 워터마크·저장물 표시·기록 (관리자는 제외) ---------- */
-  function who() { var t = sget(K_TOKEN); return t && t.token && t.exp > Date.now() && t.role !== 'admin' ? t : null; }
+  // who(): 워터마크·저장물 표시 대상(관리자와 '워터마크 제외'로 지정된 사람은 빠짐) / logWho(): 기록 대상(관리자만 빠짐)
+  function logWho() { var t = sget(K_TOKEN); return t && t.token && t.exp > Date.now() && t.role !== 'admin' ? t : null; }
+  function who() { var t = logWho(); return t && !t.nowm ? t : null; }
   function today() { var d = new Date(); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
   function mark(t) { return t.name + (t.empId ? ' · ' + t.empId : '') + ' · ' + today(); }
-  function report(kind, detail) { var t = who(); if (t) api({ action: 'event', token: t.token, kind: kind, detail: String(detail || '').slice(0, 120) }); }
+  function report(kind, detail) { var t = logWho(); if (t) api({ action: 'event', token: t.token, kind: kind, detail: String(detail || '').slice(0, 120) }); }
   var WMFONT = 'Pretendard,"Apple SD Gothic Neo","Malgun Gothic",sans-serif';
 
   // ① 화면 워터마크(인쇄물에도 찍힘). 지워도 다시 붙는다
@@ -168,11 +170,12 @@
   // ④ 복사: 30자 이상이면 출처 문구를 덧붙이고 기록
   function cpFoot(t) { return '\n\n— ' + SIMNAME + ' · ' + mark(t) + ' 복사 · 외부 전달 금지'; }
   document.addEventListener('copy', function (e) {
-    var t = who(); if (!t || !e.clipboardData) return;
+    var t = who(); if (!logWho() || !e.clipboardData) return;
     var sel = window.getSelection ? window.getSelection() : null, txt = sel ? String(sel) : '', html = '';
     var ae = document.activeElement;
     if (!txt && ae && /^(TEXTAREA|INPUT)$/.test(ae.tagName)) { try { txt = ae.value.slice(ae.selectionStart, ae.selectionEnd); } catch (x) {} }
     if (txt.length < 30) return;
+    if (!t) { report('copy', txt.length + '자'); return; }   // 워터마크 제외 대상: 문구는 붙이지 않고 기록만
     try { if (sel && sel.rangeCount) { var d = document.createElement('div'); for (var i = 0; i < sel.rangeCount; i++) d.appendChild(sel.getRangeAt(i).cloneContents()); html = d.innerHTML; } } catch (x) {}
     e.clipboardData.setData('text/plain', txt + cpFoot(t));
     if (html) e.clipboardData.setData('text/html', html + '<p style="color:#666;font-size:11px">' + esc(cpFoot(t).trim()) + '</p>');
@@ -184,7 +187,7 @@
       var cbWrite = navigator.clipboard.writeText.bind(navigator.clipboard);
       navigator.clipboard.writeText = function (txt) {
         var t = who(); txt = String(txt);
-        if (t && txt.length >= 30) { report('copy', '표 복사 ' + txt.length + '자'); txt += cpFoot(t); }
+        if (txt.length >= 30) { report('copy', '표 복사 ' + txt.length + '자'); if (t) txt += cpFoot(t); }
         return cbWrite(txt);
       };
     }
@@ -366,7 +369,7 @@
   }
 
   function grant(r) {
-    sset(K_TOKEN, { token: r.token, exp: r.exp, name: r.name, empId: r.empId, role: r.role });
+    sset(K_TOKEN, { token: r.token, exp: r.exp, name: r.name, empId: r.empId, role: r.role, nowm: !!r.nowm });
     unlock(); placeWatermark();
   }
   function unlock() {
@@ -387,7 +390,7 @@
     placeWatermark();
     // 저장된 통행증이 있으면 바로 보여 주고, 서버에서 다시 확인해 취소·차단된 경우에만 잠근다(서버 연결 실패 시에는 그대로 둔다)
     api({ action: 'check', token: tok.token }).then(function (r) {
-      if (r.ok) { tok.name = r.name; tok.role = r.role; if (r.empId) tok.empId = r.empId; if (r.exp) tok.exp = r.exp; sset(K_TOKEN, tok); placeWatermark(); }
+      if (r.ok) { tok.name = r.name; tok.role = r.role; if (r.empId) tok.empId = r.empId; tok.nowm = !!r.nowm; if (r.exp) tok.exp = r.exp; sset(K_TOKEN, tok); placeWatermark(); }
       else if (r.revoked) { sdel(K_TOKEN); lock({ text: r.msg || '통행증이 만료되었습니다. 다시 요청해주세요.' }); }
     });
   } else {

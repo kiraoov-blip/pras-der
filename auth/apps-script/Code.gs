@@ -31,7 +31,8 @@ const CFG = {
           bple: '전력수급기본계획', 'renewable-lcoe': '재생에너지 LCOE', lcoe: '태양광 LCOE' }
 };
 const SHEET_USERS = '사용자', SHEET_LOG = '접속기록';
-const USER_HEAD = ['사번', '이름', '소속', '상태', '최초 승인', '최근 접속', '접속 횟수', '메모'];
+const USER_HEAD = ['사번', '이름', '소속', '상태', '최초 승인', '최근 접속', '접속 횟수', '메모', '워터마크 제외'];
+const NOMARK_COL = 9;   // '워터마크 제외' 칸(I열). 체크하거나 O·예·Y를 넣으면 그 사람에게는 워터마크·저장물 표시를 하지 않는다
 const LOG_HEAD = ['시각', '구분', '사번', '이름', '소속', '시뮬레이터', '내용'];
 
 /* ---------------- 웹 요청 ---------------- */
@@ -124,7 +125,7 @@ function verifyCode_(r) {
     upsertUser_(empId, p.name, p.dept, true);
     const t = issueToken_({ role: 'user', empId, name: p.name, dept: p.dept }, CFG.TOKEN_DAYS);
     log_('승인', empId, p.name, p.dept, sim, `통행증 발급(${CFG.TOKEN_DAYS}일)`);
-    return { ok: true, token: t.token, exp: t.exp, name: p.name, empId, role: 'user' };
+    return { ok: true, token: t.token, exp: t.exp, name: p.name, empId, role: 'user', nowm: userState_(empId).nowm };
   } finally { lock.releaseLock(); }
 }
 
@@ -155,7 +156,7 @@ function checkToken_(r) {
   const s = readToken_(r.token);
   if (!s) return { ok: false, revoked: true, msg: '통행증이 만료되었거나 취소되었습니다.' };
   if (s.role !== 'admin') {
-    const st = userStatus_(s.empId);
+    var us = userState_(s.empId), st = us.status;
     if (st !== '승인') return { ok: false, revoked: true, msg: st === '차단' ? '이용이 제한된 사번입니다.' : '승인이 취소되었습니다. 다시 요청해주세요.' };
   }
   // 같은 통행증·시뮬레이터·날짜에는 기록을 한 번만 남긴다(시트가 너무 커지지 않도록)
@@ -166,7 +167,7 @@ function checkToken_(r) {
     log_('접속', s.empId, s.name, s.dept, sim, s.role === 'admin' ? '관리자' : '');
     if (s.role !== 'admin') touchUser_(s.empId);
   }
-  return { ok: true, name: s.name, empId: s.empId, role: s.role, exp: s.exp };
+  return { ok: true, name: s.name, empId: s.empId, role: s.role, exp: s.exp, nowm: s.role === 'admin' ? true : us.nowm };
 }
 
 /** 내려받기·복사·인쇄 기록(잠금 화면이 보내 옴). 같은 내용은 30초 안에 한 번만, 통행증당 1시간 60건까지 */
@@ -233,12 +234,12 @@ function sheet_(name, head) {
 function findUser_(empId) {
   const sh = sheet_(SHEET_USERS, USER_HEAD), v = sh.getDataRange().getValues();
   for (let i = 1; i < v.length; i++) if (String(v[i][0]).replace(/\D/g, '').padStart(8, '0') === empId)
-    return { row: i + 1, name: String(v[i][1]), dept: String(v[i][2]), status: String(v[i][3]).trim() || '승인', count: Number(v[i][6]) || 0 };
+    return { row: i + 1, name: String(v[i][1]), dept: String(v[i][2]), status: String(v[i][3]).trim() || '승인', count: Number(v[i][6]) || 0, nowm: isYes_(v[i][NOMARK_COL - 1]) };
   return null;
 }
 function upsertUser_(empId, name, dept, approved) {
   const sh = sheet_(SHEET_USERS, USER_HEAD), now = fmt_(new Date()), u = findUser_(empId);
-  if (!u) sh.appendRow(["'" + empId, name, dept, '승인', now, now, 0, '']);
+  if (!u) { sh.appendRow(["'" + empId, name, dept, '승인', now, now, 0, '', false]); try { sh.getRange(sh.getLastRow(), NOMARK_COL).insertCheckboxes(); } catch (e) {} }
   else { sh.getRange(u.row, 2, 1, 3).setValues([[name, dept, approved ? '승인' : u.status]]); }
   CacheService.getScriptCache().remove('st_' + empId);
 }
@@ -246,14 +247,15 @@ function touchUser_(empId) {
   const u = findUser_(empId); if (!u) return;
   sheet_(SHEET_USERS, USER_HEAD).getRange(u.row, 6, 1, 2).setValues([[fmt_(new Date()), u.count + 1]]);
 }
-/** '승인' / '차단' / '없음' — 시트에서 바꾼 값이 최대 STATUS_CACHE_S초 뒤 반영 */
-function userStatus_(empId) {
+/** 상태('승인' / '차단' / '없음')와 워터마크 제외 여부 — 시트에서 바꾼 값이 최대 STATUS_CACHE_S초 뒤 반영 */
+function userState_(empId) {
   const c = CacheService.getScriptCache(), k = 'st_' + empId, hit = c.get(k);
-  if (hit) return hit;
-  const u = findUser_(empId), st = !u ? '없음' : (u.status === '차단' ? '차단' : '승인');
-  c.put(k, st, CFG.STATUS_CACHE_S);
+  if (hit) { const [status, nm] = hit.split('|'); return { status, nowm: nm === '1' }; }
+  const u = findUser_(empId), st = { status: !u ? '없음' : (u.status === '차단' ? '차단' : '승인'), nowm: !!(u && u.nowm) };
+  c.put(k, st.status + '|' + (st.nowm ? '1' : '0'), CFG.STATUS_CACHE_S);
   return st;
 }
+function isYes_(v) { return v === true || /^(o|y|yes|예|제외|true|v|✓|✔)$/i.test(String(v == null ? '' : v).trim()); }
 function log_(kind, empId, name, dept, sim, note) {
   try {
     const sh = sheet_(SHEET_LOG, LOG_HEAD);
@@ -332,7 +334,10 @@ function kakaoCallback_(p) {
 function setup() {
   const b = SpreadsheetApp.getActiveSpreadsheet();
   if (b) props_().setProperty('SHEET_ID', b.getId());
-  sheet_(SHEET_USERS, USER_HEAD); sheet_(SHEET_LOG, LOG_HEAD);
+  const us = sheet_(SHEET_USERS, USER_HEAD); sheet_(SHEET_LOG, LOG_HEAD);
+  // 예전에 만든 시트에도 '워터마크 제외' 머리글과 체크박스를 넣는다(다시 실행해도 괜찮음)
+  us.getRange(1, 1, 1, USER_HEAD.length).setValues([USER_HEAD]).setFontWeight('bold');
+  if (us.getLastRow() >= 2) us.getRange(2, NOMARK_COL, us.getLastRow() - 1, 1).insertCheckboxes();   // 이미 있는 사람 행에만
   Logger.log('시트 준비 완료: ' + book_().getUrl());
 }
 
