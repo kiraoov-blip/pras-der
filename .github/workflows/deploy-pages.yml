@@ -1,60 +1,28 @@
-name: Deploy PRAS-DER + PRAS-TOU + CARE-Jeju + IEA Hub to GitHub Pages
+name: 계산 결과 검증
 
-# 이 워크플로는 이제 pras-der 저장소 하나가 simulator-kepco.co.kr 커스텀 도메인
-# 전체를 조립해서 배포한다:
-#   /            → hub/index.html (이 저장소, 정적 허브 페이지)
-#   /pras/**     → 이 저장소의 Next.js 앱 (output: "export", basePath=/pras)
-#   /tou/**      → kiraoov-blip/pras-tou 저장소를 체크아웃해서 그대로 복사(빌드 불필요)
-#   /care/**     → kiraoov-blip/care 저장소를 체크아웃해서 그 자리에서 빌드한 결과
-#   /iea-price/** → 이 저장소의 iea-price/ 폴더(정적 HTML 한 장 + 폰트·데이터 내장, 빌드 불필요)
-#   /bple/**     → 이 저장소의 bple/ 폴더(전력수급기본계획 시뮬레이터, 정적 폴더, 빌드 불필요)
-#   /elec-intensity/** → 이 저장소의 elec-intensity/ 폴더(전력원단위 시뮬레이터, 정적 HTML 한 장, 빌드 불필요)
-#   /lcoe/**     → 이 저장소의 lcoe/ 폴더(태양광 균등화 발전단가 시뮬레이터, 정적 HTML 한 장, 빌드 불필요)
-#
-# GitHub Pages 커스텀 도메인은 저장소 하나에만 붙기 때문에, 여러 제품을 한 도메인
-# 아래 서로 다른 경로로 보여주려면 이렇게 여러 저장소를 이 워크플로 안에서 함께
-# 조립해서 하나의 배포 아티팩트로 합치는 수밖에 없다. care·pras-tou 저장소는
-# 공개(public) 저장소이므로 별도 인증 토큰 없이 actions/checkout으로 그대로
-# 가져올 수 있다. pras-tou는 바닐라 정적 사이트(빌드 단계 없음)라 체크아웃한
-# 그대로 복사만 하면 된다.
+# 배포와 분리된 검증 전용 워크플로.
+# 계산 결과가 기준선과 달라지면 여기서 빨간불이 뜬다.
+# 안정화된 뒤 Settings > Branches 의 보호 규칙에 이 검사를 필수로 걸면
+# 결과가 바뀐 코드는 main 에 병합될 수 없다.
+
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: pages
-  cancel-in-progress: true
-
 jobs:
-  build:
-    name: 정적 빌드 (허브 + pras + tou + care + iea-price)
-    runs-on: ubuntu-latest
+  golden:
+    name: 골든 테스트
+    # ubuntu-latest가 26.04로 바뀌면서 Playwright 1.56이 Chromium을 설치하지 못해(지원 안 함) 24.04로 고정한다.
+    # Playwright를 올릴 때 26.04 지원이 확인되면 다시 ubuntu-latest로 되돌려도 된다.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
 
     steps:
-      - name: Checkout (pras-der)
+      - name: Checkout
         uses: actions/checkout@v6
-
-      # pras-tou 저장소(공개)를 하위 폴더로 체크아웃한다. 계정명이 바뀌거나
-      # 저장소가 이관되면 이 repository 값만 갱신하면 된다.
-      - name: Checkout (pras-tou, public repo)
-        uses: actions/checkout@v6
-        with:
-          repository: kiraoov-blip/pras-tou
-          path: tou-src
-
-      # care 저장소(공개)를 하위 폴더로 체크아웃한다. 계정명이 바뀌거나 저장소가
-      # 이관되면 이 repository 값만 갱신하면 된다.
-      - name: Checkout (care, public repo)
-        uses: actions/checkout@v6
-        with:
-          repository: kiraoov-blip/care
-          path: care-src
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -62,115 +30,24 @@ jobs:
           node-version: 22
           cache: npm
 
-      - name: Configure GitHub Pages
-        uses: actions/configure-pages@v5
-
-      # ---------- PRAS-DER (이 저장소) 빌드 ----------
-      - name: Install dependencies (pras-der)
+      - name: Install dependencies
         run: npm ci
 
-      - name: Check application types (pras-der)
-        run: npm run typecheck
+      - name: 탐라 엔진 참조 테스트
+        run: npm run test:engine
 
-      - name: Build static site (pras-der → /pras)
-        env:
-          GITHUB_PAGES: "true"
-          # 커스텀 도메인 루트는 이제 아래에서 만드는 허브(hub/index.html)가
-          # 차지하고, 이 앱 자체는 그 아래 /pras 경로에서 서비스된다.
-          PAGES_BASE_PATH: "/pras"
-        run: npm run build:github-pages
+      # 제주 TOU 시간대와 EV 단가가 엔진·전기차·히트펌프 세 곳에 하드코딩돼 있다.
+      # 요금 개정 시 한 곳만 고쳐 조용히 어긋나는 것을 여기서 막는다.
+      - name: 요금표 교차 일치 검사
+        run: node --test tests/tariff-consistency.test.mjs
 
-      # ---------- CARE-Jeju (care-src, 방금 체크아웃한 별도 저장소) 빌드 ----------
-      # care 저장소에는 package-lock.json이 커밋되어 있지 않아 npm ci를 쓸 수
-      # 없다(npm ci는 lockfile이 반드시 있어야 한다) → npm install을 쓴다.
-      - name: Install dependencies (care)
-        working-directory: care-src
-        run: npm install
+      # Playwright 는 골든 테스트에서만 쓰이므로 package-lock 을 건드리지 않는다.
+      # --no-package-lock / --legacy-peer-deps 는 기존 lock 과의 충돌을 피하기 위한 것.
+      - name: Install Playwright
+        run: npm install --no-save --no-package-lock --legacy-peer-deps playwright@1.56.0
 
-      - name: Check application types (care)
-        working-directory: care-src
-        run: npm run typecheck
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
 
-      - name: Build static site (care → /care)
-        working-directory: care-src
-        run: npm run build:site
-
-      # care/site/src/data.ts는 데이터를 site/data/ (site/ 기준 상대경로)에서
-      # 읽는다. care 저장소 자체의 배포 워크플로와 동일하게, 빌드 결과물이 아닌
-      # data/ 폴더를 site/ 안으로 복사해줘야 한다.
-      - name: Copy CARE data into its site bundle
-        run: cp -r care-src/data care-src/site/data
-
-      # ---------- 허브 + pras + tou + care를 하나의 배포 트리로 조립 ----------
-      # pras-tou는 index.html/app.js/style.css/data/*.xlsx로만 이뤄진 바닐라
-      # 정적 사이트라 빌드 없이 체크아웃 결과를 그대로 /tou로 복사한다.
-      # actions/checkout은 저장소 파일만 받고 .git 디렉터리는 각 체크아웃 경로
-      # 안에 남으므로, cp -r로 복사한 뒤 배포물에 불필요한 .git만 지운다
-      # (rsync 없이도 어느 러너에서나 동일하게 동작하도록 cp+rm 조합을 쓴다).
-      - name: Assemble combined Pages artifact
-        run: |
-          mkdir -p public-root
-          cp hub/index.html public-root/index.html
-          cp hub/favicon.svg public-root/favicon.svg
-          # 안드로이드(크롬·삼성 인터넷) 홈 화면 아이콘용 앱 정보 파일 — 시뮬레이터별 1개
-          cp -r hub/manifests public-root/manifests
-          cp -r out public-root/pras
-          cp -r tou-src public-root/tou
-          rm -rf public-root/tou/.git
-          cp -r care-src/site public-root/care
-          # iea-price는 빌드 산출물이 아니라 이 저장소에 그대로 커밋된 정적 폴더다
-          # (index.html 한 장 + favicon + vendor 스크립트). 그대로 복사만 하면 된다.
-          cp -r iea-price public-root/iea-price
-          cp -r ember-sim public-root/ember-sim
-          # kepco-stat도 같은 방식의 정적 폴더다. 배포에는 index.html·favicon·vendor만 싣는다.
-          mkdir -p public-root/kepco-stat
-          cp -r kepco-stat/index.html kepco-stat/favicon.svg kepco-stat/vendor public-root/kepco-stat/
-          # elec-intensity(전력원단위)도 같은 방식의 정적 폴더다. index.html·favicon만 싣고,
-          # 그림·엑셀 저장 모듈은 위 kepco-stat/vendor(/kepco-stat/vendor/)를 함께 쓴다.
-          mkdir -p public-root/elec-intensity
-          cp elec-intensity/index.html elec-intensity/favicon.svg public-root/elec-intensity/
-          # bple(전력수급기본계획)도 같은 방식의 정적 폴더다. 외부 의존성은 CDN의
-          # Chart.js 하나뿐이라 vendor 폴더 없이 폴더째 복사하면 된다.
-          cp -r bple public-root/bple
-          # lcoe(태양광 균등화 발전단가)도 같은 방식의 정적 폴더다. index.html 한 장 + favicon,
-          # 외부 의존성은 Pretendard 웹폰트(CDN)뿐이라 폴더째 복사하면 된다.
-          cp -r renewable-lcoe public-root/renewable-lcoe
-          cp -r lcoe public-root/lcoe
-
-      # ---------- 접근 승인 잠금(사번·소속·이름 + 관리자 카카오톡 6자리 코드) ----------
-      # LOCKED에 적은 폴더의 모든 .html <head> 맨 앞에 /auth/gate.js 한 줄과
-      # 검색엔진 수집 차단 표시(robots noindex)를 넣는다.
-      # 다른 저장소(tou·care)나 Next.js 앱(pras)의 소스는 건드리지 않고 배포물에만 넣는 방식이다.
-      # 잠글 시뮬레이터를 바꾸려면 LOCKED만 고치면 된다(허브 카드의 data-locked 표시도 함께 맞춘다).
-      # 승인 서버(Apps Script) 설정은 auth/README.md 참고.
-      - name: Inject access gate
-        env:
-          LOCKED: "pras tou care iea-price"
-        run: |
-          mkdir -p public-root/auth
-          cp auth/gate.js public-root/auth/gate.js
-          for d in $LOCKED; do
-            [ -d "public-root/$d" ] || { echo "::warning::잠글 폴더가 없습니다: $d"; continue; }
-            find "public-root/$d" -name '*.html' -print0 | while IFS= read -r -d '' f; do
-              SIM="$d" perl -0pi -e 'next if /\/auth\/gate\.js/; s{<head(\s[^>]*)?>}{$&<script src="/auth/gate.js" data-sim="$ENV{SIM}"></script><meta name="robots" content="noindex,nofollow">}i' "$f"
-            done
-            echo "잠금: $d ($(grep -rl '/auth/gate.js' "public-root/$d" --include='*.html' | wc -l)개 파일)"
-          done
-
-      - name: Upload GitHub Pages artifact
-        uses: actions/upload-pages-artifact@v4
-        with:
-          path: ./public-root
-
-  deploy:
-    name: 배포
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    needs: build
-
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+      - name: 바닐라 시뮬레이터 계산 결과 대조
+        run: npm run test:golden
