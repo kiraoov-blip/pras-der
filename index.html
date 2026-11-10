@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="계시별 요금제 시간대 및 단가 변경에 따른 전력량요금 매출 영향 시뮬레이터">
+  <title>PRAS - TOU</title>
+  <!-- PRAS-DER(파랑)·CARE-Jeju(주황)와 구분되는 세이지 그린 계열 파비콘 —
+       같은 모양(사각형 4개)을 색만 앱 고유 브랜드 색으로 바꿔 브라우저 탭에서
+       한눈에 구분되게 한다. -->
+  <link rel="icon" href="./favicon.svg?v=20261021-073">
+<!-- HOME-ICON --><link rel="icon" type="image/png" sizes="192x192" href="/pras/icon-192x192.png"><link rel="apple-touch-icon" href="/pras/icon-192x192.png"><link rel="manifest" href="/manifests/tou.webmanifest"><meta name="theme-color" content="#2168df"><!-- HOME-ICON -->
+  <!-- 홈 화면에 추가했을 때 쓰이는 아이콘. 지금까지는 이 태그가 아예 없어
+       iOS에서 "홈 화면에 추가"를 하면 아이콘 대신 화면을 찍은 스크린샷이
+       그대로 쓰였다 — PRAS-DER·PRAS-TOU·CARE-Jeju를 모두 아우르는 새
+       계기판 아이콘(파란 패널 위 흰 계기판)을 여기도 동일하게 연결한다. -->
+    <link rel="stylesheet" href="./style.css?v=20261105-unify1">
+</head>
+<body>
+<!--
+  상단 2단 구조(PRAS-DER·CARE-Jeju와 통일) — 얇은 다크 톤 .topbar(브랜드 +
+  "처음으로" 버튼)와 그 아래 그라디언트 .hero(제목·부제)로 나눈다. PRAS-TOU는
+  별도 프레임워크 없는 정적 페이지이고 basePath 개념이 없어 /tou/ 아래에서
+  서비스되므로, CARE와 동일하게 href="/"가 그대로 도메인 루트(허브)를 가리킨다.
+-->
+<div class="topbar">
+  <a href="/tou/" class="site-brand">PRAS<span>TOU</span></a>
+  <ul class="site-tabs" id="navList"><li><a href="#s-input" class="active">분석조건</a></li><li><a href="#s-period">시간대</a></li><li><a href="#s-rate">단가</a></li><li><a href="#s-curve">부하곡선</a></li><li><a href="#s-factor">요인분해</a></li><li><a href="#s-season">계절별</a></li><li><a href="#s-usage">경·중·최</a></li><li><a href="#solverPanel">목표역산</a></li></ul>
+  <a href="/" class="site-home-btn" aria-label="처음 화면으로">
+    <!-- width/height를 속성으로도 직접 지정 — CSS가 어떤 이유로든 적용되지
+         않는 경우(로딩 실패 등) svg가 기본 동작대로 부모 폭에 맞춰 커지면서
+         화면 전체를 채우는 아이콘처럼 보이는 사고를 막기 위한 안전장치.
+         평소(CSS 정상 로드 시)에는 .site-home-btn svg{width:15px;height:15px}가
+         그대로 우선 적용된다. -->
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.6 11.4 12 4.4l8.4 7"/><path d="M5.7 10.2V19a1 1 0 0 0 1 1H9.6v-5.3h4.8V20h2.9a1 1 0 0 0 1-1v-8.8"/></svg>
+    <span>처음으로</span>
+  </a>
+</div>
+<header class="hero">
+  <div>
+    <h1>계시별 요금제 수익 분석 시뮬레이터(PRAS - TOU)</h1>
+    <p class="english-title">Pricing and Revenue Analysis Simulator - Time of Use tariff</p>
+  </div>
+</header>
+
+<main>
+
+  <section id="s-input" class="panel">
+    <h2>1. 분석 조건</h2>
+    <div class="control-grid">
+      <label>분석 지역<select id="region"><option value="NATIONAL">전국</option><option value="LAND">육지</option><option value="JEJU">제주</option></select></label>
+      <label>분석 종별<select id="category"></select></label>
+      <label>부하곡선 연도<select id="year"></select></label>
+      <label>분석 범위<select id="scope"><option value="연간">연간</option><option value="하계">여름</option><option value="춘추계">봄가을</option><option value="동계">겨울</option></select></label>
+      <label>고객 범위<select id="customerScope"><option value="specific">요금제 직접 선택</option><option value="all">전체 고객(판매량 가중)</option></select></label>
+      <label>계약전력구간<select id="contract"></select></label>
+      <label>전압구분<select id="voltage"></select></label>
+      <label>선택요금<select id="choice"></select></label>
+      <label>기준안 버전<select id="baseVersion"></select></label>
+      <label>시나리오 초기값<select id="scenarioVersion"></select></label>
+    </div>
+    <div class="button-row">
+      <label class="check calibration-check"><input id="useAnnualCalibration" type="checkbox" checked> 공식 연간 판매량으로 보정</label>
+      <button id="loadScenario" class="btn primary">시나리오 초기값 불러오기</button>
+      <button id="copyBase" class="btn">기준안과 동일하게</button>
+      <button id="exportCsv" class="btn">결과 CSV 저장</button>
+    </div>
+    <div id="warning" class="callout warning"></div>
+  </section>
+
+  <section class="kpi-grid">
+    <article class="kpi"><span>분석 판매량</span><strong id="kUsage">-</strong><small id="kPeriod">-</small></article>
+    <article class="kpi"><span>기준안 전력량요금</span><strong id="kBase">-</strong><small>기본요금 제외</small></article>
+    <article class="kpi"><span>시나리오 전력량요금</span><strong id="kScenario">-</strong><small>정태적 부하 기준</small></article>
+    <article class="kpi"><span>매출 증감</span><strong id="kDelta">-</strong><small id="kDeltaPct">-</small></article>
+    <article class="kpi"><span>기준 평균단가</span><strong id="kBaseAvg">-</strong><small>원/kWh</small></article>
+    <article class="kpi"><span>시나리오 평균단가</span><strong id="kScenarioAvg">-</strong><small>원/kWh</small></article>
+    <article class="kpi"><span>평균단가 차이</span><strong id="kAvgDiff">-</strong><small id="kAvgDiffPct">-</small></article>
+    <article class="kpi"><span>최대부하 사용량 비중</span><strong id="kPeakShare">-</strong><small id="kPeakShareNote">-</small></article>
+  </section>
+
+  <div class="layout">
+    <div class="layout-left">
+      <section id="s-period" class="panel">
+        <h2>2. 시간대 구분 변경</h2>
+        <p class="muted">계절과 요일을 선택한 뒤 시간 셀을 클릭하면 경부하 → 중간부하 → 최대부하 순으로 변경됨</p>
+        <div class="tab-row" id="seasonTabs">
+          <button data-season="하계" class="tab active">여름</button>
+          <button data-season="춘추계" class="tab">봄가을</button>
+          <button data-season="동계" class="tab">겨울</button>
+        </div>
+        <div class="day-row">
+          <label>요일구분<select id="dayType"><option value="평일">평일</option><option value="토요일">토요일</option><option value="일·공휴일">일·공휴일</option></select></label>
+          <label id="weekendDiscountLabel" class="check"><input id="useScenarioDiscount" type="checkbox" checked> <span id="weekendDiscountText">주말 할인 적용</span></label>
+        </div>
+        <div class="legend"><span><i class="off"></i>경부하</span><span><i class="mid"></i>중간부하</span><span><i class="peak"></i>최대부하</span></div>
+        <div id="hourGrid" class="hour-grid"></div>
+        <h3>기준안과 시나리오 비교</h3>
+        <div class="scroll"><div id="scheduleCompare" class="schedule-compare"></div></div>
+      </section>
+
+      <section id="s-rate" class="panel">
+        <h2>3. 시간대별 단가 조정</h2>
+        <div class="rate-layout">
+          <div><h3>기준안 단가</h3><table id="baseRates" class="table"></table></div>
+          <div><h3>시나리오 단가</h3><table id="scenarioRates" class="table"></table></div>
+        </div>
+        <div class="button-row compact">
+          <button class="btn rate-adjust" data-mult="1.01">전체 +1%</button>
+          <button class="btn rate-adjust" data-mult="1.03">전체 +3%</button>
+          <button class="btn rate-adjust" data-mult="1.05">전체 +5%</button>
+          <button class="btn rate-adjust" data-mult="0.95">전체 -5%</button>
+        </div>
+      </section>
+    </div>
+
+    <!--
+      DOM 순서를 시각적 순서(2 → 3 → 4 → 5~8)와 일치시킨다. 이전에는 4번 패널이
+      마크업 맨 끝(aside 뒤)에 있고 grid-template-areas만으로 화면 배치를
+      바꿨는데, CSS가 어떤 이유로든 적용되지 않으면(로딩 실패·캐시 문제 등)
+      raw DOM 순서 그대로 2 → 3 → 5 → 6 → 7 → 8 → 4로 보여 "4번이 맨 뒤로
+      밀린 것처럼" 보이는 문제가 있었다. 이제 4번을 3번 바로 뒤, aside보다
+      앞에 둬서 CSS가 없어도 논리적 순서(2·3·4·5~8)가 그대로 유지된다.
+      화면에서 폭 전체를 차지하는 배치(.layout-full)는 아래 CSS의
+      grid-template-areas("left aside" "full full")가 그대로 담당한다.
+    -->
+    <section id="s-curve" class="panel layout-full">
+      <h2>4. 요일별 평균 부하곡선</h2>
+      <div id="graphDayTabs" class="tab-row graph-day-tabs">
+        <button data-graph-day="전체" class="tab active">전체</button>
+        <button data-graph-day="평일" class="tab">평일</button>
+        <button data-graph-day="토요일" class="tab">토요일</button>
+        <button data-graph-day="일·공휴일" class="tab">일·공휴일</button>
+      </div>
+      <div id="graphDayInfo" class="muted graph-day-info"></div>
+      <div class="chart-controls">
+        <label>세로축 표시
+          <select id="yAxisMode">
+            <option value="zoom" selected>확대 자동</option>
+            <option value="zero">0부터 자동</option>
+            <option value="custom">직접 입력</option>
+          </select>
+        </label>
+        <label>최소값(GWh/일)
+          <input id="yAxisMin" type="number" step="0.1" min="0">
+        </label>
+        <label>최대값(GWh/일)
+          <input id="yAxisMax" type="number" step="0.1" min="0">
+        </label>
+        <button id="applyYAxis" class="btn">세로축 적용</button>
+      </div>
+      <div id="yAxisInfo" class="muted chart-axis-info"></div>
+      <!-- viewBox는 최초 표시 전 기본값(900×285)이고, renderChart()가 실제
+           렌더링 폭을 읽어 매번 새로 맞춘다(가로로 글자가 늘어나 보이던
+           문제 수정 — app.js의 renderChart() 주석 참고). -->
+      <svg id="loadChart" class="chart" viewBox="0 0 900 285"></svg>
+      <p class="muted">‘전체’는 선택한 지역·종별의 전체 일평균 부하곡선임. 2025~2026년 계절·요일은 날짜와 요금 적용용 휴일기준으로 자동 생성함. 전국 분석의 시간대 색 띠는 육지 기준을 표시함.</p>
+    </section>
+
+    <aside>
+      <section id="s-factor" class="panel">
+        <h2>5. 매출 변화 요인 분해</h2>
+        <div class="decomp">
+          <div><span>시간대 구분 효과</span><strong id="dSchedule">-</strong></div>
+          <div><span>단가 조정 효과</span><strong id="dRate">-</strong></div>
+          <div><span>주말 할인 효과</span><strong id="dDiscount">-</strong></div>
+        </div>
+        <div class="callout">시간대 변경 → 단가 변경 → 주말 할인 적용 순서의 순차효과임. 최종 합계는 전체 매출 증감액과 일치함.</div>
+      </section>
+      <section id="s-season" class="panel"><h2>6. 계절별 결과</h2><table id="seasonTable" class="table"></table></section>
+      <section id="s-usage" class="panel"><h2>7. 경·중·최 사용량 변화</h2><table id="periodTable" class="table"></table></section>
+      <section class="panel">
+        <h2>8. 계산 범위</h2>
+        <ul class="notes">
+          <li>전력량요금만 계산하며 기본요금·기후환경요금·연료비조정요금·세금은 제외</li>
+          <li>요금 변경에 따른 고객의 부하이동·절감 반응은 미반영</li>
+          <li>선택요금별 시간대 부하곡선이 없어 종별 전체 부하형상에 전국 판매량 구성비를 적용한 추정값</li>
+          <li>육지·제주의 세부 전압·선택요금 구성은 지역별 자료가 없어 전국 판매량 구성비를 대리 적용</li>
+          <li>2026년은 1월 1일~6월 30일 자료만 분석하며 2022~2025 연평균에는 포함하지 않음</li>
+          <li>GitHub 데이터 변경 후 Ctrl+F5를 눌러 최신 파일을 다시 불러옴</li>
+        </ul>
+      </section>
+    </aside>
+  </div>
+
+  <section class="panel" id="solverPanel">
+    <h2>9. 목표 효과 역산</h2>
+    <p class="muted">5번 요인분해의 효과를 원하는 값으로 맞추는 시간대·단가·주말 할인율을 찾아줌. 선택한 계절만 조정하며, 목표를 비워둔 효과는 조정하지 않음.</p>
+    <div class="solver-controls">
+      <label>조정 계절<select id="solveSeason"><option value="하계">여름</option><option value="춘추계" selected>봄가을</option><option value="동계">겨울</option><option value="ALL">전체 계절</option></select></label>
+      <label class="check"><input id="solveKeepNight" type="checkbox" checked> 경부하(22~08시)는 그대로 두고 낮 시간만 중간·최대 사이에서 조정</label>
+      <div class="solver-bands"><span>단가 조정 대상</span>
+        <label class="check"><input type="checkbox" class="solve-band" value="경부하" checked>경부하</label>
+        <label class="check"><input type="checkbox" class="solve-band" value="중간부하" checked>중간부하</label>
+        <label class="check"><input type="checkbox" class="solve-band" value="최대부하" checked>최대부하</label>
+      </div>
+    </div>
+    <div class="scroll"><table class="table solver-table">
+      <colgroup><col class="c-name"><col class="c-cur"><col class="c-target"><col class="c-means"></colgroup>
+      <thead><tr><th>효과</th><th>현재(억원)</th><th>목표(억원)</th><th>조정 수단</th></tr></thead>
+      <tbody>
+        <tr><td>시간대 구분 효과<small class="means-inline">선택 계절 평일·토요일 시간대(시간 단위)</small></td><td id="solveCurSchedule">-</td><td><input id="targetSchedule" type="number" step="10"></td><td>선택 계절 평일·토요일 시간대(시간 단위)</td></tr>
+        <tr><td>단가 조정 효과<small class="means-inline">선택 계절·시간대 단가에 같은 비율 적용</small></td><td id="solveCurRate">-</td><td><input id="targetRate" type="number" step="10"></td><td>선택 계절·시간대 단가에 같은 비율 적용</td></tr>
+        <tr><td>주말 할인 효과<small class="means-inline">선택 계절 주말 11~14시 할인율</small></td><td id="solveCurDiscount">-</td><td><input id="targetDiscount" type="number" step="10"></td><td>선택 계절 주말 11~14시 할인율</td></tr>
+      </tbody>
+    </table></div>
+    <div class="solver-discount"><span>시나리오 주말 할인율(토·일·공휴일 11~14시, 산업용(을)·EV)</span>
+      <label><span class="disc-name">여름</span><input class="disc-rate" data-season="하계" type="number" min="0" max="100" step="0.1"><span class="disc-unit">%</span></label>
+      <label><span class="disc-name">봄가을</span><input class="disc-rate" data-season="춘추계" type="number" min="0" max="100" step="0.1"><span class="disc-unit">%</span></label>
+      <label><span class="disc-name">겨울</span><input class="disc-rate" data-season="동계" type="number" min="0" max="100" step="0.1"><span class="disc-unit">%</span></label>
+    </div>
+    <div class="button-row"><button id="solveTargets" class="btn primary">최적 조정안 계산</button><button id="applySolution" class="btn" disabled>시나리오에 적용</button></div>
+    <div id="solverResult"></div>
+  </section>
+</main>
+
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<script src="./app.js?v=20261021-073"></script>
+<script>/* SIM-UNIFY: 구역 탭 — 지금 보고 있는 구역을 탭에 표시 */
+(()=>{const links=[...document.querySelectorAll('#navList a')];const secs=links.map(a=>document.querySelector(a.getAttribute('href')));if(!('IntersectionObserver' in window))return;const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){links.forEach(a=>{const on=a.getAttribute('href')==='#'+e.target.id;a.classList.toggle('active',on);if(on)a.scrollIntoView({block:'nearest',inline:'nearest'});})}})},{rootMargin:'-20% 0px -70% 0px'});secs.forEach(s=>s&&io.observe(s));})();</script>
+</body>
+</html>
