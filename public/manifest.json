@@ -5,7 +5,6 @@
   "start_url": "/pras/",
   "scope": "/pras/",
   "display": "standalone",
-  "orientation": "portrait",
   "dir": "ltr",
   "lang": "ko-KR",
   "theme_color": "#2168df",

@@ -1,0 +1,36 @@
+{
+  "name": "IEA Prices and Taxes",
+  "short_name": "IEA 요금",
+  "start_url": "/iea-price/",
+  "scope": "/iea-price/",
+  "display": "standalone",
+  "lang": "ko-KR",
+  "theme_color": "#2168df",
+  "background_color": "#ffffff",
+  "icons": [
+    {
+      "src": "/pras/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pras/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pras/icon-maskable-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/pras/icon-maskable-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

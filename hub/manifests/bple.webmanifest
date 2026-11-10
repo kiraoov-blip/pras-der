@@ -1,0 +1,36 @@
+{
+  "name": "전력수급기본계획 시뮬레이터",
+  "short_name": "전력수급계획",
+  "start_url": "/bple/",
+  "scope": "/bple/",
+  "display": "standalone",
+  "lang": "ko-KR",
+  "theme_color": "#2168df",
+  "background_color": "#ffffff",
+  "icons": [
+    {
+      "src": "/pras/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pras/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pras/icon-maskable-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/pras/icon-maskable-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
