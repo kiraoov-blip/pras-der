@@ -6,6 +6,7 @@
 <title>Electricity Intensity Simulator</title>
 <meta name="description" content="전력원단위 시뮬레이터 — 한국전력통계 판매전력량과 한국은행 실질 부가가치로 본 제조업 업종별·요금종별·용도별 전력원단위, 가정 호당 사용량, Ember·세계은행 기반 209개국 비교">
 <link rel="icon" href="favicon.svg">
+<!-- HOME-ICON --><link rel="apple-touch-icon" href="/pras/icon-192x192.png"><link rel="manifest" href="/manifests/inten.webmanifest"><!-- HOME-ICON -->
 <style>
   html{-webkit-text-size-adjust:100%}
   :root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
@@ -48,7 +49,7 @@ button{cursor:pointer}
 .site-nav ul a{display:block;padding:7px 13px;border-radius:8px;color:#dcdde0;font-size:13px;font-weight:700;letter-spacing:-.01em;text-decoration:none;white-space:nowrap}
 .site-nav ul a:hover{color:#fff;background:rgba(255,255,255,.08)}
 .site-nav ul a.active{color:#fff;background:rgba(208,210,215,.18);box-shadow:inset 0 0 0 1px rgba(208,210,215,.45)}
-.site-home-btn{margin-left:auto;flex:0 0 auto;display:flex;align-items:center;gap:6px;padding:6px 11px;border-radius:8px;color:#ecedef;font-size:12.5px;font-weight:700;white-space:nowrap;border:1px solid rgba(255,255,255,.22);background:transparent}
+.site-home-btn{text-decoration:none;margin-left:auto;flex:0 0 auto;display:flex;align-items:center;gap:6px;padding:6px 11px;border-radius:8px;color:#ecedef;font-size:12.5px;font-weight:700;white-space:nowrap;border:1px solid rgba(255,255,255,.22);background:transparent}
 .site-home-btn svg{width:15px;height:15px}
 .site-home-btn:hover{color:#fff;background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.35)}
 @media(max-width:640px){.site-nav-inner{gap:14px;height:48px;padding:0 14px}.site-brand{font-size:14px}.site-home-btn span{display:none}.site-home-btn{padding:7px}.site-nav ul a{padding:6px 10px;font-size:12px}}
@@ -255,6 +256,27 @@ footer{background:#242629;color:#d0d2d6;padding:21px 0}
 .footer-inner p{margin:0}
 @media(max-width:640px){.footer-inner{flex-direction:column;gap:6px;padding:0 14px}}
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#1f2430;color:#fff;padding:9px 15px;border-radius:9px;font-size:13px;font-weight:600;z-index:70;box-shadow:0 6px 18px rgba(48,50,55,.3)}
+
+
+/* SIM-UNIFY:START — 시뮬레이터 공통 화면 규격 v1
+   상단바 52px(640px 이하 48px)·항상 위에 고정 / 제목 띠 위아래 24px(16px)·좌우 30px(14px)
+   제목 23~33px(20px) / 부제 14px(12px) / 휴대폰 기준 폭 640px — 모든 시뮬레이터 동일 */
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)}
+:root{padding-top:0!important}
+.site-nav{position:sticky!important;top:0!important;z-index:50!important}
+.site-nav{padding-top:env(safe-area-inset-top,0px)}
+.site-nav-inner{height:52px!important}
+.site-brand{font-size:15px!important}
+.site-nav ul a{font-size:13px!important}
+.site-home-btn{font-size:12.5px!important}
+@media(max-width:640px){.site-nav-inner{height:48px!important}.site-brand{font-size:14px!important}.site-nav ul a{font-size:12px!important;padding:6px 10px!important}}
+.hero{padding:24px 0!important}
+.hero-inner{padding-left:30px!important;padding-right:30px!important}
+.hero h1{font-size:clamp(23px,2.5vw,33px)!important;line-height:1.28!important}
+.hero p{font-size:14px!important;line-height:1.45!important}
+@media(max-width:640px){.hero{padding:16px 0!important}.hero-inner{padding-left:14px!important;padding-right:14px!important}.hero h1{font-size:20px!important;line-height:1.38!important}.hero p{font-size:12px!important}}
+/* SIM-UNIFY:END */
 
 </style>
 <style>

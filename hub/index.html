@@ -109,6 +109,14 @@
   }
   .landing-card:hover { border-color:#8cb3ec; box-shadow:0 6px 20px rgba(24,45,72,.07); transform:translateY(-2px); }
   .landing-card:focus-visible { outline:3px solid rgba(33,104,223,.22); outline-offset:2px; }
+  /* 접근 승인이 필요한 시뮬레이터(사번·이름 + 관리자 카카오톡 코드). 잠그는 실제 목록은
+     .github/workflows/deploy-pages.yml의 LOCKED이고, 여기 data-locked는 표시만 한다 — 둘을 같이 맞춘다. */
+  .landing-card[data-locked] { position:relative; }
+  .landing-card[data-locked]::after {
+    content:"승인 필요"; position:absolute; top:24px; right:22px; padding:3px 8px 3px 21px; border-radius:999px;
+    background:#f3f4f6 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%234b5563' stroke-width='2.4' stroke-linecap='round'%3E%3Crect x='5' y='11' width='14' height='10' rx='2'/%3E%3Cpath d='M8 11V8a4 4 0 0 1 8 0v3'/%3E%3C/svg%3E") 7px 50%/11px 11px no-repeat;
+    color:#4b5563; font-size:10px; font-weight:800; letter-spacing:.01em; border:1px solid #e5e7eb;
+  }
   .landing-card-tag {
     justify-self:start; padding:4px 9px; border-radius:999px; background:var(--blue-soft); color:var(--blue);
     font-size:10px; font-weight:800; letter-spacing:.02em;
@@ -154,6 +162,14 @@
   .landing-card.kepco:hover { border-color:#8fb0de; box-shadow:0 6px 20px rgba(0,59,142,.1); }
   .landing-card.kepco:hover .landing-card-icon { background:var(--kepco-brand); color:#fff; border-color:var(--kepco-brand); }
   .landing-card.kepco .landing-card-go { color:var(--kepco-brand); }
+
+  /* 전력원단위 카드: 브랜드색만 로컬로 덮어씀(구조·spacing은 동일, 어두운 회색 + 노란색 포인트) */
+  .landing-card.inten .landing-card-tag { background:#fdf4d8; color:#2b2f35; }
+  .landing-card.inten .landing-card-icon { background:#f3f4f5; color:#3a3f47; border-color:#dcdfe3; }
+  .landing-card.inten .landing-card-icon .pt { fill:#f5b800; stroke:none; }
+  .landing-card.inten:hover { border-color:#e0bd4f; box-shadow:0 6px 20px rgba(58,63,71,.12); }
+  .landing-card.inten:hover .landing-card-icon { background:#3a3f47; color:#fff; border-color:#3a3f47; }
+  .landing-card.inten .landing-card-go { color:#2b2f35; }
 
   /* BPLE 카드: 브랜드색만 로컬로 덮어씀(구조·spacing은 동일, 그래파이트 + 틸 포인트) */
   .landing-card.bple .landing-card-tag { background:var(--bple-brand-soft); color:var(--bple-brand-dark); }
@@ -247,11 +263,11 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
 <div class="page-shell workspace">
   <div class="landing-intro">
     <p>시뮬레이터 선택</p>
-    <span>국내 시뮬레이터 세 종은 시간대별(TOU) 요금체계를 기준으로 분산자원 · 전력판매 매출 · 가정 고객을 분석하고, IEA 시뮬레이터는 국가별 전기요금 수준을, EMBER 시뮬레이터는 국가별 발전량·설비용량·배출량을 비교합니다. KEPCO Statistics 시뮬레이터는 한국전력통계로 국내 판매·요금·발전·설비의 장기 추이를 분석합니다. BPLE 시뮬레이터는 1~11차 전력수급기본계획의 수요전망과 전원구성을 비교합니다. Renewable Energy LCOE 시뮬레이터는 태양광·풍력(육상·해상)의 분석 조건에 따른 균등화 발전단가와 경제성을 산정합니다.</span>
+    <span>국내 시뮬레이터 세 종은 시간대별(TOU) 요금체계를 기준으로 분산자원 · 전력판매 매출 · 가정 고객을 분석하고, IEA 시뮬레이터는 국가별 전기요금 수준을, EMBER 시뮬레이터는 국가별 발전량·설비용량·배출량을 비교합니다. KEPCO Statistics 시뮬레이터는 한국전력통계로 국내 판매·요금·발전·설비의 장기 추이를, 전력원단위 시뮬레이터는 업종·요금종·용도별 전력원단위와 해외 비교를 분석합니다. BPLE 시뮬레이터는 1~11차 전력수급기본계획의 수요전망과 전원구성을 비교합니다. Renewable Energy LCOE 시뮬레이터는 태양광·풍력(육상·해상)의 분석 조건에 따른 균등화 발전단가와 경제성을 산정합니다.</span>
   </div>
 
   <div class="landing-grid">
-    <a href="/pras/" class="landing-card">
+    <a href="/pras/" class="landing-card" data-locked>
       <span class="landing-card-tag">Distributed Energy Resources</span>
       <span class="landing-card-head">
         <span class="landing-card-icon" aria-hidden="true">
@@ -272,7 +288,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
       <span class="landing-card-go" aria-hidden="true">시뮬레이터 열기 →</span>
     </a>
 
-    <a href="/tou/" class="landing-card tou">
+    <a href="/tou/" class="landing-card tou" data-locked>
       <span class="landing-card-tag">Time of Use Tariff</span>
       <span class="landing-card-head">
         <span class="landing-card-icon" aria-hidden="true">
@@ -295,7 +311,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
       <span class="landing-card-go" aria-hidden="true">시뮬레이터 열기 →</span>
     </a>
 
-    <a href="/care/" class="landing-card care">
+    <a href="/care/" class="landing-card care" data-locked>
       <span class="landing-card-tag">Rate &amp; Energy Management</span>
       <span class="landing-card-head">
         <span class="landing-card-icon" aria-hidden="true">
@@ -316,7 +332,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
       <span class="landing-card-go" aria-hidden="true">시뮬레이터 열기 →</span>
     </a>
 
-    <a href="/iea-price/" class="landing-card iea">
+    <a href="/iea-price/" class="landing-card iea" data-locked>
       <span class="landing-card-tag">International Electricity Prices</span>
       <span class="landing-card-head">
         <span class="landing-card-icon" aria-hidden="true">
@@ -376,7 +392,26 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
           <p class="landing-card-sub">한국전력통계 Simulator</p>
         </span>
       </span>
-      <p class="desc">한국전력통계 기반 판매·요금·발전·설비 분석 시뮬레이터 — 1962–2025년 판매·단가·발전·연료·설비·손익 추이, 제조업 업종별 전력원단위와 판매수입 시나리오, 전원믹스 전환 시나리오, 시도 비교를 확인합니다.</p>
+      <p class="desc">한국전력통계 기반 판매·요금·발전·설비 분석 시뮬레이터 — 1962–2025년 판매·단가·발전·연료·설비·손익 추이, 판매수입 시나리오, 전원믹스 전환 시나리오, 시도 비교를 확인합니다.</p>
+      <span class="landing-card-go" aria-hidden="true">시뮬레이터 열기 →</span>
+    </a>
+    <a href="/elec-intensity/" class="landing-card inten">
+      <span class="landing-card-tag">Electricity Intensity</span>
+      <span class="landing-card-head">
+        <span class="landing-card-icon" aria-hidden="true">
+          <!-- 내려가는 추이선과 끝점(레드 포인트) — 같은 부가가치에 쓰는 전기가 줄어드는 원단위를 상징한다. -->
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 6.5 9 10l4-.8 6 6.3" />
+            <path d="M4 20h16" opacity=".55" />
+            <circle class="pt" cx="19" cy="15.5" r="2.2" />
+          </svg>
+        </span>
+        <span>
+          <strong>전력원단위</strong>
+          <p class="landing-card-sub">Electricity Intensity Simulator</p>
+        </span>
+      </span>
+      <p class="desc">전력원단위 분석 시뮬레이터 — 한국전력통계 판매전력량을 한국은행 실질 부가가치로 나눠 제조업 업종별·요금종별·용도별 원단위와 가정 호당 사용량을 보고, Ember·세계은행 자료로 209개국과 비교합니다.</p>
       <span class="landing-card-go" aria-hidden="true">시뮬레이터 열기 →</span>
     </a>
     <a href="/bple/" class="landing-card bple">
@@ -425,7 +460,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
 <footer>
   <div class="page-shell footer-inner">
     <span>전기 사용 및 요금 분석 시뮬레이터</span>
-    <p>분산에너지자원(PRAS-DER) · 계시별 요금제 수익 분석(PRAS-TOU) · 가정용 TOU 요금·에너지관리(CARE-Jeju) · 국가별 전기요금 비교(IEA Prices and Taxes) · 국가별 발전·설비 비교(EMBER Electricity) · 한국전력통계 분석(KEPCO Statistics) · 전력수급기본계획 비교(BPLE 1-11) · 재생에너지 균등화 발전단가(Renewable Energy LCOE)</p>
+    <p>분산에너지자원(PRAS-DER) · 계시별 요금제 수익 분석(PRAS-TOU) · 가정용 TOU 요금·에너지관리(CARE-Jeju) · 국가별 전기요금 비교(IEA Prices and Taxes) · 국가별 발전·설비 비교(EMBER Electricity) · 한국전력통계 분석(KEPCO Statistics) · 전력원단위 분석(Electricity Intensity) · 전력수급기본계획 비교(BPLE 1-11) · 재생에너지 균등화 발전단가(Renewable Energy LCOE)</p>
   </div>
 </footer>
 
