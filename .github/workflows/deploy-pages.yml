@@ -8,6 +8,7 @@ name: Deploy PRAS-DER + PRAS-TOU + CARE-Jeju + IEA Hub to GitHub Pages
 #   /care/**     → kiraoov-blip/care 저장소를 체크아웃해서 그 자리에서 빌드한 결과
 #   /iea-price/** → 이 저장소의 iea-price/ 폴더(정적 HTML 한 장 + 폰트·데이터 내장, 빌드 불필요)
 #   /bple/**     → 이 저장소의 bple/ 폴더(전력수급기본계획 시뮬레이터, 정적 폴더, 빌드 불필요)
+#   /elec-intensity/** → 이 저장소의 elec-intensity/ 폴더(전력원단위 시뮬레이터, 정적 HTML 한 장, 빌드 불필요)
 #   /lcoe/**     → 이 저장소의 lcoe/ 폴더(태양광 균등화 발전단가 시뮬레이터, 정적 HTML 한 장, 빌드 불필요)
 #
 # GitHub Pages 커스텀 도메인은 저장소 하나에만 붙기 때문에, 여러 제품을 한 도메인
@@ -124,6 +125,10 @@ jobs:
           # kepco-stat도 같은 방식의 정적 폴더다. 배포에는 index.html·favicon·vendor만 싣는다.
           mkdir -p public-root/kepco-stat
           cp -r kepco-stat/index.html kepco-stat/favicon.svg kepco-stat/vendor public-root/kepco-stat/
+          # elec-intensity(전력원단위)도 같은 방식의 정적 폴더다. index.html·favicon만 싣고,
+          # 그림·엑셀 저장 모듈은 위 kepco-stat/vendor(/kepco-stat/vendor/)를 함께 쓴다.
+          mkdir -p public-root/elec-intensity
+          cp elec-intensity/index.html elec-intensity/favicon.svg public-root/elec-intensity/
           # bple(전력수급기본계획)도 같은 방식의 정적 폴더다. 외부 의존성은 CDN의
           # Chart.js 하나뿐이라 vendor 폴더 없이 폴더째 복사하면 된다.
           cp -r bple public-root/bple
@@ -131,6 +136,26 @@ jobs:
           # 외부 의존성은 Pretendard 웹폰트(CDN)뿐이라 폴더째 복사하면 된다.
           cp -r renewable-lcoe public-root/renewable-lcoe
           cp -r lcoe public-root/lcoe
+
+      # ---------- 접근 승인 잠금(사번·소속·이름 + 관리자 카카오톡 6자리 코드) ----------
+      # LOCKED에 적은 폴더의 모든 .html <head> 맨 앞에 /auth/gate.js 한 줄과
+      # 검색엔진 수집 차단 표시(robots noindex)를 넣는다.
+      # 다른 저장소(tou·care)나 Next.js 앱(pras)의 소스는 건드리지 않고 배포물에만 넣는 방식이다.
+      # 잠글 시뮬레이터를 바꾸려면 LOCKED만 고치면 된다(허브 카드의 data-locked 표시도 함께 맞춘다).
+      # 승인 서버(Apps Script) 설정은 auth/README.md 참고.
+      - name: Inject access gate
+        env:
+          LOCKED: "pras tou care iea-price"
+        run: |
+          mkdir -p public-root/auth
+          cp auth/gate.js public-root/auth/gate.js
+          for d in $LOCKED; do
+            [ -d "public-root/$d" ] || { echo "::warning::잠글 폴더가 없습니다: $d"; continue; }
+            find "public-root/$d" -name '*.html' -print0 | while IFS= read -r -d '' f; do
+              SIM="$d" perl -0pi -e 'next if /\/auth\/gate\.js/; s{<head(\s[^>]*)?>}{$&<script src="/auth/gate.js" data-sim="$ENV{SIM}"></script><meta name="robots" content="noindex,nofollow">}i' "$f"
+            done
+            echo "잠금: $d ($(grep -rl '/auth/gate.js' "public-root/$d" --include='*.html' | wc -l)개 파일)"
+          done
 
       - name: Upload GitHub Pages artifact
         uses: actions/upload-pages-artifact@v4
