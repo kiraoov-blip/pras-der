@@ -336,6 +336,7 @@ footer{background:#061a3d;color:#b9c6dc}
       <li><a href="#s-pattern">부하패턴</a></li>
       <li><a href="#s-change">패턴 변화</a></li>
       <li><a href="#s-diag">요금 진단</a></li>
+      <li><a href="#s-cost">원가 신호</a></li>
       <li><a href="#s-sim">요금 시뮬레이터</a></li>
       <li><a href="#s-data">데이터·방법</a></li>
     </ul>
@@ -455,9 +456,36 @@ footer{background:#061a3d;color:#b9c6dc}
           </div>
         </section>
 
+        <section class="sec" id="s-cost">
+          <div class="sec-h">
+            <div><p class="eyebrow">05 · Cost Signal</p><h2>원가 신호 — SMP·계통부하</h2><p class="desc">시간별 SMP(육지·제주, 2016~2026.11)와 계통부하·태양광(2021~2026.10)으로 요금의 시간대 차등이 원가 차이를 반영하는지 봅니다.</p></div>
+            <div class="tools"><button class="btn" type="button" data-csv="cost">데이터 저장 <small>CSV</small></button></div>
+          </div>
+          <div class="sec-b">
+            <div id="costFindings"></div>
+            <div class="grid-in wide" style="margin:6px 0 12px">
+              <div class="field"><span class="lab">SMP 지역</span>
+                <div class="seg" role="radiogroup"><label><input type="radio" name="smpReg" value="inland" checked><span>육지</span></label><label><input type="radio" name="smpReg" value="jeju"><span>제주</span></label></div></div>
+              <div class="field"><span class="lab">시간대 구분</span>
+                <div class="seg" role="radiogroup"><label><input type="radio" name="smpSch" value="2016" checked><span>기존</span></label><label><input type="radio" name="smpSch" value="2026"><span>2026 개편</span></label></div></div>
+            </div>
+            <div class="two-col">
+              <div><h3 class="sub-h">시간대별 평균 SMP (원/kWh)</h3><div class="lg" id="bandLegend"></div><div class="chart" id="bandChart"></div></div>
+              <div><h3 class="sub-h">하루 중 SMP 모양 (연평균 = 1)</h3><div class="lg" id="smpHLegend"></div><div class="chart" id="smpHChart"></div></div>
+            </div>
+            <h3 class="sub-h" style="margin-top:20px">요금 차등 vs 원가 차등 — 최대부하 ÷ 경부하 배율</h3>
+            <div class="tbl-scroll" id="ratioTable"></div>
+            <p class="mini-note">SMP 배율은 연간 단순평균. 요금 배율은 해당 연도 말 시행 요금표의 여름철 단가(산업용(을)고압A 선택Ⅱ, 일반용(을)고압A 선택Ⅱ). 요금 배율이 훨씬 큰 것은 전력량 원가 외에 피크 설비비를 시간대 단가에 싣고 있기 때문입니다.</p>
+            <div class="two-col" style="margin-top:20px">
+              <div><h3 class="sub-h">계통 상위 100시간의 시각 분포</h3><div class="lg" id="topLegend"></div><div class="chart" id="topChart"></div><p class="mini-note">시장수요 = 태양광(PPA·자가용) 차감 후 한전이 사서 공급해야 하는 수요. 총수요 = 실제 소비.</p></div>
+              <div><h3 class="sub-h">계약종별 부하가중 SMP ÷ 계통가중 SMP</h3><div class="chart" id="clsSmpChart"></div><p class="mini-note">1보다 크면 SMP가 비싼 시간에 더 많이 쓰는 계약종. 2016~2022 시간별 정확 계산(육지 SMP).</p></div>
+            </div>
+          </div>
+        </section>
+
         <section class="sec" id="s-sim">
           <div class="sec-h">
-            <div><p class="eyebrow">05 · Tariff Simulator</p><h2>요금 시뮬레이터</h2><p class="desc">요금표·시간대·조정값을 바꾸어 계약종별 수입, 평균단가, 원가 회수율을 비교합니다. 사용량 크기는 한국전력통계 판매량, 시간 모양은 시간별 데이터에서 가져옵니다.</p></div>
+            <div><p class="eyebrow">06 · Tariff Simulator</p><h2>요금 시뮬레이터</h2><p class="desc">요금표·시간대·조정값을 바꾸어 계약종별 수입, 평균단가, 원가 회수율을 비교합니다. 사용량 크기는 한국전력통계 판매량, 시간 모양은 시간별 데이터에서 가져옵니다.</p></div>
             <div class="tools"><button class="btn" type="button" data-csv="sim">데이터 저장 <small>CSV</small></button></div>
           </div>
           <div class="sec-b">
@@ -476,19 +504,20 @@ footer{background:#061a3d;color:#b9c6dc}
                 <div class="seg" role="radiogroup"><label><input type="radio" name="simCal" value="on" checked><span>켜기</span></label><label><input type="radio" name="simCal" value="off"><span>끄기</span></label></div>
                 <span class="hint">기준 연도 시행 요금표 추정치 = 한전통계 대분류별 판매수입</span></div>
             </div>
-            <h3 class="sub-h">시간대별 원가 가중 (최대 : 중간 : 경부하)</h3>
+            <h3 class="sub-h">원가 배분 모형</h3>
             <div class="grid-in wide" style="margin-bottom:12px">
-              <div class="field"><label for="cPeak">최대부하</label><input id="cPeak" type="number" step="0.05" value="1"></div>
-              <div class="field"><label for="cMid">중간부하</label><input id="cMid" type="number" step="0.05" value="1"></div>
-              <div class="field"><label for="cOff">경부하</label><input id="cOff" type="number" step="0.05" value="1"></div>
-              <div class="field"><span class="hint" style="margin-top:22px">계통 전체 평균이 1이 되도록 자동 정규화. SMP·계통부하 연계 전 임시 입력.</span></div>
+              <div class="field"><label for="cSmpYear">SMP 기준 연도</label><select id="cSmpYear"></select><span class="hint">전력구입비를 시간별 SMP로 가중 배분</span></div>
+              <div class="field"><label for="cCP">구입비 중 용량성 비중 (%)</label><input id="cCP" type="number" step="1" value="10"><span class="hint">용량요금(CP) 등, 피크 기여로 배분</span></div>
+              <div class="field"><label for="cAlpha">망·기타비용 중 피크 배분 (%)</label><input id="cAlpha" type="number" step="5" value="50"><span class="hint">나머지는 kWh 비례</span></div>
+              <div class="field"><label for="cN">피크 기준 시간</label><select id="cN"><option value="100">총수요 상위 100시간</option><option value="300">총수요 상위 300시간</option><option value="100m">시장수요(태양광 차감) 상위 100시간</option><option value="300m">시장수요(태양광 차감) 상위 300시간</option></select><span class="hint">부하 모양 연도 기준. 시장수요는 2021년부터(이전은 총수요와 동일)</span></div>
             </div>
+            <p class="mini-note" id="costModelNote" style="margin:-4px 0 12px"></p>
             <h3 class="sub-h">전압별 공급원가 계수 (저압 : 고압A : 고압B·C)</h3>
             <div class="grid-in wide" style="margin-bottom:12px">
               <div class="field"><label for="vLow">저압</label><input id="vLow" type="number" step="0.05" value="1"></div>
               <div class="field"><label for="vA">고압A</label><input id="vA" type="number" step="0.05" value="1"></div>
               <div class="field"><label for="vB">고압B·C</label><input id="vB" type="number" step="0.05" value="1"></div>
-              <div class="field"><span class="hint" style="margin-top:22px">배전망 이용 여부를 반영(예: 1.15 : 1.00 : 0.80). 전체 원가 합계는 유지되도록 정규화. 주택용은 저압·고압 비중으로 가중.</span></div>
+              <div class="field"><span class="hint" style="margin-top:22px">망·기타비용에만 적용(배전망 이용 여부, 예: 1.30 : 1.00 : 0.50). 합계 유지 정규화. 주택용은 저압·고압 비중으로 가중.</span></div>
             </div>
             <h3 class="sub-h">대분류별 조정</h3>
             <div class="adj-grid" id="adjGrid"></div>
@@ -501,7 +530,7 @@ footer{background:#061a3d;color:#b9c6dc}
         </section>
 
         <section class="sec" id="s-data">
-          <div class="sec-h"><div><p class="eyebrow">06 · Data &amp; Method</p><h2>데이터·방법</h2></div></div>
+          <div class="sec-h"><div><p class="eyebrow">07 · Data &amp; Method</p><h2>데이터·방법</h2></div></div>
           <div class="sec-b">
             <div class="two-col">
               <div><h3 class="sub-h">데이터 품질과 보정</h3><div class="tbl-scroll" id="qTable"></div></div>
@@ -518,7 +547,7 @@ footer{background:#061a3d;color:#b9c6dc}
 
 <script>
 "use strict";
-const VER = "b030f5094e";
+const VER = "7e0ba55b1d";
 const D = {};
 const $ = s => document.querySelector(s);
 const SEASONS = ["여름", "봄·가을", "겨울"], DTYPES = ["평일", "토요일", "일요일·공휴일"];
@@ -968,11 +997,9 @@ function simulate(verEff, override, adjAll, P) {
   const sampleBig = {};
   D.meta.tariffs.forEach((t, i) => { const b = D.meta.tariff_class[t].big; sampleBig[b] = (sampleBig[b] || 0) + annualTotal(C, i, yi); });
   const scaleOf = b => { const k = REFKEY[b === "임시" ? "일반용" : b]; const tot = b === "임시" ? sampleBig["임시"] : R.sales[k][ri]; return sampleBig[b] ? tot / sampleBig[b] : 1; };
-  // 시간대 원가 가중(계통 평균 1로 정규화, 기존 시간대 기준 정의)
-  const cw = [P.cOff, P.cMid, P.cPeak];
-  let sysE = 0, sysW = 0;
-  D.meta.tariffs.forEach((t, i) => { const sc = scaleOf(D.meta.tariff_class[t].big), Y = C.data[i][yi]; for (let m = 0; m < 12; m++) for (let d = 0; d < 3; d++) { const b = bandRow("2016", m, d); for (let h = 0; h < 24; h++) { const e = Y[m][d][h] * sc; sysE += e; sysW += e * cw[b[h]]; } } });
-  const cwN = sysE > 0 ? cw.map(v => v * sysE / sysW) : cw;
+  // 원가 신호: 기준 연도 SMP 큐브(육지)
+  const smpC = D.cost.smp_cube.inland[String(P.smpYear)];
+  const smpAt = (m, d, h) => { const v = smpC[m][d][h]; if (v != null) return v; const alt = smpC[m].map(r => r[h]).filter(x => x != null); return alt.length ? sum(alt) / alt.length : 0; };
   // 기본요금: 대분류 요금적용전력을 계약종 대리피크 비율로 배분
   const proxyPeak = D.meta.tariffs.map((t, i) => { let mx = 0; for (let m = 0; m < 12; m++) for (let d = 0; d < 3; d++) { const days = D.meta.days[String(P.loadYear)][m][d]; if (!days) continue; for (let h = 0; h < 24; h++) mx = Math.max(mx, C.data[i][yi][m][d][h] / days); } return mx * scaleOf(D.meta.tariff_class[t].big); });
   const peakBig = {}; D.meta.tariffs.forEach((t, i) => { const b = D.meta.tariff_class[t].big; peakBig[b] = (peakBig[b] || 0) + proxyPeak[i]; });
@@ -980,8 +1007,9 @@ function simulate(verEff, override, adjAll, P) {
   const rows = [];
   D.meta.tariffs.forEach((t, i) => {
     const big = D.meta.tariff_class[t].big, adj = adjAll[big] || { add: 0, peak: 0, off: 0, basic: 0 }, sc = scaleOf(big), Y = C.data[i][yi];
-    let sales = 0, cost = 0; const bandE = [0, 0, 0];
-    for (let m = 0; m < 12; m++) for (let d = 0; d < 3; d++) { const b = bandRow("2016", m, d); for (let h = 0; h < 24; h++) { const e = Y[m][d][h] * sc; sales += e; cost += e * cwN[b[h]]; } }
+    let sales = 0, smpW = 0; const bandE = [0, 0, 0];
+    for (let m = 0; m < 12; m++) for (let d = 0; d < 3; d++) for (let h = 0; h < 24; h++) { const e = Y[m][d][h] * sc; sales += e; smpW += e * smpAt(m, d, h); }
+    const topL = (D.cost.top_load[P.N].load[t] || [])[yi] || 0;
     if (sales <= 0) return;
     const salesKWh = sales * 1e3;
     let energyRev = null, basicRev = null;
@@ -1009,11 +1037,21 @@ function simulate(verEff, override, adjAll, P) {
     }
     const cfRev = salesKWh * (climate + fuel);
     const total = energyRev == null ? null : energyRev + (basicRev || 0) + cfRev;
-    rows.push({ t, big, sales, salesKWh, energyRev, basicRev, cfRev, total, price: total != null ? total / salesKWh : null, cost: cost * 1e3 * P.cost * voltOf(t, P), bandE });
+    rows.push({ t, big, sales, salesKWh, energyRev, basicRev, cfRev, total, price: total != null ? total / salesKWh : null, smpW, peakL: topL * sc, bandE });
   });
-  // 전압 계수 정규화: 원가 총액을 계수 적용 전과 같게
-  const raw = rows.reduce((a, r) => a + r.cost / voltOf(r.t, P), 0), adjd = rows.reduce((a, r) => a + r.cost, 0);
-  if (adjd > 0) for (const r of rows) r.cost *= raw / adjd;
+  // 원가 배분: 총원가 = 판매량 × 총괄원가 단가. 그중 전력구입비(실적 비중) = SMP 가중(1-CP) + 피크(CP), 망·기타 = 피크 α + kWh(1-α), 전압계수
+  const totKWh = rows.reduce((a, r) => a + r.salesKWh, 0), totalCost = totKWh * P.cost;
+  const purShare = R.pur_amount[ri] / R.fin.cost[ri], purCost = totalCost * purShare, netCost = totalCost - purCost;
+  const sW = rows.reduce((a, r) => a + r.smpW, 0), sP = rows.reduce((a, r) => a + r.peakL, 0);
+  const vW = rows.reduce((a, r) => a + r.salesKWh * voltOf(r.t, P), 0), vP = rows.reduce((a, r) => a + r.peakL * voltOf(r.t, P), 0);
+  for (const r of rows) {
+    const v = voltOf(r.t, P);
+    r.costPur = purCost * ((1 - P.cp) * (sW ? r.smpW / sW : 0) + P.cp * (sP ? r.peakL / sP : 0));
+    r.costNet = netCost * (P.alpha * (vP ? r.peakL * v / vP : 0) + (1 - P.alpha) * (vW ? r.salesKWh * v / vW : 0));
+    r.cost = r.costPur + r.costNet;
+    r.peakShare = sP ? r.peakL / sP * 100 : 0; r.energyShare = r.salesKWh / totKWh * 100;
+  }
+  rows.meta = { purShare, totalCost };
   return rows;
 }
 function voltOf(t, P) {
@@ -1026,7 +1064,7 @@ function renderSim() {
   const P = {
     loadYear: $("#simLoad").value, refYear: $("#simRef").value, fuel: +$("#simFuel").value || 0, cost: +$("#simCost").value || 0,
     high: (+$("#simResHigh").value || 0) / 100, sigma: Math.max(0.05, +$("#simResSig").value || 0.6),
-    cPeak: +$("#cPeak").value || 1, cMid: +$("#cMid").value || 1, cOff: +$("#cOff").value || 1,
+    smpYear: $("#cSmpYear").value, cp: (+$("#cCP").value || 0) / 100, alpha: (+$("#cAlpha").value || 0) / 100, N: $("#cN").value,
     vLow: +$("#vLow").value || 1, vA: +$("#vA").value || 1, vB: +$("#vB").value || 1
   };
   const override = document.querySelector('input[name="simScheme"]:checked').value;
@@ -1041,11 +1079,11 @@ function renderSim() {
     const R = D.ref, ri = R.years.indexOf(+P.refYear), est = {};
     for (const r of hist) if (r.total != null) est[r.big] = (est[r.big] || 0) + r.total;
     for (const [b, v] of Object.entries(est)) { const k = REFKEY[b]; if (k && v > 0) factors[b] = R.rev[k][ri] * 1e3 / v; }
-    const apply = rs => rs.map(r => { const f = factors[r.big]; if (!f || r.total == null) return r; return Object.assign({}, r, { energyRev: r.energyRev * f, basicRev: (r.basicRev || 0) * f, cfRev: r.cfRev * f, total: r.total * f, price: r.price * f }); });
+    const apply = rs => { const o = rs.map(r => { const f = factors[r.big]; if (!f || r.total == null) return r; return Object.assign({}, r, { energyRev: r.energyRev * f, basicRev: (r.basicRev || 0) * f, cfRev: r.cfRev * f, total: r.total * f, price: r.price * f }); }); o.meta = rs.meta; return o; };
     scn = apply(scn); base = apply(base);
   }
   const bmap = Object.fromEntries(base.map(r => [r.t, r]));
-  const agg = rs => { const o = {}; for (const r of rs) { if (r.total == null) continue; const g = o[r.big] = o[r.big] || { sales: 0, rev: 0, cost: 0 }; g.sales += r.salesKWh; g.rev += r.total; g.cost += r.cost; } return o; };
+  const agg = rs => { const o = {}; for (const r of rs) { if (r.total == null) continue; const g = o[r.big] = o[r.big] || { sales: 0, rev: 0, cost: 0, pk: 0, es: 0 }; g.sales += r.salesKWh; g.rev += r.total; g.cost += r.cost; g.pk += r.peakShare; g.es += r.energyShare; } return o; };
   const A = agg(scn), B = agg(base);
   const totS = Object.values(A).reduce((a, g) => ({ rev: a.rev + g.rev, cost: a.cost + g.cost, sales: a.sales + g.sales }), { rev: 0, cost: 0, sales: 0 });
   const totB = Object.values(B).reduce((a, g) => ({ rev: a.rev + g.rev, cost: a.cost + g.cost, sales: a.sales + g.sales }), { rev: 0, cost: 0, sales: 0 });
@@ -1062,16 +1100,18 @@ function renderSim() {
   const bSer = { name: "비교 요금표 회수율", color: "#003b8e", values: bigs.map(b => B[b] ? B[b].rev / B[b].cost * 100 : null) };
   legend($("#simLegend"), [sSer, bSer]);
   barChart($("#simChart"), bigs, [bSer, sSer], { yTitle: "%", ref: 100 });
-  let h = `<table class="tbl"><thead><tr><th>계약종</th><th>판매량 GWh</th><th>전력량·누진(억원)</th><th>기본요금(억원)</th><th>기후·연료(억원)</th><th>합계(억원)</th><th>평균단가</th><th>비교 단가</th><th>단가 변화</th><th>원가(억원)</th><th>회수율</th></tr></thead><tbody>`;
-  const rows = [["계약종", "판매량GWh", "전력량요금억원", "기본요금억원", "기후연료억원", "합계억원", "평균단가", "비교단가", "단가변화%", "원가억원", "회수율%"]];
+  let h = `<table class="tbl"><thead><tr><th>계약종</th><th>판매량 GWh</th><th>전력량·누진(억원)</th><th>기본요금(억원)</th><th>기후·연료(억원)</th><th>합계(억원)</th><th>평균단가</th><th>비교 단가</th><th>단가 변화</th><th>피크기여 / 판매비중</th><th>원가(억원)</th><th>원가단가</th><th>회수율</th></tr></thead><tbody>`;
+  const rows = [["계약종", "판매량GWh", "전력량요금억원", "기본요금억원", "기후연료억원", "합계억원", "평균단가", "비교단가", "단가변화%", "피크기여%", "판매비중%", "원가억원", "원가단가", "회수율%"]];
   let last = "";
   for (const r of scn) {
-    if (r.big !== last) { const g = A[r.big]; if (g) h += `<tr class="grp"><td>${r.big}</td><td>${fmt(g.sales / 1e6, 0)}</td><td></td><td></td><td></td><td>${fmt(g.rev / 1e8, 0)}</td><td>${fmt(g.rev / g.sales, 1)}</td><td>${B[r.big] ? fmt(B[r.big].rev / B[r.big].sales, 1) : "–"}</td><td>${B[r.big] ? pct((g.rev / g.sales) / (B[r.big].rev / B[r.big].sales) * 100 - 100, 2) : "–"}</td><td>${fmt(g.cost / 1e8, 0)}</td><td>${fmt(g.rev / g.cost * 100, 1)}%</td></tr>`; last = r.big; }
+    if (r.big !== last) { const g = A[r.big]; if (g) h += `<tr class="grp"><td>${r.big}</td><td>${fmt(g.sales / 1e6, 0)}</td><td></td><td></td><td></td><td>${fmt(g.rev / 1e8, 0)}</td><td>${fmt(g.rev / g.sales, 1)}</td><td>${B[r.big] ? fmt(B[r.big].rev / B[r.big].sales, 1) : "–"}</td><td>${B[r.big] ? pct((g.rev / g.sales) / (B[r.big].rev / B[r.big].sales) * 100 - 100, 2) : "–"}</td><td>${fmt(g.pk, 1)} / ${fmt(g.es, 1)}%</td><td>${fmt(g.cost / 1e8, 0)}</td><td>${fmt(g.cost / g.sales, 1)}</td><td>${fmt(g.rev / g.cost * 100, 1)}%</td></tr>`; last = r.big; }
     const b = bmap[r.t], ch = r.price != null && b && b.price != null ? (r.price / b.price - 1) * 100 : null;
-    h += `<tr><td>${r.t}</td><td>${fmt(r.sales / 1e3, 0)}</td><td${r.energyRev == null ? ' class="na"' : ""}>${r.energyRev == null ? "미산정" : fmt(r.energyRev / 1e8, 0)}</td><td>${r.basicRev == null ? "–" : fmt(r.basicRev / 1e8, 0)}</td><td>${fmt(r.cfRev / 1e8, 0)}</td><td>${r.total == null ? "–" : fmt(r.total / 1e8, 0)}</td><td>${fmt(r.price, 1)}</td><td>${b ? fmt(b.price, 1) : "–"}</td><td class="${ch > .05 ? "pos" : ch < -.05 ? "neg" : ""}">${pct(ch, 2)}</td><td>${fmt(r.cost / 1e8, 0)}</td><td>${r.total == null ? "–" : fmt(r.total / r.cost * 100, 1) + "%"}</td></tr>`;
-    rows.push([r.t, (r.sales / 1e3).toFixed(1), r.energyRev && (r.energyRev / 1e8).toFixed(1), r.basicRev && (r.basicRev / 1e8).toFixed(1), (r.cfRev / 1e8).toFixed(1), r.total && (r.total / 1e8).toFixed(1), r.price && r.price.toFixed(2), b && b.price && b.price.toFixed(2), ch && ch.toFixed(2), (r.cost / 1e8).toFixed(1), r.total && (r.total / r.cost * 100).toFixed(1)]);
+    h += `<tr><td>${r.t}</td><td>${fmt(r.sales / 1e3, 0)}</td><td${r.energyRev == null ? ' class="na"' : ""}>${r.energyRev == null ? "미산정" : fmt(r.energyRev / 1e8, 0)}</td><td>${r.basicRev == null ? "–" : fmt(r.basicRev / 1e8, 0)}</td><td>${fmt(r.cfRev / 1e8, 0)}</td><td>${r.total == null ? "–" : fmt(r.total / 1e8, 0)}</td><td>${fmt(r.price, 1)}</td><td>${b ? fmt(b.price, 1) : "–"}</td><td class="${ch > .05 ? "pos" : ch < -.05 ? "neg" : ""}">${pct(ch, 2)}</td><td>${fmt(r.peakShare, 2)} / ${fmt(r.energyShare, 2)}%</td><td>${fmt(r.cost / 1e8, 0)}</td><td>${fmt(r.cost / r.salesKWh, 1)}</td><td>${r.total == null ? "–" : fmt(r.total / r.cost * 100, 1) + "%"}</td></tr>`;
+    rows.push([r.t, (r.sales / 1e3).toFixed(1), r.energyRev && (r.energyRev / 1e8).toFixed(1), r.basicRev && (r.basicRev / 1e8).toFixed(1), (r.cfRev / 1e8).toFixed(1), r.total && (r.total / 1e8).toFixed(1), r.price && r.price.toFixed(2), b && b.price && b.price.toFixed(2), ch && ch.toFixed(2), r.peakShare.toFixed(2), r.energyShare.toFixed(2), (r.cost / 1e8).toFixed(1), (r.cost / r.salesKWh).toFixed(2), r.total && (r.total / r.cost * 100).toFixed(1)]);
   }
-  h += `<tr class="tot"><td>합계(산정분)</td><td>${fmt(totS.sales / 1e6, 0)}</td><td></td><td></td><td></td><td>${fmt(totS.rev / 1e8, 0)}</td><td>${fmt(totS.rev / totS.sales, 1)}</td><td>${fmt(totB.rev / totB.sales, 1)}</td><td>${pct((totS.rev / totS.sales) / (totB.rev / totB.sales) * 100 - 100, 2)}</td><td>${fmt(totS.cost / 1e8, 0)}</td><td>${fmt(totS.rev / totS.cost * 100, 1)}%</td></tr>`;
+  h += `<tr class="tot"><td>합계(산정분)</td><td>${fmt(totS.sales / 1e6, 0)}</td><td></td><td></td><td></td><td>${fmt(totS.rev / 1e8, 0)}</td><td>${fmt(totS.rev / totS.sales, 1)}</td><td>${fmt(totB.rev / totB.sales, 1)}</td><td>${pct((totS.rev / totS.sales) / (totB.rev / totB.sales) * 100 - 100, 2)}</td><td></td><td>${fmt(totS.cost / 1e8, 0)}</td><td>${fmt(totS.cost / totS.sales, 1)}</td><td>${fmt(totS.rev / totS.cost * 100, 1)}%</td></tr>`;
+  const pm = scn.meta || {};
+  $("#costModelNote").innerHTML = `총원가 ${fmt((pm.totalCost || 0) / 1e12, 2)}조원 = 전력구입비 ${fmt((pm.purShare || 0) * 100, 1)}% (SMP ${P.smpYear}년 시간별 가중 ${fmt((1 - P.cp) * 100, 0)}% + 피크 ${fmt(P.cp * 100, 0)}%) + 망·기타 ${fmt((1 - (pm.purShare || 0)) * 100, 1)}% (피크 ${fmt(P.alpha * 100, 0)}% + kWh ${fmt((1 - P.alpha) * 100, 0)}%, 전압계수). 피크 = ${P.loadYear}년 ${P.N.endsWith("m") ? "시장수요" : "총수요"} 상위 ${parseInt(P.N)}시간${+P.loadYear < 2021 ? " (표본합 대리)" : " (KPX)"}.`;
   $("#simTable").innerHTML = h + "</tbody></table>";
   CSV.sim = rows;
   const fx = Object.entries(factors).map(([b, f]) => `${b} ${fmt(f, 3)}`).join(", ");
@@ -1094,6 +1134,61 @@ function barChart(el, labels, series, o) {
   el.innerHTML = s + "</svg>";
 }
 
+
+// ── 원가 신호 ───────────────────────────────────────────────────────────────
+function renderCost() {
+  const C = D.cost, reg = document.querySelector('input[name="smpReg"]:checked').value, sch = document.querySelector('input[name="smpSch"]:checked').value;
+  const ys = C.smp_years.map(String);
+  const bs = ys.map(y => C.band_smp[reg][sch][y].simple);
+  const series = [0, 1, 2].map(k => ({ name: BAND_NAMES[k], values: bs.map(b => b[k]), color: ["#0891b2", "#a16207", "#e60012"][k] }));
+  legend($("#bandLegend"), series);
+  lineChart($("#bandChart"), { labels: ys.map(y => y === "2026" ? "2026*" : y), series, yTitle: "원/kWh", height: 260, tipFmt: v => fmt(v, 1) + "원" });
+  const pick = ["2016", "2019", "2022", "2024", "2025", "2026"].filter(y => C.smp_hour_profile[reg][y]);
+  const hs = pick.map((y, j) => ({ name: y + (y === "2026" ? "(~11.14)" : ""), values: normalize(C.smp_hour_profile[reg][y]), color: ["#cbd5e1", "#94a3b8", "#003b8e", "#7c3aed", "#e60012", "#c2410c"][j], width: y >= "2024" ? 2.4 : 1.4 }));
+  legend($("#smpHLegend"), hs);
+  const repBands = bandRow(sch, 6, 0);
+  lineChart($("#smpHChart"), { labels: [...Array(24).keys()].map(h => h + "시"), series: hs, bands: repBands, yTitle: "연평균=1", height: 260, zero: false, tipLabel: i => `${i}~${i + 1}시`, tipFmt: v => fmt(v, 3) });
+  // 배율 표
+  const verAt = y => [...D.tar.versions].filter(v => v.effective <= `${y}-12-31`).pop() || D.tar.versions[0];
+  let h = `<table class="tbl"><thead><tr><th>연도</th><th>SMP 최대÷경 (기존)</th><th>SMP 최대÷경 (개편)</th><th>SMP 중간÷경 (기존)</th><th>산업(을)A 요금 최대÷경</th><th>일반(을)A 요금 최대÷경</th><th>적용 요금표</th></tr></thead><tbody>`;
+  const rows = [["연도", "SMP최대/경_기존", "SMP최대/경_개편", "SMP중간/경_기존", "산업을A요금최대/경", "일반을A요금최대/경", "요금표"]];
+  for (const y of ys) {
+    const o = C.band_smp[reg]["2016"][y].simple, n = C.band_smp[reg]["2026"][y].simple, v = verAt(+y);
+    const ti = v.tou["산업용(을)"]["고압A-II"].energy, tg = v.tou["일반용(을)"]["고압A-II"].energy;
+    const pre = +y < 2021 ? 5.3 : 0;   // 2021.1 이전: 기후환경요금 분리 전 전력량요금
+    const a = [o[2] / o[0], n[2] / n[0], o[1] / o[0], (ti.peak[0] + pre) / (ti.off[0] + pre), (tg.peak[0] + pre) / (tg.off[0] + pre)];
+    h += `<tr><td>${y}${y === "2026" ? " (~11.14)" : ""}</td>${a.map(x => `<td>${fmt(x, 2)}배</td>`).join("")}<td>${+y < 2021 ? "2021.1 기준 재구성" : v.effective.replace(/-/g, ".")}</td></tr>`;
+    rows.push([y, ...a.map(x => x.toFixed(3)), v.effective]);
+  }
+  $("#ratioTable").innerHTML = h + "</tbody></table>";
+  CSV.cost = rows;
+  // 상위 100시간 시각 분포
+  const pyrs = Object.keys(C.pv);
+  const yA = pyrs[0], yB = pyrs.at(-1), yM = pyrs.at(-2);
+  const hist = o => [...Array(24).keys()].map(k => o[String(k)] || 0);
+  const tser = [
+    { name: `${yA} 시장수요`, color: "#94a3b8", values: hist(C.pv[yA].top100_market_hours) },
+    { name: `${yM} 시장수요`, color: "#003b8e", values: hist(C.pv[yM].top100_market_hours) },
+    { name: `${yB} 시장수요(~10.6)`, color: "#e60012", values: hist(C.pv[yB].top100_market_hours) },
+    { name: `${yM} 총수요`, color: "#003b8e", dash: "4 3", values: hist(C.pv[yM].top100_total_hours) }];
+  legend($("#topLegend"), tser);
+  lineChart($("#topChart"), { labels: [...Array(24).keys()].map(h => h + "시"), series: tser, bands: bandRow("2026", 6, 0), yTitle: "시간 수", height: 250, tipFmt: v => fmt(v, 0) + "시간" });
+  // 계약종 SMP 지수 (최근 연도)
+  const yi = D.meta.years.length - 1, sysS = C.system_smp[yi];
+  const list = D.meta.tariffs.map(t => [t, C.class_smp[t][yi]]).filter(x => x[1] != null && annualTotal({ kind: "full", data: D.cube_tariff.data }, D.meta.tariffs.indexOf(x[0]), yi) > 5e4).map(([t, v]) => [t, v / sysS]).sort((a, b) => b[1] - a[1]);
+  const W = 100;
+  $("#clsSmpChart").innerHTML = `<div style="font-size:12px">${list.map(([t, v]) => { const d = (v - 1) * 100, w = Math.min(50, Math.abs(d) * 8); return `<div style="display:grid;grid-template-columns:130px 1fr 56px;align-items:center;gap:8px;margin:3px 0"><span>${t}</span><div style="position:relative;height:12px;background:#f3f4f6;border-radius:3px"><div style="position:absolute;left:50%;top:0;bottom:0;width:1px;background:#9ca3af"></div><div style="position:absolute;top:1px;height:10px;border-radius:2px;${d >= 0 ? `left:50%;width:${w}%;background:#e60012` : `right:50%;width:${w}%;background:#003b8e`}"></div></div><b style="text-align:right">${fmt(v, 3)}</b></div>`; }).join("")}</div><p class="mini-note">${D.meta.years[yi]}년 · 계통가중 SMP ${fmt(sysS, 1)}원/kWh · 가운데 선 = 1.0, 막대 끝 = ±6.25%</p>`;
+  // 발견
+  const o25 = C.band_smp.inland["2016"]["2025"].simple, o26 = C.band_smp.inland["2016"]["2026"].simple, n26 = C.band_smp.inland["2026"]["2026"].simple, o19 = C.band_smp.inland["2016"]["2019"].simple;
+  const v25 = verAt(2025).tou["산업용(을)"]["고압A-II"].energy;
+  const f = [
+    `<b>요금 차등이 원가 차등보다 훨씬 큼</b> — 육지 SMP의 최대부하÷경부하 배율은 2019년 ${fmt(o19[2] / o19[0], 2)}배, 2025년 ${fmt(o25[2] / o25[0], 2)}배인데, 산업용(을)고압A 여름 요금 배율은 ${fmt(v25.peak[0] / v25.off[0], 2)}배입니다. 시간대 단가에 피크 설비비가 크게 실려 있어, 원가배분 기준(피크 기여)과 요금 차등이 맞는지가 형평성의 관건입니다.`,
+    `<b>기존 시간대의 수명 종료</b> — 2026년 SMP를 기존 시간대로 나누면 최대부하 ${fmt(o26[2], 1)}원, 중간부하 ${fmt(o26[1], 1)}원으로 사실상 구분이 사라졌습니다. 개편 시간대로는 최대 ${fmt(n26[2], 1)}원 · 중간 ${fmt(n26[1], 1)}원으로 다시 벌어집니다.`,
+    `<b>피크의 저녁 이동</b> — 태양광(PPA·자가용) 차감 후 시장수요 상위 100시간이 ${yA}년 14~17시 중심에서 ${yM}년 17~19시로 옮겨 갔습니다. 실제 소비(총수요) 피크는 여전히 14시 전후라, '소비 피크'와 '구입 피크'가 갈라지고 있습니다.`,
+    `<b>계약종 간 전력량 원가 차이는 작음</b> — 부하가중 SMP는 계약종 간 ±5% 이내입니다. 계약종별 원가 격차는 주로 피크 기여와 전압(망 이용)에서 나오므로, 그 배분 방식 선택이 결론을 좌우합니다. 심야전력도 SMP 기준으로는 계통 평균보다 싸지 않습니다(겨울밤 난방수요).`];
+  $("#costFindings").innerHTML = f.map(x => `<p class="finding">${x}</p>`).join("");
+}
+
 // ── 데이터·방법 ─────────────────────────────────────────────────────────────
 function renderData() {
   const A = D.audit;
@@ -1109,6 +1204,8 @@ function renderData() {
     `<b>요금표</b> ${D.tar.methods.anchored}`,
     `<b>2021.1 이전</b> ${D.tar.pre2021_rule}`,
     `<b>미해결·확인 필요</b> ${D.tar.gaps.join(" / ")}`,
+    `<b>SMP·계통부하</b> 시간별 SMP 육지·제주 2016.1~2026.11.14(1h = 00~01시, 사용량 H01과 시간 차분 상관 0.968로 정렬 확인), 계통부하·태양광(KPX·PPA·자가용) 2021.1~2026.10.6(MW). 계통수요 = 시장수요 + PPA, 총수요 = 계통수요 + 자가용 태양광(항등식 일치). 2016~2020 계통부하는 시간별 사용량 표본합으로 대리(2021~22년 총수요의 ${fmt(D.cost.sample_to_total_ratio * 100, 1)}%, 시간대별 편차 ±2%p).`,
+    `<b>원가 배분</b> 총원가(영업비용÷판매량 × 판매량) 중 전력구입비 실적 비중만큼을 시간별 SMP 가중(일부는 피크 기여)으로, 나머지 망·기타비용을 계통 피크 기여와 kWh로 배분하고 전압계수를 곱합니다. 큐브(월×날짜유형×시) 근사 오차 최대 ${fmt(D.cost.cube_approx_max_err_pct, 2)}%.`,
     `<b>표본 비중</b> 시간별 데이터는 스마트미터 계량분이라 한국전력통계 판매량 대비 주택용 50→80%, 일반용 58→72%로 늘었습니다(2016→2022). 크기 비교에는 확대계수를, 모양 비교에는 정규화를 씁니다.`
   ].map(x => `<p>${x}</p>`).join("");
   $("#buildInfo").textContent = `빌드 ${VER}`;
@@ -1117,18 +1214,19 @@ function renderData() {
 // ── 초기화 ──────────────────────────────────────────────────────────────────
 function opts(el, arr, val) { el.innerHTML = arr.map(a => Array.isArray(a) ? `<option value="${a[0]}">${a[1]}</option>` : `<option>${a}</option>`).join(""); if (val != null) el.value = val; }
 async function boot() {
-  [D.meta, D.tar, D.ana, D.cube_tariff, D.daily, D.ref, D.audit] = await Promise.all(["meta", "tariffs", "analysis", "cube_tariff", "daily_tariff", "kepco_ref", "audit"].map(j));
+  [D.meta, D.tar, D.ana, D.cube_tariff, D.daily, D.ref, D.audit, D.cost] = await Promise.all(["meta", "tariffs", "analysis", "cube_tariff", "daily_tariff", "kepco_ref", "audit", "cost"].map(j));
   D.cube_tariff_full = D.cube_tariff;
   const Y = D.meta.years;
   opts($("#year"), Y, S.year); opts($("#base"), Y, S.base); opts($("#dLoad"), Y, Y.at(-1)); opts($("#simLoad"), Y, Y.at(-1));
   opts($("#simRef"), D.ref.years, D.ref.years.at(-1));
+  opts($("#cSmpYear"), D.cost.smp_years.map(y => [y, y + (y === 2026 ? " (~11.14)" : "")]), D.ref.years.at(-1));
   const vers = D.tar.versions.map(v => [v.effective, v.effective.replace(/-/g, ".") + (v.tou_scheme === "2026" ? " (개편)" : "")]);
   opts($("#simVer"), vers, "2026-04-16"); opts($("#simBase"), vers, "2025-04-01");
   const setCost = () => { const ri = D.ref.years.indexOf(+$("#simRef").value); const c = D.ref.fin.cost[ri] * 1e3 / D.ref.sold[ri]; $("#simCost").value = c.toFixed(1); $("#simCostHint").textContent = `${$("#simRef").value}년 영업비용÷판매량 · 구입단가 ${fmt(D.ref.pur_price[ri], 1)}원`; };
   setCost();
   adjInputs();
   $("#boot").hidden = true; $("#app").hidden = false;
-  await fillItems(); await renderAll(); renderCoverage(); renderDiag(); renderSim(); renderData();
+  await fillItems(); await renderAll(); renderCoverage(); renderDiag(); renderCost(); renderSim(); renderData();
   const on = (sel_, ev, fn) => document.querySelectorAll(sel_).forEach(e => e.addEventListener(ev, fn));
   on("#dim", "change", async e => { S.dim = e.target.value; await fillItems(); renderAll(); });
   on("#item", "change", e => { S.item = e.target.value; renderAll(); });
@@ -1136,10 +1234,11 @@ async function boot() {
   on('input[name="scheme"]', "change", e => { S.scheme = e.target.value; renderAll(); });
   on('input[name="norm"]', "change", e => { S.norm = e.target.value; renderAll(); });
   on("#dLoad", "change", renderDiag);
-  on("#simRef", "change", () => { setCost(); renderSim(); });
+  on('input[name="smpReg"], input[name="smpSch"]', "change", renderCost);
+  on("#simRef", "change", () => { setCost(); $("#cSmpYear").value = $("#simRef").value; renderSim(); });
   on("#s-sim input, #s-sim select", "change", renderSim);
   on("#reset", "click", async () => { Object.assign(S, DEF); $("#dim").value = S.dim; $("#year").value = S.year; $("#base").value = S.base; $("#season").value = S.season; $("#dtype").value = S.dtype; document.querySelector('input[name="scheme"][value="2016"]').checked = true; document.querySelector('input[name="norm"][value="mw"]').checked = true; await fillItems(); renderAll(); });
-  let rt; window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { renderAll(); renderCoverage(); renderDiag(); renderSim(); }, 200); });
+  let rt; window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { renderAll(); renderCoverage(); renderDiag(); renderCost(); renderSim(); }, 200); });
   // 네비게이션 활성 표시
   const links = [...document.querySelectorAll("#navList a")];
   const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) links.forEach(a => a.classList.toggle("active", a.getAttribute("href") === "#" + e.target.id)); }), { rootMargin: "-40% 0px -55% 0px" });

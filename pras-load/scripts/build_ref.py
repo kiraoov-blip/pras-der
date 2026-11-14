@@ -19,6 +19,8 @@ ref = {"years": years, "groups": groups,
 for t in ("sales", "rev", "cust", "kw", "price"):
     ref[t] = {k: cut(d["tables"][t][k]) for k in list(groups) + ["total"]}
 ref["pur_price"] = cut(d["tables"]["pur"]["tp"])     # 전력구입 평균단가
+ref["pur_amount"] = cut(d["tables"]["pur"]["ta"])    # 전력구입비 (백만원)
+ref["pur_volume"] = cut(d["tables"]["pur"]["tv"])    # 구입전력량 (MWh)
 ref["fin"] = {k: cut(d["tables"]["fin"][k]) for k in ("rev", "cost", "opinc")}
 ref["sold"] = cut(d["tables"]["loss"]["sold"])
 (out / "kepco_ref.json").write_text(json.dumps(ref, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
