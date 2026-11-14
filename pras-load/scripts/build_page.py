@@ -17,7 +17,7 @@ for a, b in [("#9f1239", "#003b8e"), ("#881337", "#002a66"), ("#f8eef1", "#eaf1f
              ("#e3b9c4", "#bcd2ef"), ("#e8c4cd", "#c5d8f0"), ("#f3dfe5", "#dbe7f7"), ("#d9a9b6", "#a9c3e6"), ("rgba(159,18,57", "rgba(0,59,142")]:
     css = css.replace(a, b)
 
-DATA = ["meta", "tariffs", "analysis", "cube_tariff", "cube_industry", "cube_region", "cube_cross", "daily_tariff", "kepco_ref", "audit", "cost"]
+DATA = ["meta", "tariffs", "analysis", "cube_tariff", "cube_industry", "cube_region", "cube_cross", "daily_tariff", "kepco_ref", "audit", "cost", "fuel"]
 out = ROOT / "data"
 out.mkdir(exist_ok=True)
 h = hashlib.sha1()

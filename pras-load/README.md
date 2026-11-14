@@ -12,7 +12,7 @@
 | 02 부하패턴 | 평균 일부하곡선(연도 겹쳐보기, 시간대 음영), 월×시간 히트맵, 부하모양 변화(정규화 차이) |
 | 03 패턴 변화 | 한낮·저녁·최대부하 비중 추이, 전년 대비 부하모양 변화율 표, 일별 사용량(장애일 표시), 표본 비중 |
 | 04 요금 진단 | 같은 부하에 요금표 7개 시점 적용한 계약종별 평균단가, 2026 개편 영향, 원가 회수 추이(한국전력통계) |
-| 05 원가 신호 | 시간대별 평균 SMP 추이, 하루 중 SMP 모양, 요금 차등 vs SMP 차등 배율, 계통 상위 100시간 시각(시장·총수요), 계약종별 부하가중 SMP |
+| 05 원가 신호 | 시간대별 평균 SMP 추이, 하루 중 SMP 모양, 요금 차등 vs SMP 차등 배율, 계통 상위 100시간 시각(시장·총수요), 계약종별 부하가중 SMP, 연료비 연동의 형평성(산식·규칙·적용 단가와 누적 이전액) |
 | 06 요금 시뮬레이터 | 요금표·시간대·대분류별 조정 → 계약종별 수입·단가·원가 회수율, 실적 보정, SMP 가중 구입비 + 피크·전압 망비용 배분 |
 | 07 데이터·방법 | 보정 내역, 요금표 판본별 추출 방법, 가정과 미해결 항목 |
 
@@ -28,6 +28,7 @@
 | `scripts/analyze.py` | 부하율·피크·시간대 비중·평균단가 사전 계산 |
 | `scripts/build_smp.py` | 시간별 SMP 엑셀(육지·제주) → `smp_hourly.parquet`, 점검 요약 |
 | `scripts/build_sysload.py` | 계통부하·태양광 엑셀 → `sysload_hourly.parquet` (항등식 점검) |
+| `scripts/build_fuel.py` | 연료비조정단가 산정내역(분기 PDF 텍스트) → `fuel.json` (필요·규칙·적용 단가, 원 게시값) |
 | `scripts/analyze_cost.py` | SMP·계통부하 × 계약종 부하 → `cost.json` (SMP 큐브, 시간대별 SMP, 피크 기여, 태양광) |
 | `scripts/tariff/` | 요금표 PDF → `tariffs.json` (추출 `rows/blocks/extract`, 스캔·양식불일치 판본 확정 `infer/anchor`, 조립 `assemble`) |
 | `scripts/build_page.py` | `src/` + `build/` → `index.html`, `data/` |
@@ -48,6 +49,7 @@ python3 scripts/analyze.py build
 python3 scripts/build_smp.py <smp_xlsx_dir> build            # smpInLand_YYYY.xlsx, smpJeju_YYYY.xlsx
 python3 scripts/build_sysload.py <계통부하.xlsx> build
 python3 scripts/analyze_cost.py build
+python3 scripts/build_fuel.py <산정내역_txt_dir> build      # pdftotext -layout 결과(이미지 판은 OCR 후 MANUAL 반영)
 python3 scripts/build_page.py ../ember-sim/index.html
 ```
 
@@ -79,6 +81,12 @@ python3 scripts/build_page.py ../ember-sim/index.html
   파일의 '평균' 열은 단순평균과 달라 수요가중으로 보이며, 분석은 시간값을 직접 사용.
 - 계통부하·태양광 2021.1.1~2026.10.6 (MW): 시장수요, 계통수요(= 시장 + PPA), 총수요(= 계통 + 자가용), KPX·PPA·자가용 태양광.
 - 시간축 정렬: 사용량 표본합과 총수요의 시간 차분 상관이 동시각 0.968, ±1시간 0.70~0.73 → 1h·H01 모두 00~01시.
+
+## 연료비조정단가
+
+- 2022.1Q~2026.4Q 한전 산정내역 + 2021년 보도자료. 필요조정단가(산식), 규칙(±5원 상한, 2022.2Q까지 분기 ±3원), 실제 적용(유보·동결)을 분기별로 기록.
+- 2022.1Q~2023.2Q는 '미조정분 차감' 재산정본(2023.5 약관 개정 방식)으로 일관화, 원 게시값 병기. 2023.2Q는 5.16 전후 일수 가중(36.7원).
+- 시뮬레이터 실적 보정의 연료비는 연도별 실제 적용 연평균(2021 −2.25, 2022 +2.5, 2023~ +5.0)을 사용.
 
 ## 한계와 다음 단계
 

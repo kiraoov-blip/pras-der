@@ -199,7 +199,7 @@ footer{background:#061a3d;color:#b9c6dc}
         <section class="sec" id="s-cost">
           <div class="sec-h">
             <div><p class="eyebrow">05 · Cost Signal</p><h2>원가 신호 — SMP·계통부하</h2><p class="desc">시간별 SMP(육지·제주, 2016~2026.11)와 계통부하·태양광(2021~2026.10)으로 요금의 시간대 차등이 원가 차이를 반영하는지 봅니다.</p></div>
-            <div class="tools"><button class="btn" type="button" data-csv="cost">데이터 저장 <small>CSV</small></button></div>
+            <div class="tools"><button class="btn" type="button" data-csv="cost">배율 <small>CSV</small></button><button class="btn" type="button" data-csv="fuel">연료비 <small>CSV</small></button></div>
           </div>
           <div class="sec-b">
             <div id="costFindings"></div>
@@ -220,6 +220,13 @@ footer{background:#061a3d;color:#b9c6dc}
               <div><h3 class="sub-h">계통 상위 100시간의 시각 분포</h3><div class="lg" id="topLegend"></div><div class="chart" id="topChart"></div><p class="mini-note">시장수요 = 태양광(PPA·자가용) 차감 후 한전이 사서 공급해야 하는 수요. 총수요 = 실제 소비.</p></div>
               <div><h3 class="sub-h">계약종별 부하가중 SMP ÷ 계통가중 SMP</h3><div class="chart" id="clsSmpChart"></div><p class="mini-note">1보다 크면 SMP가 비싼 시간에 더 많이 쓰는 계약종. 2016~2022 시간별 정확 계산(육지 SMP).</p></div>
             </div>
+            <h3 class="sub-h" style="margin-top:26px">연료비 연동의 형평성 — 산식 vs 규칙 vs 실제 적용 (2021~2026)</h3>
+            <div id="fuelFindings"></div>
+            <div class="two-col">
+              <div><div class="lg" id="fuelLegend"></div><div class="chart" id="fuelChart"></div><p class="mini-note">필요조정단가 = (실적연료비 − 기준연료비) × 변환계수, 상하한 적용 전. 규칙 = 약관의 ±5원 상한(2022.2Q까지 분기 조정폭 ±3원). 적용 = 정부 유보·동결 반영 최종값.</p></div>
+              <div><div class="lg" id="fuelCumLegend"></div><div class="chart" id="fuelCumChart"></div><p class="mini-note">(기준 단가 − 실제 적용) × 분기 판매량, 누적. +는 한전 미회수(고객 부담 경감), −는 고객 초과 부담(과거 미회수분 회수). 분기 판매량은 한국전력통계 연간값 ÷ 4 근사(2026년은 2025년 값). 월보 연계 시 월 단위로 대체.</p></div>
+            </div>
+            <div class="tbl-scroll" id="fuelTable" style="margin-top:10px"></div>
           </div>
         </section>
 
@@ -236,7 +243,9 @@ footer{background:#061a3d;color:#b9c6dc}
                 <div class="seg" role="radiogroup"><label><input type="radio" name="simScheme" value="auto" checked><span>요금표 기준</span></label><label><input type="radio" name="simScheme" value="2016"><span>기존</span></label><label><input type="radio" name="simScheme" value="2026"><span>개편</span></label></div></div>
               <div class="field"><label for="simLoad">부하 모양 연도</label><select id="simLoad"></select></div>
               <div class="field"><label for="simRef">판매량·원가 기준 연도</label><select id="simRef"></select><span class="hint">한국전력통계</span></div>
-              <div class="field"><label for="simFuel">연료비조정단가 (원/kWh)</label><input id="simFuel" type="number" step="0.1" value="5"></div>
+              <div class="field"><label for="simFuelMode">연료비조정단가 기준</label>
+                <select id="simFuelMode"><option value="applied">기준 연도 실제 적용</option><option value="rule">기준 연도 규칙(상하한 적용)</option><option value="required">기준 연도 산식(상하한 없음)</option><option value="manual">직접 입력</option></select>
+                <div class="row" style="margin-top:6px"><input id="simFuel" type="number" step="0.1" value="5" style="flex:1" aria-label="연료비조정단가"><span style="align-self:center;font-size:12px;color:#6b7686">원/kWh</span></div></div>
               <div class="field"><label for="simCost">총괄원가 단가 (원/kWh)</label><input id="simCost" type="number" step="0.1"><span class="hint" id="simCostHint"></span></div>
               <div class="field"><label for="simResHigh">주택용 고압 비중 (%)</label><input id="simResHigh" type="number" step="1" value="40"><span class="hint">누진 계산용 가정</span></div>
               <div class="field"><label for="simResSig">주택 호당 사용량 분산 σ</label><input id="simResSig" type="number" step="0.05" value="0.6"><span class="hint">로그정규 분포 가정</span></div>
@@ -701,8 +710,13 @@ function renderFindings(out, yi) {
 
 // ── 시뮬레이터 ──────────────────────────────────────────────────────────────
 const BIGS = ["일반용", "교육용", "산업용", "농사용", "가로등", "심야", "임시"];
-// 연료비조정단가 연평균 실적(원/kWh): 2021 1분기 -3, 2022 3분기부터 +5
-const FUEL_HIST = { 2016: 0, 2017: 0, 2018: 0, 2019: 0, 2020: 0, 2021: -0.75, 2022: 2.5, 2023: 5, 2024: 5, 2025: 5 };
+// 연료비조정단가 연평균(원/kWh): fuel.json(분기 산정내역)에서 계산. 2020년 이전은 제도 도입 전(0)
+const FUEL_HIST = {};
+function fuelAvg(y, key) {
+  if (+y < 2021) return 0;
+  const qs = D.fuel.quarters.filter(q => q.q.startsWith(String(y)) && q[key] != null);
+  return qs.length ? sum(qs.map(q => q[key])) / qs.length : null;
+}
 const REFKEY = { 주택용: "res", 일반용: "gen", 교육용: "edu", 산업용: "ind", 농사용: "agr", 가로등: "str", 심야: "night" };
 function adjInputs() {
   let h = `<div class="h">대분류</div><div class="h">전력량 ±원/kWh</div><div class="h">최대부하 ±%</div><div class="h">경부하 ±%</div><div class="h">기본요금 ±%</div>`;
@@ -815,7 +829,7 @@ function renderSim() {
   const inforce = [...D.tar.versions].filter(v => v.effective <= `${P.refYear}-12-31`).map(v => v.effective).pop() || D.tar.versions[0].effective;
   const factors = {};
   if (cal) {
-    const hist = simulate(inforce, "auto", {}, Object.assign({}, P, { fuel: FUEL_HIST[P.refYear] ?? P.fuel }));
+    const hist = simulate(inforce, "auto", {}, Object.assign({}, P, { fuel: FUEL_HIST[P.refYear] ?? 0 }));
     const R = D.ref, ri = R.years.indexOf(+P.refYear), est = {};
     for (const r of hist) if (r.total != null) est[r.big] = (est[r.big] || 0) + r.total;
     for (const [b, v] of Object.entries(est)) { const k = REFKEY[b]; if (k && v > 0) factors[b] = R.rev[k][ri] * 1e3 / v; }
@@ -929,6 +943,38 @@ function renderCost() {
   $("#costFindings").innerHTML = f.map(x => `<p class="finding">${x}</p>`).join("");
 }
 
+function renderFuel() {
+  const F = D.fuel.quarters, R = D.ref;
+  const labels = F.map(q => q.q.replace("Q", "."));
+  const req = F.map(q => q.required_effective), rule = F.map(q => q.rule), app = F.map(q => q.applied);
+  const ser = [{ name: "산식 필요단가", values: req, color: "#94a3b8", width: 2 }, { name: "규칙(상하한) 적용", values: rule, color: "#003b8e", dash: "5 4" }, { name: "실제 적용", values: app, color: "#e60012", width: 2.6 }];
+  legend($("#fuelLegend"), ser);
+  lineChart($("#fuelChart"), { labels, series: ser, yTitle: "원/kWh", height: 270, zero: false, ref: 0, maxTicks: 8, tipFmt: v => fmt(v, 1) + "원" });
+  const salesQ = q => { const y = +q.q.slice(0, 4), i = R.years.indexOf(y); return (i >= 0 ? R.sales.total[i] : R.sales.total.at(-1)) * 1e3 / 4; };
+  let c1 = 0, c2 = 0; const g1 = [], g2 = [], k1 = [], k2 = [];
+  const rows = [["분기", "필요조정단가", "규칙적용", "실제적용", "산식대비(조원)", "규칙대비(조원)", "누적_산식(조원)", "누적_규칙(조원)", "정부결정"]];
+  let h = `<table class="tbl"><thead><tr><th>분기</th><th>실적연료비 (원/kg)</th><th>필요조정단가</th><th>규칙 적용</th><th>실제 적용</th><th>산식 대비 (조원)</th><th>규칙 대비 (조원)</th><th>누적 · 산식</th><th>누적 · 규칙</th><th>정부 결정</th><th>원 게시 필요단가</th></tr></thead><tbody>`;
+  for (const q of F) {
+    const s = salesQ(q), a = q.required_effective == null ? 0 : (q.required_effective - q.applied) * s / 1e12, b = (q.rule - q.applied) * s / 1e12;
+    c1 += a; c2 += b; g1.push(a); g2.push(b); k1.push(c1); k2.push(c2);
+    h += `<tr><td>${q.q.replace("Q", "년 ")}분기</td><td>${q.actual_fuel ? fmt(q.actual_fuel, 2) : "–"}</td><td>${fmt(q.required_effective, 1)}</td><td>${fmt(q.rule, 1)}</td><td><b>${fmt(q.applied, 1)}</b></td><td class="${a > 0.005 ? "neg" : a < -0.005 ? "pos" : ""}">${pct(a, 2).replace("%", "")}</td><td class="${b > 0.005 ? "neg" : b < -0.005 ? "pos" : ""}">${pct(b, 2).replace("%", "")}</td><td>${fmt(c1, 1)}</td><td>${fmt(c2, 1)}</td><td>${q.gov_note ? '<span class="flag">유보·동결</span>' : ""}</td><td>${q.original_posting && q.original_posting.required !== q.required ? fmt(q.original_posting.required, 1) : ""}</td></tr>`;
+    rows.push([q.q, q.required_effective, q.rule, q.applied, a.toFixed(3), b.toFixed(3), c1.toFixed(2), c2.toFixed(2), q.gov_note ? "Y" : ""]);
+  }
+  $("#fuelTable").innerHTML = h + "</tbody></table>";
+  CSV.fuel = rows;
+  const cser = [{ name: "누적 · 산식 대비", values: k1, color: "#e60012", width: 2.6 }, { name: "누적 · 규칙 대비", values: k2, color: "#003b8e", width: 2.2 }];
+  legend($("#fuelCumLegend"), cser);
+  lineChart($("#fuelCumChart"), { labels, series: cser, yTitle: "조원", height: 270, zero: false, ref: 0, maxTicks: 8, tipFmt: v => fmt(v, 2) + "조원" });
+  const peak = Math.max(...k1), pi = k1.indexOf(peak);
+  const sinceIdx = F.findIndex(q => q.q === "2023Q4");
+  const recov = k1[pi] - k1.at(-1), overRule = k2[sinceIdx - 1] - k2.at(-1);
+  $("#fuelFindings").innerHTML = [
+    `<b>시기 간 이전</b> — 산식 대비 미반영액은 ${labels[pi]}까지 누적 약 <b>${fmt(peak, 1)}조원</b>(연료비 급등기 0~5원 동결)이었고, 이후 산식이 −2~−13원을 가리킬 때도 +5원을 유지해 약 ${fmt(recov, 1)}조원을 회수했습니다. ${labels.at(-1)} 기준 잔여 약 ${fmt(k1.at(-1), 1)}조원.`,
+    `<b>규칙 기준으로 보면</b> — 약관의 상하한 규칙만 지켰다면 2023.4분기 이후 고객 부담은 지금보다 약 <b>${fmt(overRule, 1)}조원</b> 적었습니다. 연동제가 '원가 반영 장치'보다 '시기 간 재무 완충 장치'로 운영된 셈이며, 형평성 판단 기준(산식 원가 vs 약관 규칙)을 먼저 정해야 합니다.`,
+    `<b>계약종별 파급</b> — 연료비조정요금은 모든 계약종에 kWh당 같은 금액이라, 단가가 낮은 계약종(농사용·심야·산업용 경부하 비중이 큰 고객)일수록 요금 대비 비중이 커집니다. 시뮬레이터에서 '연료비조정단가 기준'을 바꿔 계약종별 영향을 볼 수 있습니다.`
+  ].map(x => `<p class="finding">${x}</p>`).join("");
+}
+
 // ── 데이터·방법 ─────────────────────────────────────────────────────────────
 function renderData() {
   const A = D.audit;
@@ -946,6 +992,7 @@ function renderData() {
     `<b>미해결·확인 필요</b> ${D.tar.gaps.join(" / ")}`,
     `<b>SMP·계통부하</b> 시간별 SMP 육지·제주 2016.1~2026.11.14(1h = 00~01시, 사용량 H01과 시간 차분 상관 0.968로 정렬 확인), 계통부하·태양광(KPX·PPA·자가용) 2021.1~2026.10.6(MW). 계통수요 = 시장수요 + PPA, 총수요 = 계통수요 + 자가용 태양광(항등식 일치). 2016~2020 계통부하는 시간별 사용량 표본합으로 대리(2021~22년 총수요의 ${fmt(D.cost.sample_to_total_ratio * 100, 1)}%, 시간대별 편차 ±2%p).`,
     `<b>원가 배분</b> 총원가(영업비용÷판매량 × 판매량) 중 전력구입비 실적 비중만큼을 시간별 SMP 가중(일부는 피크 기여)으로, 나머지 망·기타비용을 계통 피크 기여와 kWh로 배분하고 전압계수를 곱합니다. 큐브(월×날짜유형×시) 근사 오차 최대 ${fmt(D.cost.cube_approx_max_err_pct, 2)}%.`,
+    `<b>연료비조정</b> 2022.1Q~2026.4Q 한전 산정내역(분기별 PDF·이미지), 2021년은 보도자료(산정 −0.2·1.7·10.8원, 적용 −3·−3·−3·0원). 2022.1Q~2023.2Q는 '미조정분 차감' 재산정본 기준(원 게시값 병기). 이전 금액은 분기 판매량을 연간 ÷ 4로 근사.`,
     `<b>표본 비중</b> 시간별 데이터는 스마트미터 계량분이라 한국전력통계 판매량 대비 주택용 50→80%, 일반용 58→72%로 늘었습니다(2016→2022). 크기 비교에는 확대계수를, 모양 비교에는 정규화를 씁니다.`
   ].map(x => `<p>${x}</p>`).join("");
   $("#buildInfo").textContent = `빌드 ${VER}`;
@@ -954,19 +1001,22 @@ function renderData() {
 // ── 초기화 ──────────────────────────────────────────────────────────────────
 function opts(el, arr, val) { el.innerHTML = arr.map(a => Array.isArray(a) ? `<option value="${a[0]}">${a[1]}</option>` : `<option>${a}</option>`).join(""); if (val != null) el.value = val; }
 async function boot() {
-  [D.meta, D.tar, D.ana, D.cube_tariff, D.daily, D.ref, D.audit, D.cost] = await Promise.all(["meta", "tariffs", "analysis", "cube_tariff", "daily_tariff", "kepco_ref", "audit", "cost"].map(j));
+  [D.meta, D.tar, D.ana, D.cube_tariff, D.daily, D.ref, D.audit, D.cost, D.fuel] = await Promise.all(["meta", "tariffs", "analysis", "cube_tariff", "daily_tariff", "kepco_ref", "audit", "cost", "fuel"].map(j));
   D.cube_tariff_full = D.cube_tariff;
   const Y = D.meta.years;
   opts($("#year"), Y, S.year); opts($("#base"), Y, S.base); opts($("#dLoad"), Y, Y.at(-1)); opts($("#simLoad"), Y, Y.at(-1));
   opts($("#simRef"), D.ref.years, D.ref.years.at(-1));
   opts($("#cSmpYear"), D.cost.smp_years.map(y => [y, y + (y === 2026 ? " (~11.14)" : "")]), D.ref.years.at(-1));
+  for (let y = 2016; y <= 2026; y++) FUEL_HIST[y] = fuelAvg(y, "applied");
+  const setFuel = () => { const m = $("#simFuelMode").value; $("#simFuel").disabled = m !== "manual"; if (m !== "manual") { const key = m === "required" ? "required_effective" : m; const v = fuelAvg($("#simRef").value, key); $("#simFuel").value = v == null ? 0 : v.toFixed(2); } };
+  setFuel();
   const vers = D.tar.versions.map(v => [v.effective, v.effective.replace(/-/g, ".") + (v.tou_scheme === "2026" ? " (개편)" : "")]);
   opts($("#simVer"), vers, "2026-04-16"); opts($("#simBase"), vers, "2025-04-01");
   const setCost = () => { const ri = D.ref.years.indexOf(+$("#simRef").value); const c = D.ref.fin.cost[ri] * 1e3 / D.ref.sold[ri]; $("#simCost").value = c.toFixed(1); $("#simCostHint").textContent = `${$("#simRef").value}년 영업비용÷판매량 · 구입단가 ${fmt(D.ref.pur_price[ri], 1)}원`; };
   setCost();
   adjInputs();
   $("#boot").hidden = true; $("#app").hidden = false;
-  await fillItems(); await renderAll(); renderCoverage(); renderDiag(); renderCost(); renderSim(); renderData();
+  await fillItems(); await renderAll(); renderCoverage(); renderDiag(); renderCost(); renderFuel(); renderSim(); renderData();
   const on = (sel_, ev, fn) => document.querySelectorAll(sel_).forEach(e => e.addEventListener(ev, fn));
   on("#dim", "change", async e => { S.dim = e.target.value; await fillItems(); renderAll(); });
   on("#item", "change", e => { S.item = e.target.value; renderAll(); });
@@ -975,10 +1025,11 @@ async function boot() {
   on('input[name="norm"]', "change", e => { S.norm = e.target.value; renderAll(); });
   on("#dLoad", "change", renderDiag);
   on('input[name="smpReg"], input[name="smpSch"]', "change", renderCost);
-  on("#simRef", "change", () => { setCost(); $("#cSmpYear").value = $("#simRef").value; renderSim(); });
+  on("#simRef", "change", () => { setCost(); setFuel(); $("#cSmpYear").value = $("#simRef").value; renderSim(); });
+  on("#simFuelMode", "change", () => { setFuel(); renderSim(); });
   on("#s-sim input, #s-sim select", "change", renderSim);
   on("#reset", "click", async () => { Object.assign(S, DEF); $("#dim").value = S.dim; $("#year").value = S.year; $("#base").value = S.base; $("#season").value = S.season; $("#dtype").value = S.dtype; document.querySelector('input[name="scheme"][value="2016"]').checked = true; document.querySelector('input[name="norm"][value="mw"]').checked = true; await fillItems(); renderAll(); });
-  let rt; window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { renderAll(); renderCoverage(); renderDiag(); renderCost(); renderSim(); }, 200); });
+  let rt; window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { renderAll(); renderCoverage(); renderDiag(); renderCost(); renderFuel(); renderSim(); }, 200); });
   // 네비게이션 활성 표시
   const links = [...document.querySelectorAll("#navList a")];
   const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) links.forEach(a => a.classList.toggle("active", a.getAttribute("href") === "#" + e.target.id)); }), { rootMargin: "-40% 0px -55% 0px" });
