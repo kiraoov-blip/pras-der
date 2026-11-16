@@ -1096,7 +1096,7 @@ function renderResBins() {
     `<b>적용 요금표</b>: 저압 전체와 고압 종합계약 세대(${fmt(sum(comp.map(gh)) / 1e4, 0)}만 가구)는 저압 요금표, 고압 단일계약(${fmt(sum(single.map(gh)) / 1e4, 0)}만 가구)·고압 일반은 고압 요금표가 적용됩니다. ` +
     `하계 누진 구간은 검침 주기 때문에 7월 청구의 ${fmt(B.summer_w[6] * 100, 0)}%, 8월 ${fmt(B.summer_w[7] * 100, 0)}%, 9월 ${fmt(B.summer_w[8] * 100, 0)}%에 반영됩니다. ` +
     `분포 합계는 월보 주택용 판매량의 ${fmt(Math.min(...salesRatio) * 100, 0)}~${fmt(Math.max(...salesRatio) * 100, 0)}%이며, 시뮬레이터는 분포 모양을 유지한 채 월 판매량에 맞춰 확대합니다. ` +
-    `정제: ${B.replaced.map(r => `${r.month.replace("-", ".")} ${r.group}는 복지할인 가구만 뽑혀(${fmt(r.hh / 1e4, 0)}만 가구) ${r.used.replace("-", ".")} 분포로 대체`).join(", ")}; 가구당 기본요금이 누진 상한(7,300원)의 1.5배를 넘는 비주거성 행 제외(대부분 2025.1~3 고압 종합, 월 ${fmt(sum(B.dropped.filter(d => d.group === "고압·종합").map(d => d.kwh)) / 3 / 1e6, 0)}GWh 안팎).`;
+    `정제: ${B.replaced.map(r => `${r.month.replace("-", ".")} ${r.group}는 복지할인 가구만 뽑혀(${fmt(r.hh / 1e4, 0)}만 가구) ${r.used.replace("-", ".")} 분포로 대체; `).join("")}가구당 기본요금이 누진 상한(7,300원)의 1.5배를 넘는 비주거성 행 제외(대부분 2025.1~3 고압 종합, 월 ${fmt(sum(B.dropped.filter(d => d.group === "고압·종합").map(d => d.kwh)) / 3 / 1e6, 0)}GWh 안팎).`;
   CSV.resbins = [["구간", "가구비중%", "사용량비중%", "평균kWh", "가구당요금원", "kWh당요금", "복지할인가구비율%"], ...rows.map(r => [r.name, (r.hh / T.hh * 100).toFixed(2), (r.kwh / T.kwh * 100).toFixed(2), (r.kwh / r.hh).toFixed(0), (r.bill / r.hh).toFixed(0), r.kwh ? (r.bill / r.kwh).toFixed(1) : "", r.hh ? (r.whh / r.hh * 100).toFixed(1) : ""])];
   if (season !== "all") return "";
   const big = rows.slice(7), bigW = sum(big.map(r => r.whh)) / sum(big.map(r => r.hh)) * 100;
