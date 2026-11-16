@@ -183,7 +183,7 @@ footer{background:#061a3d;color:#b9c6dc}
         <section class="sec" id="s-diag">
           <div class="sec-h">
             <div><p class="eyebrow">04 · Tariff Diagnosis</p><h2>요금체계 진단</h2><p class="desc" id="diagDesc"></p></div>
-            <div class="tools"><button class="btn" type="button" data-csv="diag">단가 <small>CSV</small></button><button class="btn" type="button" data-csv="monthly">월별 <small>CSV</small></button></div>
+            <div class="tools"><button class="btn" type="button" data-csv="diag">단가 <small>CSV</small></button><button class="btn" type="button" data-csv="monthly">월별 <small>CSV</small></button><button class="btn" type="button" data-csv="welfare">복지할인 구간 <small>CSV</small></button></div>
           </div>
           <div class="sec-b">
             <div id="findings"></div>
@@ -198,6 +198,14 @@ footer{background:#061a3d;color:#b9c6dc}
             <h3 class="sub-h" style="margin-top:22px">복지할인 실적 (2021~2025, 억원)</h3>
             <div class="tbl-scroll" id="discTable"></div>
             <p class="mini-note">할인 한도는 2016.12 개정 이후 고정. 주택용 수입 대비 비중 = (총할인 − 사회복지시설 − 기초 심야) ÷ 월보 주택용 판매수입. 사회복지시설은 일반·주택·심야 합산 표기.</p>
+            <h3 class="sub-h" style="margin-top:22px">복지할인 가구의 사용량 구간별 분포 (<span id="wbYear"></span>, 월별 청구)</h3>
+            <div class="grid-in wide" style="margin:6px 0 10px">
+              <div class="field"><label for="wbSeason">기간</label><select id="wbSeason"><option value="all">연간</option><option value="non">하계 외 (1~6·9~12월)</option><option value="sum">하계 (7·8월)</option></select><span class="hint">하계는 누진 구간 300/450kWh·할인 한도 상향</span></div>
+            </div>
+            <div class="lg" id="wbLegend"></div>
+            <div class="chart" id="wbChart"></div>
+            <div class="tbl-scroll" id="wbTable"></div>
+            <p class="mini-note" id="wbNote"></p>
             <h3 class="sub-h" style="margin-top:22px">월별 판매단가 vs 전력구입 정산단가 (전력통계월보, 2016.1~)</h3>
             <div class="lg" id="monLegend"></div>
             <div class="chart" id="monChart"></div>
@@ -726,7 +734,7 @@ function renderFindings(out, yi, under, discF) {
     for (let i = 1; i < under.length; i++) { if (idx(under[i]) - idx(under[i - 1]) <= 2) cur.push(under[i]); else cur = [under[i]]; if (cur.length > best.length) best = cur.slice(); }
     f.push(`<b>구입단가보다 싸게 판 기간</b> — 전체 평균 판매단가가 전력구입 정산단가를 밑돈 달이 ${under.length}개월이며, 대부분이 ${best[0].replace("-", ".")}~${best.at(-1).replace("-", ".")} 연료비 급등기(${best.length}개월)에 몰려 있습니다. 요금 동결의 비용이 이 시기에 한전 재무로 넘어갔습니다.`);
   }
-  if (discF) f.push(discF);
+  if (discF) f.push(...[].concat(discF).filter(Boolean));
   $("#findings").innerHTML = f.map(x => `<p class="finding">${x}</p>`).join("");
 }
 
@@ -997,6 +1005,39 @@ function renderCost() {
   $("#costFindings").innerHTML = f.map(x => `<p class="finding">${x}</p>`).join("");
 }
 
+const WB_BANDS = [[0, 0, "0"], [1, 100, "1~100"], [101, 200, "101~200"], [201, 300, "201~300"], [301, 400, "301~400"], [401, 500, "401~500"], [501, 700, "501~700"], [701, 1000, "701~1,000"], [1001, 1e9, "1,000 초과"]];
+function renderWelfareBins() {
+  const W = D.wbin; if (!W) return "";
+  const season = $("#wbSeason").value;
+  const mm = W.months.map((m, i) => [i, +m.slice(5)]).filter(([, m]) => season === "all" || (season === "sum") === (m === 7 || m === 8)).map(([i]) => i);
+  const agg = (cube, v, lo, hi) => { let s = 0; for (const mi of mm) cube[v][mi].forEach((x, bi) => { if (W.lo[bi] >= lo && W.lo[bi] <= hi) s += x; }); return s; };
+  const rows = WB_BANDS.map(([lo, hi, name]) => {
+    const g = v => agg(W.all, v, lo, hi), r = v => agg(W.rate, v, lo, hi);
+    return { name, hh: g("hh"), kwh: g("kwh"), wel: 0 - g("wel"), le200: 0 - g("le200"), frz: 0 - g("frz"), disc: 0 - g("disc"), rDisc: 0 - r("disc"), rPre: r("pre") };
+  });
+  const T = rows.reduce((a, r) => { for (const k in r) if (k !== "name") a[k] = (a[k] || 0) + r[k]; return a; }, {});
+  const yr = W.months[0].slice(0, 4);
+  $("#wbYear").textContent = yr;
+  const ser = [{ name: "가구 비중(%)", color: "#003b8e", values: rows.map(r => r.hh / T.hh * 100) }, { name: "할인액 비중(%)", color: "#e60012", values: rows.map(r => r.disc / T.disc * 100) }];
+  legend($("#wbLegend"), ser);
+  barChart($("#wbChart"), rows.map(r => r.name), ser, { yTitle: "%" });
+  let h = `<table class="tbl"><thead><tr><th>가구당 월 사용량(kWh)</th><th>가구 비중</th><th>평균 사용량</th><th>가구당 월 할인(원)</th><th>복지할인</th><th>200kWh 이하 감액</th><th>요금동결 할인</th><th>할인율(할인 전 요금 대비)</th></tr></thead><tbody>`;
+  const line = (r, cls) => `<tr${cls ? ` class="${cls}"` : ""}><td>${r.name}</td><td>${fmt(r.hh / T.hh * 100, 1)}%</td><td>${fmt(r.kwh / r.hh, 0)}kWh</td><td><b>${fmt(r.disc / r.hh, 0)}</b></td><td>${fmt(r.wel / r.hh, 0)}</td><td>${fmt(r.le200 / r.hh, 0)}</td><td>${fmt(r.frz / r.hh, 0)}</td><td>${r.rPre > 0 ? fmt(r.rDisc / r.rPre * 100, 1) + "%" : "-"}</td></tr>`;
+  h += rows.map(r => line(r)).join("") + line({ ...T, name: "전체" }, "tot");
+  $("#wbTable").innerHTML = h + "</tbody></table>";
+  const n = mm.length, gtot = k => sum(W.groups.map(g => sum(mm.map(i => g[k][i]))));
+  const dTab = D.disc.rows.filter(r => r.tariff === "주택용").reduce((a, r) => a + r.amount[D.disc.years.indexOf(+yr)], 0);
+  $("#wbNote").innerHTML = `구간 = 가구당 월 사용량(아파트 단일계약은 세대 평균). 월평균 ${fmt(T.hh / n / 1e4, 0)}만 가구, ${season === "all" ? "연간" : n + "개월"} 총할인 ${fmt(T.disc / 1e8, 0)}억원(복지 ${fmt(T.wel / 1e8, 0)} · 200kWh 이하 감액 ${fmt(T.le200 / 1e8, 0)} · 요금동결 ${fmt(T.frz / 1e8, 0)}).` +
+    (season === "all" && dTab ? ` 복지할인액은 실적표의 주택용 항목 합(${fmt(dTab, 0)}억원)의 ${fmt(T.wel / 1e8 / dTab * 100, 0)}%로, 실적표의 일부 항목(사회복지시설·심야)은 이 분포에 들어 있지 않습니다.` : "") +
+    ` 할인율은 할인 전 요금이 기재된 개별·종합계약 기준(단일계약 ${fmt(gtot("hh") ? sum(W.groups.filter(g => g.apt === "단일").map(g => sum(mm.map(i => g.hh[i])))) / gtot("hh") * 100 : 0, 0)}%는 단지 단위 청구라 제외). 요금동결 할인은 하계에는 0입니다.`;
+  CSV.welfare = [["구간", "가구비중%", "평균kWh", "가구당할인원", "복지", "200kWh이하감액", "요금동결", "할인율%"], ...rows.map(r => [r.name, (r.hh / T.hh * 100).toFixed(2), (r.kwh / r.hh).toFixed(0), (r.disc / r.hh).toFixed(0), (r.wel / r.hh).toFixed(0), (r.le200 / r.hh).toFixed(0), (r.frz / r.hh).toFixed(0), r.rPre > 0 ? (r.rDisc / r.rPre * 100).toFixed(1) : ""])];
+  // 발견 (연간 기준으로 고정)
+  const A = WB_BANDS.map(([lo, hi]) => { let d = 0, p = 0, hh = 0; W.months.forEach((_, mi) => W.rate.hh[mi].forEach((x, bi) => { if (W.lo[bi] >= lo && W.lo[bi] <= hi) { hh += x; d -= W.rate.disc[mi][bi]; p += W.rate.pre[mi][bi]; } })); return { d, p, hh }; });
+  const rate = i => A[i].d / A[i].p * 100, per = i => A[i].d / A[i].hh;
+  let hhAll = 0, kAll = 0; W.months.forEach((_, mi) => { hhAll += sum(W.all.hh[mi]); kAll += sum(W.all.kwh[mi]); });
+  return `<b>복지할인은 사용량과 거의 무관한 정액</b> — ${yr}년 할인 가구(월평균 ${fmt(hhAll / 12 / 1e4, 0)}만 가구, 평균 ${fmt(kAll / hhAll, 0)}kWh)는 사용량이 101~200kWh든 501~700kWh든 가구당 월 ${fmt(Math.min(...[2,3,4,5,6].map(per)) / 1e4, 1)}~${fmt(Math.max(...[2,3,4,5,6].map(per)) / 1e4, 1)}만원을 받습니다. 그래서 할인율은 101~200kWh 구간 ${fmt(rate(2), 0)}%에서 501~700kWh 구간 ${fmt(rate(6), 0)}%로 떨어집니다. 한도에 걸린 뒤의 추가 사용분은 할인 없이 누진 단가를 그대로 내므로 절약 신호는 살아 있지만, 요금이 오를수록 할인의 실질 비중은 계속 줄어드는 구조입니다.`;
+}
+
 function renderDiscount() {
   const X = D.disc, M = D.mon;
   const resRev = y => sum(Object.entries(M.rev.res).filter(([k]) => k.startsWith(String(y))).map(([, v]) => v)) / 100;   // 백만원 → 억원
@@ -1008,7 +1049,8 @@ function renderDiscount() {
   h += `<tr><td>주택용 판매수입(월보)</td><td></td><td></td>${X.years.map(y => `<td>${fmt(resRev(y), 0)}</td>`).join("")}<td>${pct((resRev(X.years.at(-1)) / resRev(X.years[0]) - 1) * 100, 0)}</td></tr>`;
   $("#discTable").innerHTML = h + "</tbody></table>";
   const per = X.total.at(-1) * 1e8 / (X.households_total * 1e3) / 12, cust = D.ref.cust.res.at(-1);
-  return `<b>복지할인의 실질 가치 하락</b> — ${X.years.at(-1)}년 주택용 고객의 약 ${fmt(X.households_total * 1e3 / cust * 100, 0)}%(${fmt(X.households_total / 1000, 2)}백만 호)가 할인을 받고 호당 평균은 월 약 ${fmt(per, 0)}원입니다. 같은 기간 주택용 판매수입이 ${pct((resRev(X.years.at(-1)) / resRev(X.years[0]) - 1) * 100, 0)} 늘 때 주택용 할인액은 덜 늘어 수입 대비 비중이 ${fmt(share[0], 1)}% → ${fmt(share.at(-1), 1)}%로 낮아졌습니다. 정액 한도(월 16천원, 하계 2만원)가 2016.12 이후 고정된 탓으로, 요금 인상분이 취약계층에 그대로 전가되고 있습니다.`;
+  const wb = renderWelfareBins();
+  return [`<b>복지할인의 실질 가치 하락</b> — ${X.years.at(-1)}년 주택용 고객의 약 ${fmt(X.households_total * 1e3 / cust * 100, 0)}%(${fmt(X.households_total / 1000, 2)}백만 호)가 할인을 받고 호당 평균은 월 약 ${fmt(per, 0)}원입니다. 같은 기간 주택용 판매수입이 ${pct((resRev(X.years.at(-1)) / resRev(X.years[0]) - 1) * 100, 0)} 늘 때 주택용 할인액은 덜 늘어 수입 대비 비중이 ${fmt(share[0], 1)}% → ${fmt(share.at(-1), 1)}%로 낮아졌습니다. 정액 한도(월 16천원, 하계 2만원)가 2016.12 이후 고정된 탓으로, 요금 인상분이 취약계층에 그대로 전가되고 있습니다.`, wb];
 }
 
 function renderMonthly() {
@@ -1086,7 +1128,7 @@ function renderData() {
 // ── 초기화 ──────────────────────────────────────────────────────────────────
 function opts(el, arr, val) { el.innerHTML = arr.map(a => Array.isArray(a) ? `<option value="${a[0]}">${a[1]}</option>` : `<option>${a}</option>`).join(""); if (val != null) el.value = val; }
 async function boot() {
-  [D.meta, D.tar, D.ana, D.cube_tariff, D.daily, D.ref, D.audit, D.cost, D.fuel, D.mon, D.zone, D.disc, D.net] = await Promise.all(["meta", "tariffs", "analysis", "cube_tariff", "daily_tariff", "kepco_ref", "audit", "cost", "fuel", "monthly", "region_map", "discount", "network"].map(j));
+  [D.meta, D.tar, D.ana, D.cube_tariff, D.daily, D.ref, D.audit, D.cost, D.fuel, D.mon, D.zone, D.disc, D.net, D.wbin] = await Promise.all(["meta", "tariffs", "analysis", "cube_tariff", "daily_tariff", "kepco_ref", "audit", "cost", "fuel", "monthly", "region_map", "discount", "network", "welfare_bins"].map(j));
   D.cube_tariff_full = D.cube_tariff;
   const Y = D.meta.years;
   opts($("#year"), Y, S.year); opts($("#base"), Y, S.base); opts($("#dLoad"), Y, Y.at(-1)); opts($("#simLoad"), Y, Y.at(-1));
@@ -1107,6 +1149,7 @@ async function boot() {
   const on = (sel_, ev, fn) => document.querySelectorAll(sel_).forEach(e => e.addEventListener(ev, fn));
   on("#dim", "change", async e => { S.dim = e.target.value; await fillItems(); renderAll(); });
   on("#item", "change", e => { S.item = e.target.value; renderAll(); });
+  on("#wbSeason", "change", () => renderWelfareBins());
   for (const k of ["year", "base", "season", "dtype"]) on("#" + k, "change", e => { S[k] = e.target.value; renderAll(); });
   on('input[name="scheme"]', "change", e => { S.scheme = e.target.value; renderAll(); });
   on('input[name="norm"]', "change", e => { S.norm = e.target.value; renderAll(); });

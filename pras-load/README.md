@@ -33,6 +33,7 @@
 | `scripts/build_regionmap.py` | 본부 ↔ 시도 10개 권역 대응(한전 조직표 기준), 권역별 표본 비중 → `region_map.json` |
 | `scripts/build_network.py` | 송배전 이용요금 총괄원가(송전·배전, 적정원가·적정투자보수, 배전 저압·고압 단가) → `network.json` |
 | `scripts/build_discount.py` | 복지할인 실적(2021~2025 항목별 금액, 2025.12 호수) → `discount.json` |
+| `scripts/build_welfare_bins.py` | 복지할인 가구 사용량 구간별 분포(2025 월별, 저/고압 × 일반·단일·종합) → `welfare_bins.json` |
 | `scripts/build_fuel.py` | 연료비조정단가 산정내역(분기 PDF 텍스트) → `fuel.json` (필요·규칙·적용 단가, 원 게시값) |
 | `scripts/analyze_cost.py` | SMP·계통부하 × 계약종 부하 → `cost.json` (SMP 큐브, 시간대별 SMP, 피크 기여, 태양광) |
 | `scripts/tariff/` | 요금표 PDF → `tariffs.json` (추출 `rows/blocks/extract`, 스캔·양식불일치 판본 확정 `infer/anchor`, 조립 `assemble`) |
@@ -57,6 +58,7 @@ python3 scripts/analyze_cost.py build
 python3 scripts/build_monthly.py <월보_폴더(연도별 하위폴더)> build   # build_ref.py 다음에 실행
 python3 scripts/build_regionmap.py build
 python3 scripts/build_discount.py build
+python3 scripts/build_welfare_bins.py <복지할인_구간분포_xlsx_폴더> build
 python3 scripts/build_network.py build
 python3 scripts/build_fuel.py <산정내역_txt_dir> build      # pdftotext -layout 결과(이미지 판은 OCR 후 MANUAL 반영)
 python3 scripts/build_page.py ../ember-sim/index.html
@@ -106,6 +108,9 @@ python3 scripts/build_page.py ../ember-sim/index.html
 - 시뮬레이터: 실적 보정을 '추정(할인 전) − 할인 = 실적 판매수입'으로 맞추고, 시나리오에서 할인 규모(%) 조정.
   사회복지시설(일반·주택·심야 합산)은 일반용 비중 입력(기본 50%), 기초 심야는 심야, 나머지는 주택용.
 - 정액 한도형(장애인·다자녀·대가족 등)은 2021→2025 감소·정체, 정률형(사회복지시설·생명유지)은 요금 인상에 따라 증가.
+- 구간별 분포(2025, 72개 파일): 구간 = 가구당 월 사용량(단일계약은 세대 평균). 총할인 = 필수사용량보장공제 + 200kWh이하감액 + 요금동결 + 복지할인,
+  할인 후 = 할인 전 + 총할인 (전 행 검증). 연간 6,474억원(복지 5,714 = 실적표 주택용 항목의 98%), 월평균 354만 가구.
+  단일계약은 '할인 전 요금'이 비어 있어 할인율에서 제외. 가구당 할인은 사용량과 무관하게 월 1.5만원 안팎 → 할인율 101~200kWh 78% → 501~700kWh 13%.
 
 ## 연료비조정단가
 
