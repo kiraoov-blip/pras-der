@@ -31,6 +31,7 @@
 | `scripts/build_sysload.py` | 계통부하·태양광 엑셀 → `sysload_hourly.parquet` (항등식 점검) |
 | `scripts/build_monthly.py` | 전력통계월보(속보) 엑셀 129호 → `monthly.json` (계약종 대분류 월별 판매량·호수·수입, 정산단가, 수급, 태양광, 시도·산업분류) |
 | `scripts/build_regionmap.py` | 본부 ↔ 시도 10개 권역 대응(한전 조직표 기준), 권역별 표본 비중 → `region_map.json` |
+| `scripts/build_network.py` | 송배전 이용요금 총괄원가(송전·배전, 적정원가·적정투자보수, 배전 저압·고압 단가) → `network.json` |
 | `scripts/build_discount.py` | 복지할인 실적(2021~2025 항목별 금액, 2025.12 호수) → `discount.json` |
 | `scripts/build_fuel.py` | 연료비조정단가 산정내역(분기 PDF 텍스트) → `fuel.json` (필요·규칙·적용 단가, 원 게시값) |
 | `scripts/analyze_cost.py` | SMP·계통부하 × 계약종 부하 → `cost.json` (SMP 큐브, 시간대별 SMP, 피크 기여, 태양광) |
@@ -56,6 +57,7 @@ python3 scripts/analyze_cost.py build
 python3 scripts/build_monthly.py <월보_폴더(연도별 하위폴더)> build   # build_ref.py 다음에 실행
 python3 scripts/build_regionmap.py build
 python3 scripts/build_discount.py build
+python3 scripts/build_network.py build
 python3 scripts/build_fuel.py <산정내역_txt_dir> build      # pdftotext -layout 결과(이미지 판은 OCR 후 MANUAL 반영)
 python3 scripts/build_page.py ../ember-sim/index.html
 ```
@@ -116,8 +118,9 @@ python3 scripts/build_page.py ../ember-sim/index.html
 - 기본요금은 대분류 요금적용전력을 계약종 평균일 최대부하 비율로 배분한 추정치.
 - 월보의 판매 통계는 7개 대분류까지만 있어 갑·을·전압별 확대는 시간별 데이터 내 비중을 따름.
 - 주택용 누진은 호당 사용량 로그정규 분포 가정 → 실적 보정으로 수준을 맞춤. 조합별 호수 확보 시 대체.
-- 원가 배분: 총괄원가 중 전력구입비(실적 비중 83~91%)는 시간별 SMP 가중(용량성 비중은 피크 기여),
-  망·기타비용은 계통 상위 N시간 기여와 kWh로 나누고 전압계수 적용. 계통부하는 2021년부터라 2016~2020은 표본합 대리.
-  전압계수 기본값은 1:1:1 — 송배전 원가 자료 확보 시 근거값으로 교체.
+- 원가 배분: 영업비용 = 전력구입비(시간별 SMP 가중 + CP 비중만큼 피크) + 송전 적정원가(피크·kWh)
+  + 배전 적정원가(배전이용요금 저압·고압 단가 × kW·kWh, 고압B·C 제외) + 판매·기타(나머지, 고객 수).
+  선택 시 송배전 적정투자보수 가산(총괄원가 방식). 송전 추이표=결산연도, 배전 추이표=적용연도로 해석해 정렬.
+  기본요금 kW는 계약종 평균일 최대부하(대리값). 계통부하는 2021년부터 KPX 실측, 2016~2020은 표본합 대리.
 - 임시전력(갑/을저압)·가로등(갑)은 요금표에 단가가 없어 미산정.
 - 고압 선택요금(Ⅰ/Ⅱ/Ⅲ)은 별도 분석하지 않기로 결정 — 선택Ⅱ를 대표값으로 사용.
