@@ -75,7 +75,7 @@ cal_days = cal.groupby(["year", "month", "dtype"]).size()  # 날짜유형별 일
 # ── 1차 패스: 차원 수집 + 전국 일별 통계 ─────────────────────────────────────
 cats = {k: set() for k in KEYS}
 nat = []
-EXCLUDE_HQ = {"판매사업단"}   # 2024년 1행·2025년 167행, 사용량 ≈ 0 → 분석 제외(audit 기록)
+EXCLUDE_HQ = {"판매사업단"}   # 입력 시 지역코드 누락분(담당 부서 확인, 2026.11). 2024년 1행·2025년 167행, 사용량 ≈ 0 → 분석 제외(audit 기록)
 excluded = {}
 for y in years:
     df = pd.read_parquet(SRC / f"year={y}.parquet")
