@@ -31,6 +31,7 @@
 | `scripts/build_sysload.py` | 계통부하·태양광 엑셀 → `sysload_hourly.parquet` (항등식 점검) |
 | `scripts/build_monthly.py` | 전력통계월보(속보) 엑셀 129호 → `monthly.json` (계약종 대분류 월별 판매량·호수·수입, 정산단가, 수급, 태양광, 시도·산업분류) |
 | `scripts/build_regionmap.py` | 본부 ↔ 시도 10개 권역 대응(한전 조직표 기준), 권역별 표본 비중 → `region_map.json` |
+| `scripts/build_discount.py` | 복지할인 실적(2021~2025 항목별 금액, 2025.12 호수) → `discount.json` |
 | `scripts/build_fuel.py` | 연료비조정단가 산정내역(분기 PDF 텍스트) → `fuel.json` (필요·규칙·적용 단가, 원 게시값) |
 | `scripts/analyze_cost.py` | SMP·계통부하 × 계약종 부하 → `cost.json` (SMP 큐브, 시간대별 SMP, 피크 기여, 태양광) |
 | `scripts/tariff/` | 요금표 PDF → `tariffs.json` (추출 `rows/blocks/extract`, 스캔·양식불일치 판본 확정 `infer/anchor`, 조립 `assemble`) |
@@ -54,6 +55,7 @@ python3 scripts/build_sysload.py <계통부하.xlsx> build
 python3 scripts/analyze_cost.py build
 python3 scripts/build_monthly.py <월보_폴더(연도별 하위폴더)> build   # build_ref.py 다음에 실행
 python3 scripts/build_regionmap.py build
+python3 scripts/build_discount.py build
 python3 scripts/build_fuel.py <산정내역_txt_dir> build      # pdftotext -layout 결과(이미지 판은 OCR 후 MANUAL 반영)
 python3 scripts/build_page.py ../ember-sim/index.html
 ```
@@ -96,6 +98,13 @@ python3 scripts/build_page.py ../ember-sim/index.html
 - 판매수입 단위 백만원. 정산단가 중 CP 비중 8.0~15.4%(2025년 12.0%) → 시뮬레이터 '구입비 중 용량성 비중' 기본값.
 - 시뮬레이터 판매량 확대는 대분류 × 월 단위, 연료비 이전액은 실제 분기 판매량.
 
+## 복지할인
+
+- 2021~2025 항목별 할인금액(억원)과 2025.12 대상 호수(천호). 항목 합 = 총계 검증.
+- 시뮬레이터: 실적 보정을 '추정(할인 전) − 할인 = 실적 판매수입'으로 맞추고, 시나리오에서 할인 규모(%) 조정.
+  사회복지시설(일반·주택·심야 합산)은 일반용 비중 입력(기본 50%), 기초 심야는 심야, 나머지는 주택용.
+- 정액 한도형(장애인·다자녀·대가족 등)은 2021→2025 감소·정체, 정률형(사회복지시설·생명유지)은 요금 인상에 따라 증가.
+
 ## 연료비조정단가
 
 - 2022.1Q~2026.4Q 한전 산정내역 + 2021년 보도자료. 필요조정단가(산식), 규칙(±5원 상한, 2022.2Q까지 분기 ±3원), 실제 적용(유보·동결)을 분기별로 기록.
@@ -104,7 +113,6 @@ python3 scripts/build_page.py ../ember-sim/index.html
 
 ## 한계와 다음 단계
 
-- 고압 선택요금(Ⅰ/Ⅱ/Ⅲ) 가입 비중이 없어 선택Ⅱ를 대표로 사용.
 - 기본요금은 대분류 요금적용전력을 계약종 평균일 최대부하 비율로 배분한 추정치.
 - 월보의 판매 통계는 7개 대분류까지만 있어 갑·을·전압별 확대는 시간별 데이터 내 비중을 따름.
 - 주택용 누진은 호당 사용량 로그정규 분포 가정 → 실적 보정으로 수준을 맞춤. 조합별 호수 확보 시 대체.
@@ -112,3 +120,4 @@ python3 scripts/build_page.py ../ember-sim/index.html
   망·기타비용은 계통 상위 N시간 기여와 kWh로 나누고 전압계수 적용. 계통부하는 2021년부터라 2016~2020은 표본합 대리.
   전압계수 기본값은 1:1:1 — 송배전 원가 자료 확보 시 근거값으로 교체.
 - 임시전력(갑/을저압)·가로등(갑)은 요금표에 단가가 없어 미산정.
+- 고압 선택요금(Ⅰ/Ⅱ/Ⅲ)은 별도 분석하지 않기로 결정 — 선택Ⅱ를 대표값으로 사용.
