@@ -29,6 +29,7 @@
 | `scripts/build_smp.py` | 시간별 SMP 엑셀(육지·제주) → `smp_hourly.parquet`, 점검 요약 |
 | `scripts/build_sysload.py` | 계통부하·태양광 엑셀 → `sysload_hourly.parquet` (항등식 점검) |
 | `scripts/build_monthly.py` | 전력통계월보(속보) 엑셀 129호 → `monthly.json` (계약종 대분류 월별 판매량·호수·수입, 정산단가, 수급, 태양광, 시도·산업분류) |
+| `scripts/build_regionmap.py` | 본부 ↔ 시도 10개 권역 대응(한전 조직표 기준), 권역별 표본 비중 → `region_map.json` |
 | `scripts/build_fuel.py` | 연료비조정단가 산정내역(분기 PDF 텍스트) → `fuel.json` (필요·규칙·적용 단가, 원 게시값) |
 | `scripts/analyze_cost.py` | SMP·계통부하 × 계약종 부하 → `cost.json` (SMP 큐브, 시간대별 SMP, 피크 기여, 태양광) |
 | `scripts/tariff/` | 요금표 PDF → `tariffs.json` (추출 `rows/blocks/extract`, 스캔·양식불일치 판본 확정 `infer/anchor`, 조립 `assemble`) |
@@ -51,6 +52,7 @@ python3 scripts/build_smp.py <smp_xlsx_dir> build            # smpInLand_YYYY.xl
 python3 scripts/build_sysload.py <계통부하.xlsx> build
 python3 scripts/analyze_cost.py build
 python3 scripts/build_monthly.py <월보_폴더(연도별 하위폴더)> build   # build_ref.py 다음에 실행
+python3 scripts/build_regionmap.py build
 python3 scripts/build_fuel.py <산정내역_txt_dir> build      # pdftotext -layout 결과(이미지 판은 OCR 후 MANUAL 반영)
 python3 scripts/build_page.py ../ember-sim/index.html
 ```

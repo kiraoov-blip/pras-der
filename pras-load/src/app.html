@@ -174,6 +174,9 @@ footer{background:#061a3d;color:#b9c6dc}
             <div class="lg" id="covLegend"></div>
             <div class="chart" id="covChart"></div>
             <p class="mini-note">주택용·일반용 총량 증가의 상당 부분은 스마트미터 보급 확대입니다. 크기 비교는 반드시 이 비중을 감안해야 합니다.</p>
+            <h3 class="sub-h" style="margin-top:18px">권역별 표본 비중 (전력통계월보 시도별 판매량 대비, %)</h3>
+            <div class="tbl-scroll" id="zoneTable"></div>
+            <p class="mini-note">본부 관할과 시도 경계가 어긋나(인천본부 ⊃ 부천·김포·시흥, 대구본부 ⊃ 포항·경주 등, 부산울산본부 ⊃ 김해·양산) 경계가 일치하는 10개 권역으로 비교합니다. 개성(황북)은 경기북부본부 관할.</p>
           </div>
         </section>
 
@@ -664,6 +667,9 @@ function renderCoverage() {
   }));
   legend($("#covLegend"), series);
   lineChart($("#covChart"), { labels: Y.map(String), series, yTitle: "%", height: 240, tipFmt: v => fmt(v, 1) + "%", yMin: 0, yMax: 100 });
+  const Z = D.zone;
+  $("#zoneTable").innerHTML = `<table class="tbl"><thead><tr><th>권역</th><th>본부</th>${Z.years.map(y => `<th>${y}</th>`).join("")}</tr></thead><tbody>` +
+    Object.entries(Z.coverage_pct).map(([z, r]) => `<tr><td>${z}</td><td style="text-align:left;white-space:normal;font-size:11.5px;color:#6b7686">${Z.zones[z].hq.join(", ")}</td>${r.map((v, i) => { const d = i ? v - r[i - 1] : 0; return `<td style="background:rgba(0,59,142,${Math.max(0, (v - 30) / 70) * .35})${d < -5 ? ";outline:2px solid #e60012;outline-offset:-2px" : ""}">${fmt(v, 1)}</td>`; }).join("")}</tr>`).join("") + "</tbody></table>";
 }
 
 // ── 요금 진단 ───────────────────────────────────────────────────────────────
@@ -1031,7 +1037,7 @@ function renderData() {
 // ── 초기화 ──────────────────────────────────────────────────────────────────
 function opts(el, arr, val) { el.innerHTML = arr.map(a => Array.isArray(a) ? `<option value="${a[0]}">${a[1]}</option>` : `<option>${a}</option>`).join(""); if (val != null) el.value = val; }
 async function boot() {
-  [D.meta, D.tar, D.ana, D.cube_tariff, D.daily, D.ref, D.audit, D.cost, D.fuel, D.mon] = await Promise.all(["meta", "tariffs", "analysis", "cube_tariff", "daily_tariff", "kepco_ref", "audit", "cost", "fuel", "monthly"].map(j));
+  [D.meta, D.tar, D.ana, D.cube_tariff, D.daily, D.ref, D.audit, D.cost, D.fuel, D.mon, D.zone] = await Promise.all(["meta", "tariffs", "analysis", "cube_tariff", "daily_tariff", "kepco_ref", "audit", "cost", "fuel", "monthly", "region_map"].map(j));
   D.cube_tariff_full = D.cube_tariff;
   const Y = D.meta.years;
   opts($("#year"), Y, S.year); opts($("#base"), Y, S.base); opts($("#dLoad"), Y, Y.at(-1)); opts($("#simLoad"), Y, Y.at(-1));
