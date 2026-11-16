@@ -28,6 +28,7 @@
 | `scripts/analyze.py` | 부하율·피크·시간대 비중·평균단가 사전 계산 |
 | `scripts/build_smp.py` | 시간별 SMP 엑셀(육지·제주) → `smp_hourly.parquet`, 점검 요약 |
 | `scripts/build_sysload.py` | 계통부하·태양광 엑셀 → `sysload_hourly.parquet` (항등식 점검) |
+| `scripts/build_monthly.py` | 전력통계월보(속보) 엑셀 129호 → `monthly.json` (계약종 대분류 월별 판매량·호수·수입, 정산단가, 수급, 태양광, 시도·산업분류) |
 | `scripts/build_fuel.py` | 연료비조정단가 산정내역(분기 PDF 텍스트) → `fuel.json` (필요·규칙·적용 단가, 원 게시값) |
 | `scripts/analyze_cost.py` | SMP·계통부하 × 계약종 부하 → `cost.json` (SMP 큐브, 시간대별 SMP, 피크 기여, 태양광) |
 | `scripts/tariff/` | 요금표 PDF → `tariffs.json` (추출 `rows/blocks/extract`, 스캔·양식불일치 판본 확정 `infer/anchor`, 조립 `assemble`) |
@@ -49,6 +50,7 @@ python3 scripts/analyze.py build
 python3 scripts/build_smp.py <smp_xlsx_dir> build            # smpInLand_YYYY.xlsx, smpJeju_YYYY.xlsx
 python3 scripts/build_sysload.py <계통부하.xlsx> build
 python3 scripts/analyze_cost.py build
+python3 scripts/build_monthly.py <월보_폴더(연도별 하위폴더)> build   # build_ref.py 다음에 실행
 python3 scripts/build_fuel.py <산정내역_txt_dir> build      # pdftotext -layout 결과(이미지 판은 OCR 후 MANUAL 반영)
 python3 scripts/build_page.py ../ember-sim/index.html
 ```
@@ -82,6 +84,14 @@ python3 scripts/build_page.py ../ember-sim/index.html
 - 계통부하·태양광 2021.1.1~2026.10.6 (MW): 시장수요, 계통수요(= 시장 + PPA), 총수요(= 계통 + 자가용), KPX·PPA·자가용 태양광.
 - 시간축 정렬: 사용량 표본합과 총수요의 시간 차분 상관이 동시각 0.968, ±1시간 0.70~0.73 → 1h·H01 모두 00~01시.
 
+## 전력통계월보
+
+- 2016.1~2026.9, 129개월. 한 호에 최근 약 13개월이 실려 호를 모아 시계열 구성. 시트 번호가 해마다 달라 이름 키워드로 탐색.
+- 엑셀이 10월을 'YYYY.1'로 저장한 문제는 기준월에서 거꾸로 세어 해결. 같은 달 값이 호마다 다르면 최빈값(2023.1월호의 2022.1월 일반용 오기 보정).
+- 월 합계와 한국전력통계 연간값 일치(판매량·수입 오차 0.000%). 2016.1은 연간값 − 2~12월(2016.1월호는 PDF).
+- 판매수입 단위 백만원. 정산단가 중 CP 비중 8.0~15.4%(2025년 12.0%) → 시뮬레이터 '구입비 중 용량성 비중' 기본값.
+- 시뮬레이터 판매량 확대는 대분류 × 월 단위, 연료비 이전액은 실제 분기 판매량.
+
 ## 연료비조정단가
 
 - 2022.1Q~2026.4Q 한전 산정내역 + 2021년 보도자료. 필요조정단가(산식), 규칙(±5원 상한, 2022.2Q까지 분기 ±3원), 실제 적용(유보·동결)을 분기별로 기록.
@@ -92,6 +102,7 @@ python3 scripts/build_page.py ../ember-sim/index.html
 
 - 고압 선택요금(Ⅰ/Ⅱ/Ⅲ) 가입 비중이 없어 선택Ⅱ를 대표로 사용.
 - 기본요금은 대분류 요금적용전력을 계약종 평균일 최대부하 비율로 배분한 추정치.
+- 월보의 판매 통계는 7개 대분류까지만 있어 갑·을·전압별 확대는 시간별 데이터 내 비중을 따름.
 - 주택용 누진은 호당 사용량 로그정규 분포 가정 → 실적 보정으로 수준을 맞춤. 조합별 호수 확보 시 대체.
 - 원가 배분: 총괄원가 중 전력구입비(실적 비중 83~91%)는 시간별 SMP 가중(용량성 비중은 피크 기여),
   망·기타비용은 계통 상위 N시간 기여와 kWh로 나누고 전압계수 적용. 계통부하는 2021년부터라 2016~2020은 표본합 대리.

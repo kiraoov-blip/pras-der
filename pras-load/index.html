@@ -440,7 +440,7 @@ footer{background:#061a3d;color:#b9c6dc}
         <section class="sec" id="s-diag">
           <div class="sec-h">
             <div><p class="eyebrow">04 · Tariff Diagnosis</p><h2>요금체계 진단</h2><p class="desc" id="diagDesc"></p></div>
-            <div class="tools"><button class="btn" type="button" data-csv="diag">데이터 저장 <small>CSV</small></button></div>
+            <div class="tools"><button class="btn" type="button" data-csv="diag">단가 <small>CSV</small></button><button class="btn" type="button" data-csv="monthly">월별 <small>CSV</small></button></div>
           </div>
           <div class="sec-b">
             <div id="findings"></div>
@@ -452,6 +452,10 @@ footer{background:#061a3d;color:#b9c6dc}
             <h3 class="sub-h" style="margin-top:22px">원가 회수 추이 — 판매단가 ÷ 총괄원가 단가 (한국전력통계)</h3>
             <div class="lg" id="recLegend"></div>
             <div class="chart" id="recChart"></div>
+            <h3 class="sub-h" style="margin-top:22px">월별 판매단가 vs 전력구입 정산단가 (전력통계월보, 2016.1~)</h3>
+            <div class="lg" id="monLegend"></div>
+            <div class="chart" id="monChart"></div>
+            <p class="mini-note">판매단가 = 계약종별 판매수입 ÷ 판매량(부가세·기금 제외). 정산단가 = 한전이 전력시장에서 사는 평균 단가(SMP·CP·기타 포함). 판매단가가 정산단가 아래로 내려가면 송배전·판매비는커녕 구입비도 회수하지 못하는 상태입니다.</p>
             <p class="mini-note">총괄원가 단가 = 영업비용 ÷ 판매량. 계약종별 원가배분 전의 평균 기준이며, SMP·계통부하 연계 시 시간대별 원가로 대체됩니다.</p>
           </div>
         </section>
@@ -484,7 +488,7 @@ footer{background:#061a3d;color:#b9c6dc}
             <div id="fuelFindings"></div>
             <div class="two-col">
               <div><div class="lg" id="fuelLegend"></div><div class="chart" id="fuelChart"></div><p class="mini-note">필요조정단가 = (실적연료비 − 기준연료비) × 변환계수, 상하한 적용 전. 규칙 = 약관의 ±5원 상한(2022.2Q까지 분기 조정폭 ±3원). 적용 = 정부 유보·동결 반영 최종값.</p></div>
-              <div><div class="lg" id="fuelCumLegend"></div><div class="chart" id="fuelCumChart"></div><p class="mini-note">(기준 단가 − 실제 적용) × 분기 판매량, 누적. +는 한전 미회수(고객 부담 경감), −는 고객 초과 부담(과거 미회수분 회수). 분기 판매량은 한국전력통계 연간값 ÷ 4 근사(2026년은 2025년 값). 월보 연계 시 월 단위로 대체.</p></div>
+              <div><div class="lg" id="fuelCumLegend"></div><div class="chart" id="fuelCumChart"></div><p class="mini-note">(기준 단가 − 실제 적용) × 분기 판매량, 누적. +는 한전 미회수(고객 부담 경감), −는 고객 초과 부담(과거 미회수분 회수). 분기 판매량은 전력통계월보 실적(2026.4분기는 전년 동분기).</p></div>
             </div>
             <div class="tbl-scroll" id="fuelTable" style="margin-top:10px"></div>
           </div>
@@ -556,7 +560,7 @@ footer{background:#061a3d;color:#b9c6dc}
 
 <script>
 "use strict";
-const VER = "d330c2cf87";
+const VER = "114a2ba6a5";
 const D = {};
 const $ = s => document.querySelector(s);
 const SEASONS = ["여름", "봄·가을", "겨울"], DTYPES = ["평일", "토요일", "일요일·공휴일"];
@@ -944,7 +948,8 @@ function renderDiag() {
   $("#diagTable").innerHTML = h + "</tbody></table>";
   CSV.diag = rows;
   $("#diagDesc").textContent = `${$("#dLoad").value}년 시간별 부하를 고정하고 요금표만 바꿔 계약종별 평균단가를 비교합니다. 주택용은 누진 구조라 호당 사용량 분포가 필요해 시뮬레이터에서 다룹니다.`;
-  renderFindings(out, yi);
+  const under = renderMonthly();
+  renderFindings(out, yi, under);
   // 원가 회수 추이
   const R = D.ref, map = { res: "주택용", gen: "일반용", edu: "교육용", ind: "산업용", agr: "농사용", str: "가로등", night: "심야" };
   const cost = R.years.map((y, i) => R.fin.cost[i] * 1e3 / R.sold[i]);
@@ -953,7 +958,7 @@ function renderDiag() {
   legend($("#recLegend"), series);
   lineChart($("#recChart"), { labels: R.years.map(String), series, yTitle: "%", height: 280, zero: false, ref: 100, tipFmt: v => fmt(v, 1) + "%" });
 }
-function renderFindings(out, yi) {
+function renderFindings(out, yi, under) {
   const byT = Object.fromEntries(out.map(o => [o.t, o]));
   const f = [];
   const iA = byT["산업용(을)고압A"], gA = byT["일반용(을)고압A"], iB = byT["산업용(을)고압B"];
@@ -965,6 +970,11 @@ function renderFindings(out, yi) {
   if (st) f.push(`<b>가로등(을)의 실제 부하모양</b> — 야간 전용 설비를 전제로 한 단일요금이지만, 실측 곡선은 주간이 더 높고 일출·일몰 시각에만 떨어집니다(신호등·CCTV 등 상시 부하 혼재 추정). 경부하 비중 ${fmt(st.a[0], 0)}%.`);
   const res = D.ana.load_factor["주택용전력"];
   if (res) f.push(`<b>주택용 부하율 하락</b> — 연간 8760시간 부하율이 ${D.meta.years[0]}년 ${fmt(res[0].lf, 1)}% → ${D.meta.years.at(-1)}년 ${fmt(res.at(-1).lf, 1)}%로 낮아졌고 피크는 ${res.at(-1).peak_month}월 ${res.at(-1).peak_hour}시입니다. 저녁 집중이 강해져 2026 개편의 최대부하(15~21시)와 겹칩니다.`);
+  if (under && under.length) {
+    const idx = k => +k.slice(0, 4) * 12 + +k.slice(5); let best = [under[0]], cur = [under[0]];
+    for (let i = 1; i < under.length; i++) { if (idx(under[i]) - idx(under[i - 1]) <= 2) cur.push(under[i]); else cur = [under[i]]; if (cur.length > best.length) best = cur.slice(); }
+    f.push(`<b>구입단가보다 싸게 판 기간</b> — 전체 평균 판매단가가 전력구입 정산단가를 밑돈 달이 ${under.length}개월이며, 대부분이 ${best[0].replace("-", ".")}~${best.at(-1).replace("-", ".")} 연료비 급등기(${best.length}개월)에 몰려 있습니다. 요금 동결의 비용이 이 시기에 한전 재무로 넘어갔습니다.`);
+  }
   $("#findings").innerHTML = f.map(x => `<p class="finding">${x}</p>`).join("");
 }
 
@@ -1008,21 +1018,25 @@ function simulate(verEff, override, adjAll, P) {
   const ver = verOf(verEff), C = { names: D.meta.tariffs, data: D.cube_tariff.data, kind: "full" }, yi = yIdx(P.loadYear);
   const R = D.ref, ri = R.years.indexOf(+P.refYear);
   // 대분류별 확대계수: 한국전력통계 판매량 / 표본 합
-  const sampleBig = {};
-  D.meta.tariffs.forEach((t, i) => { const b = D.meta.tariff_class[t].big; sampleBig[b] = (sampleBig[b] || 0) + annualTotal(C, i, yi); });
-  const scaleOf = b => { const k = REFKEY[b === "임시" ? "일반용" : b]; const tot = b === "임시" ? sampleBig["임시"] : R.sales[k][ri]; return sampleBig[b] ? tot / sampleBig[b] : 1; };
+  // 확대계수: 대분류 × 월 = 전력통계월보 기준연도 월 판매량 / 표본(부하 모양 연도) 월 합계
+  const sampleBM = {};
+  D.meta.tariffs.forEach((t, i) => { const b = D.meta.tariff_class[t].big, Y = C.data[i][yi]; const a = sampleBM[b] = sampleBM[b] || new Array(12).fill(0); for (let m = 0; m < 12; m++) for (let d = 0; d < 3; d++) for (let h = 0; h < 24; h++) a[m] += Y[m][d][h]; });
+  const scaleM = {};
+  for (const b of Object.keys(sampleBM)) scaleM[b] = sampleBM[b].map((v, m) => { const k = REFKEY[b]; if (!k || v <= 0) return 1; const s = D.mon.sales[k] && D.mon.sales[k][`${P.refYear}-${String(m + 1).padStart(2, "0")}`]; return s != null ? s / v : R.sales[k][ri] / sum(sampleBM[b]); });
+  const scaleOf = (b, m) => scaleM[b] ? scaleM[b][m] : 1;
   // 원가 신호: 기준 연도 SMP 큐브(육지)
   const smpC = D.cost.smp_cube.inland[String(P.smpYear)];
   const smpAt = (m, d, h) => { const v = smpC[m][d][h]; if (v != null) return v; const alt = smpC[m].map(r => r[h]).filter(x => x != null); return alt.length ? sum(alt) / alt.length : 0; };
   // 기본요금: 대분류 요금적용전력을 계약종 대리피크 비율로 배분
-  const proxyPeak = D.meta.tariffs.map((t, i) => { let mx = 0; for (let m = 0; m < 12; m++) for (let d = 0; d < 3; d++) { const days = D.meta.days[String(P.loadYear)][m][d]; if (!days) continue; for (let h = 0; h < 24; h++) mx = Math.max(mx, C.data[i][yi][m][d][h] / days); } return mx * scaleOf(D.meta.tariff_class[t].big); });
+  const proxyPeak = D.meta.tariffs.map((t, i) => { const b = D.meta.tariff_class[t].big; let mx = 0; for (let m = 0; m < 12; m++) for (let d = 0; d < 3; d++) { const days = D.meta.days[String(P.loadYear)][m][d]; if (!days) continue; for (let h = 0; h < 24; h++) mx = Math.max(mx, C.data[i][yi][m][d][h] / days * scaleOf(b, m)); } return mx; });
   const peakBig = {}; D.meta.tariffs.forEach((t, i) => { const b = D.meta.tariff_class[t].big; peakBig[b] = (peakBig[b] || 0) + proxyPeak[i]; });
   const climate = ver.climate, fuel = P.fuel;
   const rows = [];
   D.meta.tariffs.forEach((t, i) => {
-    const big = D.meta.tariff_class[t].big, adj = adjAll[big] || { add: 0, peak: 0, off: 0, basic: 0 }, sc = scaleOf(big), Y = C.data[i][yi];
+    const big = D.meta.tariff_class[t].big, adj = adjAll[big] || { add: 0, peak: 0, off: 0, basic: 0 }, Y = C.data[i][yi];
     let sales = 0, smpW = 0; const bandE = [0, 0, 0];
-    for (let m = 0; m < 12; m++) for (let d = 0; d < 3; d++) for (let h = 0; h < 24; h++) { const e = Y[m][d][h] * sc; sales += e; smpW += e * smpAt(m, d, h); }
+    for (let m = 0; m < 12; m++) { const sc = scaleOf(big, m); for (let d = 0; d < 3; d++) for (let h = 0; h < 24; h++) { const e = Y[m][d][h] * sc; sales += e; smpW += e * smpAt(m, d, h); } }
+    const scA = sales / Math.max(1e-9, sum(Y.map(M => sum(M.map(r => sum(r))))));   // 연평균 확대계수(피크·주택 호수용)
     const topL = (D.cost.top_load[P.N].load[t] || [])[yi] || 0;
     if (sales <= 0) return;
     const salesKWh = sales * 1e3;
@@ -1032,7 +1046,7 @@ function simulate(verEff, override, adjAll, P) {
       const cust = R.cust.res[ri] * (sales / R.sales.res[ri]);
       let tot = 0;
       for (let m = 0; m < 12; m++) {
-        let em = 0; for (let d = 0; d < 3; d++) for (let h = 0; h < 24; h++) em += Y[m][d][h] * sc;
+        let em = 0; const sc = scaleOf(big, m); for (let d = 0; d < 3; d++) for (let h = 0; h < 24; h++) em += Y[m][d][h] * sc;
         const mu = em * 1e3 / cust;
         const bLow = resBill(ver, mu, m, P.sigma, false, adj.add), bHigh = resBill(ver, mu, m, P.sigma, true, adj.add);
         tot += cust * ((1 - P.high) * bLow + P.high * bHigh);
@@ -1042,7 +1056,7 @@ function simulate(verEff, override, adjAll, P) {
     } else {
       const g = priceGrid(ver, t, override, adj);
       if (g) {
-        let w = 0; for (let m = 0; m < 12; m++) for (let d = 0; d < 3; d++) for (let h = 0; h < 24; h++) w += Y[m][d][h] * sc * 1e3 * g[m][d][h];
+        let w = 0; for (let m = 0; m < 12; m++) { const sc = scaleOf(big, m); for (let d = 0; d < 3; d++) for (let h = 0; h < 24; h++) w += Y[m][d][h] * sc * 1e3 * g[m][d][h]; }
         energyRev = w;
         const br = basicRate(ver, t), refBig = REFKEY[big];
         if (br && refBig && peakBig[big] > 0) { const kw = R.kw[refBig][ri] * proxyPeak[i] / peakBig[big]; basicRev = kw * br * 12 * (1 + adj.basic / 100); }
@@ -1051,7 +1065,7 @@ function simulate(verEff, override, adjAll, P) {
     }
     const cfRev = salesKWh * (climate + fuel);
     const total = energyRev == null ? null : energyRev + (basicRev || 0) + cfRev;
-    rows.push({ t, big, sales, salesKWh, energyRev, basicRev, cfRev, total, price: total != null ? total / salesKWh : null, smpW, peakL: topL * sc, bandE });
+    rows.push({ t, big, sales, salesKWh, energyRev, basicRev, cfRev, total, price: total != null ? total / salesKWh : null, smpW, peakL: topL * scA, bandE });
   });
   // 원가 배분: 총원가 = 판매량 × 총괄원가 단가. 그중 전력구입비(실적 비중) = SMP 가중(1-CP) + 피크(CP), 망·기타 = 피크 α + kWh(1-α), 전압계수
   const totKWh = rows.reduce((a, r) => a + r.salesKWh, 0), totalCost = totKWh * P.cost;
@@ -1203,6 +1217,20 @@ function renderCost() {
   $("#costFindings").innerHTML = f.map(x => `<p class="finding">${x}</p>`).join("");
 }
 
+function renderMonthly() {
+  const M = D.mon, ks = M.months.filter(k => M.price.settle[k] != null);
+  const labels = ks.map(k => k.replace("-", "."));
+  const map = { res: "주택용", gen: "일반용", ind: "산업용", agr: "농사용", night: "심야", total: "전체" };
+  const ser = Object.entries(map).map(([b, n], j) => ({ name: n, color: b === "total" ? "#111827" : PAL[[0, 1, 3, 4, 6][j] ?? j], width: b === "total" ? 2.6 : 1.4, values: ks.map(k => M.rev[b][k] != null ? M.rev[b][k] * 1e3 / M.sales[b][k] : null) }));
+  ser.push({ name: "정산단가(구입)", color: "#e60012", width: 2.6, dash: "6 3", values: ks.map(k => M.price.settle[k]) });
+  ser.push({ name: "SMP", color: "#94a3b8", width: 1.2, values: ks.map(k => M.price.smp[k]) });
+  legend($("#monLegend"), ser);
+  lineChart($("#monChart"), { labels, series: ser, yTitle: "원/kWh", height: 300, maxTicks: 11, yMax: 300, tipFmt: v => fmt(v, 1) + "원" });
+  const under = ks.filter(k => M.rev.total[k] * 1e3 / M.sales.total[k] < M.price.settle[k]);
+  CSV.monthly = [["월", ...ser.map(s => s.name)], ...ks.map((k, i) => [k, ...ser.map(s => s.values[i] != null ? s.values[i].toFixed(2) : "")])];
+  return under;
+}
+
 function renderFuel() {
   const F = D.fuel.quarters, R = D.ref;
   const labels = F.map(q => q.q.replace("Q", "."));
@@ -1210,7 +1238,8 @@ function renderFuel() {
   const ser = [{ name: "산식 필요단가", values: req, color: "#94a3b8", width: 2 }, { name: "규칙(상하한) 적용", values: rule, color: "#003b8e", dash: "5 4" }, { name: "실제 적용", values: app, color: "#e60012", width: 2.6 }];
   legend($("#fuelLegend"), ser);
   lineChart($("#fuelChart"), { labels, series: ser, yTitle: "원/kWh", height: 270, zero: false, ref: 0, maxTicks: 8, tipFmt: v => fmt(v, 1) + "원" });
-  const salesQ = q => { const y = +q.q.slice(0, 4), i = R.years.indexOf(y); return (i >= 0 ? R.sales.total[i] : R.sales.total.at(-1)) * 1e3 / 4; };
+  const salesQ = q => { const y = +q.q.slice(0, 4), n = +q.q.slice(-1); let s = 0, ok = 0; for (let m = 3 * n - 2; m <= 3 * n; m++) { const v = D.mon.sales.total[`${y}-${String(m).padStart(2, "0")}`]; if (v != null) { s += v; ok++; } }
+    if (ok === 3) return s * 1e3; const p = D.mon.sales.total; let s2 = 0; for (let m = 3 * n - 2; m <= 3 * n; m++) s2 += p[`${y - 1}-${String(m).padStart(2, "0")}`] || 0; return s2 * 1e3; };   // 미도래 분기 = 전년 동분기
   let c1 = 0, c2 = 0; const g1 = [], g2 = [], k1 = [], k2 = [];
   const rows = [["분기", "필요조정단가", "규칙적용", "실제적용", "산식대비(조원)", "규칙대비(조원)", "누적_산식(조원)", "누적_규칙(조원)", "정부결정"]];
   let h = `<table class="tbl"><thead><tr><th>분기</th><th>실적연료비 (원/kg)</th><th>필요조정단가</th><th>규칙 적용</th><th>실제 적용</th><th>산식 대비 (조원)</th><th>규칙 대비 (조원)</th><th>누적 · 산식</th><th>누적 · 규칙</th><th>정부 결정</th><th>원 게시 필요단가</th></tr></thead><tbody>`;
@@ -1252,6 +1281,7 @@ function renderData() {
     `<b>미해결·확인 필요</b> ${D.tar.gaps.join(" / ")}`,
     `<b>SMP·계통부하</b> 시간별 SMP 육지·제주 2016.1~2026.11.14(1h = 00~01시, 사용량 H01과 시간 차분 상관 0.968로 정렬 확인), 계통부하·태양광(KPX·PPA·자가용) 2021.1~2026.10.6(MW). 계통수요 = 시장수요 + PPA, 총수요 = 계통수요 + 자가용 태양광(항등식 일치). 2016~2020 계통부하는 시간별 사용량 표본합으로 대리(2021~22년 총수요의 ${fmt(D.cost.sample_to_total_ratio * 100, 1)}%, 시간대별 편차 ±2%p).`,
     `<b>원가 배분</b> 총원가(영업비용÷판매량 × 판매량) 중 전력구입비 실적 비중만큼을 시간별 SMP 가중(일부는 피크 기여)으로, 나머지 망·기타비용을 계통 피크 기여와 kWh로 배분하고 전압계수를 곱합니다. 큐브(월×날짜유형×시) 근사 오차 최대 ${fmt(D.cost.cube_approx_max_err_pct, 2)}%.`,
+    `<b>전력통계월보</b> 2016.1~2026.9 월별 계약종(대분류) 판매량·호수·판매수입, 정산단가(SMP·CP·기타), 월별 수급, 태양광 추계, 시도·산업분류 판매량. 월 합계 = 한국전력통계 연간값(오차 0.000%). 같은 달 값이 호마다 다르면 최빈값(2023.1월호 2022.1월 일반용 오기 보정). 2016.1은 연간 − 2~12월. 시뮬레이터 확대계수는 대분류 × 월 단위.`,
     `<b>연료비조정</b> 2022.1Q~2026.4Q 한전 산정내역(분기별 PDF·이미지), 2021년은 보도자료(산정 −0.2·1.7·10.8원, 적용 −3·−3·−3·0원). 2022.1Q~2023.2Q는 '미조정분 차감' 재산정본 기준(원 게시값 병기). 이전 금액은 분기 판매량을 연간 ÷ 4로 근사.`,
     `<b>표본 비중</b> 시간별 데이터는 스마트미터 계량분이라 한국전력통계 판매량 대비 주택용 50→80%, 일반용 58→72%로 늘었습니다(2016→2022). 크기 비교에는 확대계수를, 모양 비교에는 정규화를 씁니다.`
   ].map(x => `<p>${x}</p>`).join("");
@@ -1261,7 +1291,7 @@ function renderData() {
 // ── 초기화 ──────────────────────────────────────────────────────────────────
 function opts(el, arr, val) { el.innerHTML = arr.map(a => Array.isArray(a) ? `<option value="${a[0]}">${a[1]}</option>` : `<option>${a}</option>`).join(""); if (val != null) el.value = val; }
 async function boot() {
-  [D.meta, D.tar, D.ana, D.cube_tariff, D.daily, D.ref, D.audit, D.cost, D.fuel] = await Promise.all(["meta", "tariffs", "analysis", "cube_tariff", "daily_tariff", "kepco_ref", "audit", "cost", "fuel"].map(j));
+  [D.meta, D.tar, D.ana, D.cube_tariff, D.daily, D.ref, D.audit, D.cost, D.fuel, D.mon] = await Promise.all(["meta", "tariffs", "analysis", "cube_tariff", "daily_tariff", "kepco_ref", "audit", "cost", "fuel", "monthly"].map(j));
   D.cube_tariff_full = D.cube_tariff;
   const Y = D.meta.years;
   opts($("#year"), Y, S.year); opts($("#base"), Y, S.base); opts($("#dLoad"), Y, Y.at(-1)); opts($("#simLoad"), Y, Y.at(-1));
@@ -1272,7 +1302,9 @@ async function boot() {
   setFuel();
   const vers = D.tar.versions.map(v => [v.effective, v.effective.replace(/-/g, ".") + (v.tou_scheme === "2026" ? " (개편)" : "")]);
   opts($("#simVer"), vers, "2026-04-16"); opts($("#simBase"), vers, "2025-04-01");
-  const setCost = () => { const ri = D.ref.years.indexOf(+$("#simRef").value); const c = D.ref.fin.cost[ri] * 1e3 / D.ref.sold[ri]; $("#simCost").value = c.toFixed(1); $("#simCostHint").textContent = `${$("#simRef").value}년 영업비용÷판매량 · 구입단가 ${fmt(D.ref.pur_price[ri], 1)}원`; };
+  const setCost = () => { const y = $("#simRef").value, ri = D.ref.years.indexOf(+y); const c = D.ref.fin.cost[ri] * 1e3 / D.ref.sold[ri]; $("#simCost").value = c.toFixed(1); $("#simCostHint").textContent = `${y}년 영업비용÷판매량 · 구입단가 ${fmt(D.ref.pur_price[ri], 1)}원`;
+    let cp = 0, st = 0; for (let m = 1; m <= 12; m++) { const k = `${y}-${String(m).padStart(2, "0")}`, a = D.mon.price.cp[k], b = D.mon.price.settle[k]; if (a != null && b != null) { cp += a; st += b; } }
+    if (st > 0) { $("#cCP").value = (cp / st * 100).toFixed(1); $("#cCP").nextElementSibling.textContent = `${y}년 실측: 정산단가 중 CP ${fmt(cp / st * 100, 1)}% (월보)`; } };
   setCost();
   adjInputs();
   $("#boot").hidden = true; $("#app").hidden = false;
