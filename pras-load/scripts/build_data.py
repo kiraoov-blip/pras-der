@@ -75,8 +75,14 @@ cal_days = cal.groupby(["year", "month", "dtype"]).size()  # 날짜유형별 일
 # ── 1차 패스: 차원 수집 + 전국 일별 통계 ─────────────────────────────────────
 cats = {k: set() for k in KEYS}
 nat = []
+EXCLUDE_HQ = {"판매사업단"}   # 2024년 1행·2025년 167행, 사용량 ≈ 0 → 분석 제외(audit 기록)
+excluded = {}
 for y in years:
     df = pd.read_parquet(SRC / f"year={y}.parquet")
+    ex = df["본부"].astype(str).isin(EXCLUDE_HQ)
+    if ex.any():
+        excluded[str(y)] = {"rows": int(ex.sum()), "kWh": float(np.nansum(df.loc[ex, H].to_numpy()))}
+    df = df[~ex]
     for k in KEYS:
         cats[k] |= set(df[k].astype(str).unique())
     v = df[H].to_numpy()
@@ -117,6 +123,9 @@ audit_years = []
 
 for yi, y in enumerate(years):
     df = pd.read_parquet(SRC / f"year={y}.parquet")
+    df = df[~df["본부"].astype(str).isin(EXCLUDE_HQ)].reset_index(drop=True)
+    for k in KEYS:
+        df[k] = df[k].astype(str).astype("category")
     c = cal[cal.year == y].reset_index(drop=True)
     ndays = len(c)
     d_index = pd.Series(np.arange(ndays), index=c.ymd)
@@ -289,6 +298,7 @@ dump("audit.json", {
             "평일·토 0.8~1.2배, 일·공휴일 0.6~1.4배를 벗어남",
     "imputation": "장애일·결측 포함일·누락일은 같은 조합의 같은 달·같은 날짜유형 유효일 평균곡선으로 대체",
     "years": audit_years,
+    "excluded_hq": excluded,
     "bad_days": nat_bad.to_dict(orient="records"),
 })
 pd.concat(hourly).astype("float32").to_parquet(OUT / "hourly_tariff.parquet", compression="zstd")

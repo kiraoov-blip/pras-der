@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>PRAS-LOAD · 전력소비패턴·요금 진단 시뮬레이터</title>
-<meta name="description" content="계약종·업종·지역별 시간별 사용량(2016~2022)으로 전력소비패턴을 분해하고, 2021~2026 전기요금표를 적용해 요금체계의 정합성과 재무적 형평성을 시뮬레이션합니다.">
+<meta name="description" content="계약종·업종·지역별 시간별 사용량(2016~2025)으로 전력소비패턴을 분해하고, 2021~2026 전기요금표를 적용해 요금체계의 정합성과 재무적 형평성을 시뮬레이션합니다.">
 <link rel="icon" href="favicon.svg">
 <!-- HOME-ICON --><link rel="apple-touch-icon" href="/pras/icon-192x192.png"><link rel="manifest" href="/manifests/load.webmanifest"><!-- HOME-ICON -->
 <style>
@@ -91,7 +91,7 @@ footer{background:#061a3d;color:#b9c6dc}
   <header class="hero">
     <div class="hero-inner">
       <h1>전력소비패턴 · 요금 진단 시뮬레이터</h1>
-      <p>계약종·업종·지역별 시간별 사용량(2016~2022, 약 2,000만 행)으로 소비패턴을 분해하고, 2021~2026년 전기요금표 14개 판을 적용해 요금체계의 정합성과 고객·한전 간 재무적 형평성을 시뮬레이션합니다.</p>
+      <p>계약종·업종·지역별 시간별 사용량(2016~2025, 약 2,960만 행)으로 소비패턴을 분해하고, 2021~2026년 전기요금표 14개 판을 적용해 요금체계의 정합성과 고객·한전 간 재무적 형평성을 시뮬레이션합니다.</p>
     </div>
   </header>
 
@@ -107,7 +107,7 @@ footer{background:#061a3d;color:#b9c6dc}
           <div class="grid-in top">
             <div class="field"><span class="lab">분석 차원</span>
               <select id="dim">
-                <option value="tariff">계약종 (33)</option>
+                <option value="tariff">계약종 (34)</option>
                 <option value="industry">산업종 (79)</option>
                 <option value="region">본부 (15)</option>
                 <option value="mid_industry">계약종 중분류 × 산업종</option>
@@ -176,7 +176,7 @@ footer{background:#061a3d;color:#b9c6dc}
             <p class="mini-note">주택용·일반용 총량 증가의 상당 부분은 스마트미터 보급 확대입니다. 크기 비교는 반드시 이 비중을 감안해야 합니다.</p>
             <h3 class="sub-h" style="margin-top:18px">권역별 표본 비중 (전력통계월보 시도별 판매량 대비, %)</h3>
             <div class="tbl-scroll" id="zoneTable"></div>
-            <p class="mini-note">본부 관할과 시도 경계가 어긋나(인천본부 ⊃ 부천·김포·시흥, 대구본부 ⊃ 포항·경주 등, 부산울산본부 ⊃ 김해·양산) 경계가 일치하는 10개 권역으로 비교합니다. 개성(황북)은 경기북부본부 관할.</p>
+            <p class="mini-note">본부 관할과 시도 경계가 어긋나(인천본부 ⊃ 부천·김포·시흥, 대구본부 ⊃ 포항·경주 등, 부산울산본부 ⊃ 김해·양산) 경계가 일치하는 10개 권역으로 비교합니다. 개성(황북)은 경기북부본부 관할. 100%를 넘는 칸(주로 산업용·교육용)은 대형 고객의 관리 본부와 공급 지점 시도가 달라 생기는 집계 차이로, 전국 합계와 시뮬레이터(대분류 × 월 확대)에는 영향이 없습니다.</p>
           </div>
         </section>
 
@@ -225,7 +225,7 @@ footer{background:#061a3d;color:#b9c6dc}
             <p class="mini-note">SMP 배율은 연간 단순평균. 요금 배율은 해당 연도 말 시행 요금표의 여름철 단가(산업용(을)고압A 선택Ⅱ, 일반용(을)고압A 선택Ⅱ). 요금 배율이 훨씬 큰 것은 전력량 원가 외에 피크 설비비를 시간대 단가에 싣고 있기 때문입니다.</p>
             <div class="two-col" style="margin-top:20px">
               <div><h3 class="sub-h">계통 상위 100시간의 시각 분포</h3><div class="lg" id="topLegend"></div><div class="chart" id="topChart"></div><p class="mini-note">시장수요 = 태양광(PPA·자가용) 차감 후 한전이 사서 공급해야 하는 수요. 총수요 = 실제 소비.</p></div>
-              <div><h3 class="sub-h">계약종별 부하가중 SMP ÷ 계통가중 SMP</h3><div class="chart" id="clsSmpChart"></div><p class="mini-note">1보다 크면 SMP가 비싼 시간에 더 많이 쓰는 계약종. 2016~2022 시간별 정확 계산(육지 SMP).</p></div>
+              <div><h3 class="sub-h">계약종별 부하가중 SMP ÷ 계통가중 SMP</h3><div class="chart" id="clsSmpChart"></div><p class="mini-note">1보다 크면 SMP가 비싼 시간에 더 많이 쓰는 계약종. 2016~2025 시간별 정확 계산(육지 SMP). 2021년 이후 피크는 KPX 실측.</p></div>
             </div>
             <h3 class="sub-h" style="margin-top:26px">연료비 연동의 형평성 — 산식 vs 규칙 vs 실제 적용 (2021~2026)</h3>
             <div id="fuelFindings"></div>
@@ -299,7 +299,7 @@ footer{background:#061a3d;color:#b9c6dc}
     </div>
   </div>
 </main>
-<footer><div class="page-shell" style="padding:18px 20px;font-size:12px">PRAS-LOAD · 자료: 한국전력공사 계약종·본부·산업종별 시간별 사용량(2016~2022), 전기요금표(2021.1~2026.4), 한국전력통계 · <span id="buildInfo"></span></div></footer>
+<footer><div class="page-shell" style="padding:18px 20px;font-size:12px">PRAS-LOAD · 자료: 한국전력공사 계약종·본부·산업종별 시간별 사용량(2016~2025), 전기요금표(2021.1~2026.4), 한국전력통계 · <span id="buildInfo"></span></div></footer>
 
 <script>
 "use strict";
@@ -1020,7 +1020,7 @@ function renderData() {
   for (const x of D.tar.versions) v += `<tr><td>${x.effective}</td><td>${x.method === "extracted" ? '<span class="flag ok">직접 추출</span>' : '<span class="flag">앵커 대조</span>'}</td><td>${fmt(x.climate, 1)}</td><td>${x.tou_scheme === "2026" ? "개편" : "기존"}</td><td>${fmt(x.residential.low.other.energy[0], 1)}</td><td>${fmt(x.tou["산업용(을)"]["고압A-II"].energy.peak[0], 1)}</td></tr>`;
   $("#vTable").innerHTML = v + "</tbody></table>";
   $("#methodText").innerHTML = [
-    `<b>원자료</b> 계약종(33)×본부(15)×산업종(79)×날짜, 시간별 사용량(kWh, H01=00~01시). 2016~2022년 ${fmt(A.years.reduce((a, y) => a + y.rows, 0), 0)}행.`,
+    `<b>원자료</b> 계약종(34)×본부(15)×산업종(79)×날짜, 시간별 사용량(kWh, H01=00~01시). 2025년 파일은 영문 열 이름(CNTR_CLAS_NM 등)을 한글로 대응, 판매사업단(2024~, 사용량≈0) 제외. 2016~2025년 ${fmt(A.years.reduce((a, y) => a + y.rows, 0), 0)}행.`,
     `<b>수집장애 보정</b> ${A.rule}. ${A.imputation}. 그 달 유효일이 50% 미만인 조합은 들어온 행만 반영.`,
     `<b>요금표</b> ${D.tar.methods.anchored}`,
     `<b>2021.1 이전</b> ${D.tar.pre2021_rule}`,
@@ -1029,7 +1029,7 @@ function renderData() {
     `<b>원가 배분</b> 총원가(영업비용÷판매량 × 판매량) 중 전력구입비 실적 비중만큼을 시간별 SMP 가중(일부는 피크 기여)으로, 나머지 망·기타비용을 계통 피크 기여와 kWh로 배분하고 전압계수를 곱합니다. 큐브(월×날짜유형×시) 근사 오차 최대 ${fmt(D.cost.cube_approx_max_err_pct, 2)}%.`,
     `<b>전력통계월보</b> 2016.1~2026.9 월별 계약종(대분류) 판매량·호수·판매수입, 정산단가(SMP·CP·기타), 월별 수급, 태양광 추계, 시도·산업분류 판매량. 월 합계 = 한국전력통계 연간값(오차 0.000%). 같은 달 값이 호마다 다르면 최빈값(2023.1월호 2022.1월 일반용 오기 보정). 2016.1은 연간 − 2~12월. 시뮬레이터 확대계수는 대분류 × 월 단위.`,
     `<b>연료비조정</b> 2022.1Q~2026.4Q 한전 산정내역(분기별 PDF·이미지), 2021년은 보도자료(산정 −0.2·1.7·10.8원, 적용 −3·−3·−3·0원). 2022.1Q~2023.2Q는 '미조정분 차감' 재산정본 기준(원 게시값 병기). 이전 금액은 분기 판매량을 연간 ÷ 4로 근사.`,
-    `<b>표본 비중</b> 시간별 데이터는 스마트미터 계량분이라 한국전력통계 판매량 대비 주택용 50→80%, 일반용 58→72%로 늘었습니다(2016→2022). 크기 비교에는 확대계수를, 모양 비교에는 정규화를 씁니다.`
+    `<b>표본 비중</b> 시간별 데이터는 스마트미터 계량분이라 전력통계월보 판매량 대비 주택용 50→98%, 일반용 58→93%로 늘었습니다(2016→2025). 산업용·교육용은 2024년부터 101~103%로 월보를 넘어 계약종 분류 기준 차이 확인이 필요합니다. 크기 비교에는 확대계수를, 모양 비교에는 정규화를 씁니다.`
   ].map(x => `<p>${x}</p>`).join("");
   $("#buildInfo").textContent = `빌드 ${VER}`;
 }
