@@ -50,7 +50,7 @@ def r(a, d=2):
 
 
 res = {"notes": ["SMP 1h = 00~01시, 사용량 H01과 정렬 확인(시간 차분 상관 0.968, ±1시간 0.70~0.73)",
-                 "2016~2020 계통부하는 시간별 사용량 표본합으로 대리(2021~22 대조: 총수요의 77.6%, 시간대별 76~79%로 안정)"]}
+                 "계통부하(KPX 시장수요·PPA·BTM 태양광)는 2016~ 실측. 실측이 없는 기간만 시간별 사용량 표본합으로 대리"]}
 
 # ── SMP 큐브 ───────────────────────────────────────────────────────────────
 smp_cube = {}
@@ -60,14 +60,14 @@ for reg in ("inland", "jeju"):
 res["smp_cube"] = smp_cube
 res["smp_years"] = sorted(int(y) for y in smp_cube["inland"])
 
-# ── 계통부하 큐브 (2021~ 총수요, 2016~2020 대리) ─────────────────────────────
+# ── 계통부하 큐브 (실측 총수요, 실측 없는 기간만 표본합 대리) ─────────────────────────────
 sample_tot = hourly.sum(axis=1) / 1e3  # MWh/h = MW (표본)
 ov = sample_tot.index.intersection(sysl.index)
 ratio = float((sample_tot.loc[ov] / sysl.total.loc[ov]).mean())
 proxy = sample_tot / ratio
 sys_series = pd.concat([proxy[proxy.index < sysl.index.min()], sysl.total])
 res["sys_cube"] = {str(y): r(a, 0) for y, a in cube_of(sys_series).items()}
-res["sys_source"] = {str(y): ("KPX 총수요" if y >= 2021 else "표본합 대리") for y in sorted(set(sys_series.index.year))}
+res["sys_source"] = {str(y): ("KPX 총수요" if y >= sysl.index.min().year else "표본합 대리") for y in sorted(set(sys_series.index.year))}
 res["sample_to_total_ratio"] = round(ratio, 4)
 res["sample_ratio_by_hour"] = (sample_tot.loc[ov] / sysl.total.loc[ov]).groupby(ov.hour).mean().round(4).tolist()
 
