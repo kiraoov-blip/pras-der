@@ -200,6 +200,7 @@ footer{background:#061a3d;color:#b9c6dc}
             <p class="mini-note">할인 한도는 2016.12 개정 이후 고정. 주택용 수입 대비 비중 = (총할인 − 사회복지시설 − 기초 심야) ÷ 월보 주택용 판매수입. 사회복지시설은 일반·주택·심야 합산 표기.</p>
             <h3 class="sub-h" style="margin-top:22px">주택용 사용량 구간별 분포와 누진 구간 (<span id="rbYear"></span>, 월별 청구)</h3>
             <div class="grid-in wide" style="margin:6px 0 10px">
+              <div class="field"><label for="rbYearSel">연도</label><select id="rbYearSel"></select></div>
               <div class="field"><label for="rbSeason">기간</label><select id="rbSeason"><option value="all">연간</option><option value="non">하계 외 (1~6·10~12월)</option><option value="sum">하계 청구 (7~9월)</option></select><span class="hint">누진 구간: 하계 외 200/400kWh, 하계 300/450kWh</span></div>
             </div>
             <div class="lg" id="rbLegend"></div>
@@ -274,7 +275,7 @@ footer{background:#061a3d;color:#b9c6dc}
                 <select id="simFuelMode"><option value="applied">기준 연도 실제 적용</option><option value="rule">기준 연도 규칙(상하한 적용)</option><option value="required">기준 연도 산식(상하한 없음)</option><option value="manual">직접 입력</option></select>
                 <div class="row" style="margin-top:6px"><input id="simFuel" type="number" step="0.1" value="5" style="flex:1" aria-label="연료비조정단가"><span style="align-self:center;font-size:12px;color:#6b7686">원/kWh</span></div></div>
               <div class="field"><label for="simCost">총괄원가 단가 (원/kWh)</label><input id="simCost" type="number" step="0.1"><span class="hint" id="simCostHint"></span></div>
-              <div class="field"><label for="simResDist">주택용 누진 계산</label><select id="simResDist"><option value="measured">실측 사용량 구간 분포 (2025 청구)</option><option value="lognormal">로그정규 분포 가정</option></select><span class="hint" id="simResDistHint">가구별 구간 분포 × 저·고압 요금표</span></div>
+              <div class="field"><label for="simResDist">주택용 누진 계산</label><select id="simResDist"><option value="measured">실측 사용량 구간 분포 (2024~2025 청구)</option><option value="lognormal">로그정규 분포 가정</option></select><span class="hint" id="simResDistHint">가구별 구간 분포 × 저·고압 요금표</span></div>
               <div class="field"><label for="simResHigh">주택용 고압 비중 (%)</label><input id="simResHigh" type="number" step="1" value="40"><span class="hint">누진 계산용 가정</span></div>
               <div class="field"><label for="simResSig">주택 호당 사용량 분산 σ</label><input id="simResSig" type="number" step="0.05" value="0.6"><span class="hint">로그정규 분포 가정</span></div>
               <div class="field"><label for="simDisc">복지할인 규모 (%)</label><input id="simDisc" type="number" step="10" value="100"><span class="hint">기준 연도 실적 = 100. 2021~2025 자료</span></div>
@@ -786,8 +787,9 @@ function resBill(ver, mu, month, sigma, high, add) {
 
 // 실측 구간 분포 기반 주택용 kWh당 요금(기본+전력량). 구간별 가구당 평균 사용량으로 누진 계산, 군별 저·고압 요금표,
 // 청구월 하계 비중(검침 주기로 7·8월 사용분이 7~9월 청구에 나뉨)과 슈퍼유저 월 반영. 분포 모양은 고정, 총량은 시뮬레이터 월 판매량으로 확대.
-function resPerKWh(ver, m, add) {
-  const B = D.rbin, w = B.summer_w[m], sup = B.super_months.includes(m + 1);
+function resBinYear(y) { const ys = D.rbin.years.map(Number); return String(ys.reduce((a, b) => Math.abs(b - y) < Math.abs(a - y) ? b : a)); }
+function resPerKWh(ver, m0, add, yr) {
+  const B = D.rbin, m = B.months.indexOf(`${yr}-${String(m0 + 1).padStart(2, "0")}`), w = B.summer_w[m], sup = B.super_months.includes(m0 + 1);
   let bill = 0, kwh = 0;
   for (const g of B.groups) {
     const R = ver.residential[g.rate], H = g.hh[m], K = g.kwh[m];
@@ -840,7 +842,7 @@ function simulate(verEff, override, adjAll, P) {
       let tot = 0;
       for (let m = 0; m < 12; m++) {
         let em = 0; const sc = scaleOf(big, m); for (let d = 0; d < 3; d++) for (let h = 0; h < 24; h++) em += Y[m][d][h] * sc;
-        if (P.resDist === "measured") { tot += em * 1e3 * resPerKWh(ver, m, adj.add); continue; }
+        if (P.resDist === "measured") { tot += em * 1e3 * resPerKWh(ver, m, adj.add, resBinYear(+P.refYear)); continue; }
         const mu = em * 1e3 / cust;
         const bLow = resBill(ver, mu, m, P.sigma, false, adj.add), bHigh = resBill(ver, mu, m, P.sigma, true, adj.add);
         tot += cust * ((1 - P.high) * bLow + P.high * bHigh);
@@ -975,7 +977,7 @@ function renderSim() {
   $("#simTable").innerHTML = h + "</tbody></table>";
   CSV.sim = rows;
   const fx = Object.entries(factors).map(([b, f]) => `${b} ${fmt(f, 3)}`).join(", ");
-  $("#simNote").innerHTML = (cal ? `<b>실적 보정계수</b> (한전통계 ÷ 추정): ${fx}. 1에서 멀수록 기본요금 배분·선택요금·누진 분포 가정의 오차가 큽니다.<br>` : "") + `가정 — 판매량: 대분류별 ${P.refYear}년 한국전력통계로 확대(계약종 내 비중·시간 모양은 ${P.loadYear}년 시간별 데이터). 기본요금: 대분류 요금적용전력을 계약종 평균일 최대부하 비율로 배분, 고압 선택Ⅱ. 주택용: ${P.resDist === "measured" ? `${D.rbin.months[0].slice(0, 4)}년 청구월별 사용량 구간 분포(가구 ${fmt(sum(D.rbin.groups.map(g => sum(g.hh[0]))) / 1e4, 0)}만, 저압 요금표: 저압·고압 종합 / 고압 요금표: 고압 단일·일반)로 누진 계산하고 월 판매량에 맞춰 확대` : `월별 호당 평균사용량에 로그정규 분포(σ=${P.sigma})를 가정한 누진 계산, 고압 비중 ${fmt(P.high * 100, 0)}%`}. 기후환경 ${fmt(verOf($("#simVer").value).climate, 1)}원·연료비조정 ${fmt(P.fuel, 1)}원/kWh 일률. 가로등(갑)·임시전력(갑/을저압)은 미산정. 부가세·기금 제외. 복지할인: ${D.disc.years.includes(+P.refYear) ? `${P.refYear}년 실적 ${fmt(D.disc.total[D.disc.years.indexOf(+P.refYear)], 0)}억원 × ${fmt(P.disc * 100, 0)}%(사회복지시설 일반용 ${fmt(P.discGen * 100, 0)}%)` : "해당 연도 자료 없음(0)"}${(() => { const x = extraDiscOf(P.refYear); return x.동결 + x.감액 > 0 ? ` + 주택용 실적표 외 감액 ${fmt(x.동결 + x.감액, 0)}억원(취약계층 요금인상 유예 ${fmt(x.동결, 0)}${x.감액 ? ` · 200kWh 이하 감액 ${fmt(x.감액, 0)}` : ""}, ${x.src}${x.src === "발표" ? "; 200kWh 이하 감액은 자료 없음" : ""})` : ""; })()}.`;
+  $("#simNote").innerHTML = (cal ? `<b>실적 보정계수</b> (한전통계 ÷ 추정): ${fx}. 1에서 멀수록 기본요금 배분·선택요금·누진 분포 가정의 오차가 큽니다.<br>` : "") + `가정 — 판매량: 대분류별 ${P.refYear}년 한국전력통계로 확대(계약종 내 비중·시간 모양은 ${P.loadYear}년 시간별 데이터). 기본요금: 대분류 요금적용전력을 계약종 평균일 최대부하 비율로 배분, 고압 선택Ⅱ. 주택용: ${P.resDist === "measured" ? `${(() => { const y = resBinYear(+P.refYear); return y + "년" + (y !== String(P.refYear) ? `(기준 ${P.refYear}년 분포 없음 → 가장 가까운 연도)` : ""); })()} 청구월별 사용량 구간 분포(가구 ${fmt(sum(D.rbin.groups.map(g => sum(g.hh[D.rbin.months.indexOf(resBinYear(+P.refYear) + "-01")]))) / 1e4, 0)}만, 저압 요금표: 저압·고압 종합 / 고압 요금표: 고압 단일·일반)로 누진 계산하고 월 판매량에 맞춰 확대` : `월별 호당 평균사용량에 로그정규 분포(σ=${P.sigma})를 가정한 누진 계산, 고압 비중 ${fmt(P.high * 100, 0)}%`}. 기후환경 ${fmt(verOf($("#simVer").value).climate, 1)}원·연료비조정 ${fmt(P.fuel, 1)}원/kWh 일률. 가로등(갑)·임시전력(갑/을저압)은 미산정. 부가세·기금 제외. 복지할인: ${D.disc.years.includes(+P.refYear) ? `${P.refYear}년 실적 ${fmt(D.disc.total[D.disc.years.indexOf(+P.refYear)], 0)}억원 × ${fmt(P.disc * 100, 0)}%(사회복지시설 일반용 ${fmt(P.discGen * 100, 0)}%)` : "해당 연도 자료 없음(0)"}${(() => { const x = extraDiscOf(P.refYear); return x.동결 + x.감액 > 0 ? ` + 주택용 실적표 외 감액 ${fmt(x.동결 + x.감액, 0)}억원(취약계층 요금인상 유예 ${fmt(x.동결, 0)}${x.감액 ? ` · 200kWh 이하 감액 ${fmt(x.감액, 0)}` : ""}, ${x.src}${x.src === "발표" ? "; 200kWh 이하 감액은 자료 없음" : ""})` : ""; })()}.`;
 }
 function barChart(el, labels, series, o) {
   const W = Math.max(320, el.clientWidth || 720), H = 260, L = 50, R = 10, T = 12, B = 30;
@@ -1050,57 +1052,69 @@ function renderCost() {
 }
 
 const WB_BANDS = [[0, 0, "0"], [1, 100, "1~100"], [101, 200, "101~200"], [201, 300, "201~300"], [301, 400, "301~400"], [401, 500, "401~500"], [501, 700, "501~700"], [701, 1000, "701~1,000"], [1001, 1e9, "1,000 초과"]];
-function renderResBins() {
-  const B = D.rbin, W = D.wbin; if (!B) return "";
-  const season = $("#rbSeason").value, yr = B.months[0].slice(0, 4);
-  const isS = m => m >= 7 && m <= 9;
-  const mm = B.months.map((m, i) => [i, +m.slice(5)]).filter(([, m]) => season === "all" || (season === "sum") === isS(m)).map(([i]) => i);
-  $("#rbYear").textContent = yr;
-  const bandSum = (arrs, lo, hi) => { let s = 0; for (const mi of mm) arrs[mi].forEach((x, bi) => { if (B.lo[bi] >= lo && B.lo[bi] <= hi) s += x; }); return s; };
+// 주택용 구간 분포 통계: 연도·기간별 구간 요약과 누진 단계 점유
+function resBinStats(yr, season) {
+  const B = D.rbin, W = D.wbin, isS = m => m >= 7 && m <= 9;
+  const ym = B.months.map((m, i) => [i, m]).filter(([, m]) => m.startsWith(yr));
+  const mm = ym.filter(([, m]) => season === "all" || (season === "sum") === isS(+m.slice(5))).map(([i]) => i);
+  const wOn = W && W.months[0].startsWith(yr), wIdx = gi => W.months.indexOf(B.months[gi]);
+  const bandSum = (arrs, lo, hi, idx) => { let s = 0; for (const mi of idx) if (mi >= 0) arrs[mi].forEach((x, bi) => { if (B.lo[bi] >= lo && B.lo[bi] <= hi) s += x; }); return s; };
   const ver = D.tar.versions.filter(v => v.effective <= `${yr}-07-01`).pop();
-  // 가구당 월 요금(기본+전력량, 추정): 구간 평균 사용량 × 해당 월 요금표·하계 비중
   const rows = WB_BANDS.map(([lo, hi, name]) => {
     let hh = 0, kwh = 0, bill = 0;
     for (const g of B.groups) {
-      hh += bandSum(g.hh, lo, hi); kwh += bandSum(g.kwh, lo, hi);
+      hh += bandSum(g.hh, lo, hi, mm); kwh += bandSum(g.kwh, lo, hi, mm);
       const R = ver.residential[g.rate];
-      for (const mi of mm) { const w = B.summer_w[mi], sup = B.super_months.includes(mi + 1);
+      for (const mi of mm) { const w = B.summer_w[mi], sup = B.super_months.includes(+B.months[mi].slice(5));
         g.hh[mi].forEach((h, bi) => { if (!h || B.lo[bi] < lo || B.lo[bi] > hi) return; const q = g.kwh[mi][bi] / h;
           for (const [k, wt] of [["other", 1 - w], ["summer", w]]) { if (wt <= 0) continue; const sec = R[k], th = sec.thresholds, e = sec.energy, b = sec.basic;
             let en = Math.min(q, th[0]) * e[0] + Math.min(Math.max(q - th[0], 0), th[1] - th[0]) * e[1] + Math.max(q - th[1], 0) * e[2]; if (sup && q > 1000) en += (q - 1000) * (R.super - e[2]);
             bill += wt * h * (en + (q <= th[0] ? b[0] : q <= th[1] ? b[1] : b[2])); } }); }
     }
-    const whh = W ? bandSum(W.all.hh, lo, hi) : 0;
+    const whh = wOn ? bandSum(W.all.hh, lo, hi, mm.map(wIdx)) : 0;
     return { name, hh, kwh, bill, whh };
   });
-  const T = rows.reduce((a, r) => { for (const k in r) if (k !== "name") a[k] = (a[k] || 0) + r[k]; return a; }, {});
+  const T = rows.reduce((acc, r) => { for (const k in r) if (k !== "name") acc[k] = (acc[k] || 0) + r[k]; return acc; }, {});
+  const tierOf = (idx, th) => { let hh = [0, 0, 0], kw = [0, 0, 0]; for (const g of B.groups) for (const mi of idx) g.hh[mi].forEach((x, bi) => { const q = x ? g.kwh[mi][bi] / x : 0, t = q <= th[0] ? 0 : q <= th[1] ? 1 : 2; hh[t] += x; kw[t] += g.kwh[mi][bi]; }); const H = sum(hh), K = sum(kw); return { hh: hh.map(v => v / H * 100), kw: kw.map(v => v / K * 100) }; };
+  const tN = tierOf(ym.filter(([, m]) => !isS(+m.slice(5))).map(([i]) => i), [200, 400]), tS = tierOf(ym.filter(([, m]) => +m.slice(5) === 8).map(([i]) => i), [300, 450]);
+  return { rows, T, tN, tS, wOn, mm, ym };
+}
+function renderResBins() {
+  const B = D.rbin, W = D.wbin; if (!B) return "";
+  const sel = $("#rbYearSel");
+  if (!sel.options.length) { sel.innerHTML = B.years.map(y => `<option>${y}</option>`).join(""); sel.value = B.years.at(-1); }
+  const season = $("#rbSeason").value, yr = sel.value;
+  $("#rbYear").textContent = B.years.length > 1 ? `${B.years[0]}~${B.years.at(-1)}` : yr;
+  const { rows, T, tN, tS, wOn, ym } = resBinStats(yr, season);
   const ser = [{ name: "전체 가구 비중(%)", color: "#003b8e", values: rows.map(r => r.hh / T.hh * 100) }, { name: "사용량 비중(%)", color: "#94a3b8", values: rows.map(r => r.kwh / T.kwh * 100) }];
-  if (W) ser.push({ name: "복지할인 가구 비중(%)", color: "#e60012", values: rows.map(r => r.whh / T.whh * 100) });
+  if (wOn) ser.push({ name: "복지할인 가구 비중(%)", color: "#e60012", values: rows.map(r => r.whh / T.whh * 100) });
   legend($("#rbLegend"), ser);
   barChart($("#rbChart"), rows.map(r => r.name), ser, { yTitle: "%" });
-  let h = `<table class="tbl"><thead><tr><th>가구당 월 사용량(kWh)</th><th>가구 비중</th><th>사용량 비중</th><th>평균 사용량</th><th>가구당 월 요금(추정)</th><th>kWh당 요금</th>${W ? "<th>복지할인 가구 비율</th>" : ""}</tr></thead><tbody>`;
-  const line = (r, cls) => `<tr${cls ? ` class="${cls}"` : ""}><td>${r.name}</td><td>${fmt(r.hh / T.hh * 100, 1)}%</td><td>${fmt(r.kwh / T.kwh * 100, 1)}%</td><td>${fmt(r.kwh / r.hh, 0)}kWh</td><td>${fmt(r.bill / r.hh, 0)}원</td><td>${r.kwh / r.hh >= 1 ? fmt(r.bill / r.kwh, 1) : "-"}</td>${W ? `<td>${fmt(r.whh / r.hh * 100, 1)}%</td>` : ""}</tr>`;
+  let h = `<table class="tbl"><thead><tr><th>가구당 월 사용량(kWh)</th><th>가구 비중</th><th>사용량 비중</th><th>평균 사용량</th><th>가구당 월 요금(추정)</th><th>kWh당 요금</th>${wOn ? "<th>복지할인 가구 비율</th>" : ""}</tr></thead><tbody>`;
+  const line = (r, cls) => `<tr${cls ? ` class="${cls}"` : ""}><td>${r.name}</td><td>${fmt(r.hh / T.hh * 100, 1)}%</td><td>${fmt(r.kwh / T.kwh * 100, 1)}%</td><td>${fmt(r.kwh / r.hh, 0)}kWh</td><td>${fmt(r.bill / r.hh, 0)}원</td><td>${r.kwh / r.hh >= 1 ? fmt(r.bill / r.kwh, 1) : "-"}</td>${wOn ? `<td>${fmt(r.whh / r.hh * 100, 1)}%</td>` : ""}</tr>`;
   h += rows.map(r => line(r)).join("") + line({ ...T, name: "전체" }, "tot");
   $("#rbTable").innerHTML = h + "</tbody></table>";
-  // 누진 단계별 점유 (하계 외 = 200/400, 하계 = 8월 청구 기준 300/450)
-  const tierOf = (idx, th) => { let hh = [0, 0, 0], kw = [0, 0, 0]; for (const g of B.groups) for (const mi of idx) g.hh[mi].forEach((x, bi) => { const q = x ? g.kwh[mi][bi] / x : 0, t = q <= th[0] ? 0 : q <= th[1] ? 1 : 2; hh[t] += x; kw[t] += g.kwh[mi][bi]; }); const H = sum(hh), K = sum(kw); return { hh: hh.map(v => v / H * 100), kw: kw.map(v => v / K * 100) }; };
-  const nonIdx = B.months.map((m, i) => [i, +m.slice(5)]).filter(([, m]) => !isS(m)).map(([i]) => i), augIdx = B.months.map((m, i) => [i, +m.slice(5)]).filter(([, m]) => m === 8).map(([i]) => i);
-  const tN = tierOf(nonIdx, [200, 400]), tS = tierOf(augIdx, [300, 450]);
-  let t = `<table class="tbl"><thead><tr><th>누진 단계</th><th>하계 외 가구</th><th>하계 외 사용량</th><th>하계(8월 청구) 가구</th><th>하계 사용량</th></tr></thead><tbody>`;
-  ["1단계 (≤200 / ≤300kWh)", "2단계 (~400 / ~450kWh)", "3단계 (>400 / >450kWh)"].forEach((n, k) => t += `<tr><td>${n}</td><td>${fmt(tN.hh[k], 1)}%</td><td>${fmt(tN.kw[k], 1)}%</td><td>${fmt(tS.hh[k], 1)}%</td><td>${fmt(tS.kw[k], 1)}%</td></tr>`);
+  // 누진 단계별 점유: 연도별 비교 (하계 외 = 200/400, 하계 = 8월 청구 300/450)
+  const S = B.years.map(y => [y, y === yr ? { tN, tS } : resBinStats(y, "all")]);
+  let t = `<table class="tbl"><thead><tr><th rowspan="2">누진 단계</th>${S.map(([y]) => `<th colspan="4">${y}</th>`).join("")}</tr><tr>${S.map(() => "<th>하계 외 가구</th><th>하계 외 사용량</th><th>하계 가구</th><th>하계 사용량</th>").join("")}</tr></thead><tbody>`;
+  ["1단계 (≤200 / ≤300kWh)", "2단계 (~400 / ~450kWh)", "3단계 (>400 / >450kWh)"].forEach((n, k) => t += `<tr><td>${n}</td>${S.map(([, x]) => `<td>${fmt(x.tN.hh[k], 1)}%</td><td>${fmt(x.tN.kw[k], 1)}%</td><td>${fmt(x.tS.hh[k], 1)}%</td><td>${fmt(x.tS.kw[k], 1)}%</td>`).join("")}</tr>`);
   $("#rbTier").innerHTML = t + "</tbody></table>";
-  const gh = g => sum(g.hh[0]), G = B.groups, single = G.filter(g => g.apt === "단일" && g.volt === "고압"), comp = G.filter(g => g.apt === "종합" && g.volt === "고압");
+  const G = B.groups, i0 = ym[0][0], gh = g => sum(g.hh[i0]), single = G.filter(g => g.apt === "단일" && g.volt === "고압"), comp = G.filter(g => g.apt === "종합" && g.volt === "고압");
   const avgCk = sum(B.check.map(c => Math.abs(c.ratio - 1))) / B.check.length * 100;
-  const salesRatio = B.months.map((m, i) => { const s = D.mon.sales.res[m]; return s ? sum(G.map(g => sum(g.kwh[i]))) / (s * 1e3) : null; }).filter(x => x != null);
-  $("#rbNote").innerHTML = `가구당 월 요금 = 기본 + 전력량요금 추정(${yr}년 요금표, 기후·연료비·부가세·기금·복지할인 제외). 구간별 가구당 평균 사용량으로 다시 계산한 요금이 실제 청구액(기본+전력량)과 월평균 ${fmt(avgCk, 2)}% 이내로 맞습니다. ` +
-    `<b>적용 요금표</b>: 저압 전체와 고압 종합계약 세대(${fmt(sum(comp.map(gh)) / 1e4, 0)}만 가구)는 저압 요금표, 고압 단일계약(${fmt(sum(single.map(gh)) / 1e4, 0)}만 가구)·고압 일반은 고압 요금표가 적용됩니다. ` +
-    `하계 누진 구간은 검침 주기 때문에 7월 청구의 ${fmt(B.summer_w[6] * 100, 0)}%, 8월 ${fmt(B.summer_w[7] * 100, 0)}%, 9월 ${fmt(B.summer_w[8] * 100, 0)}%에 반영됩니다. ` +
-    `분포 합계는 월보 주택용 판매량의 ${fmt(Math.min(...salesRatio) * 100, 0)}~${fmt(Math.max(...salesRatio) * 100, 0)}%이며, 시뮬레이터는 분포 모양을 유지한 채 월 판매량에 맞춰 확대합니다. ` +
-    `정제: ${B.replaced.map(r => `${r.month.replace("-", ".")} ${r.group}는 복지할인 가구만 뽑혀(${fmt(r.hh / 1e4, 0)}만 가구) ${r.used.replace("-", ".")} 분포로 대체; `).join("")}가구당 기본요금이 누진 상한(7,300원)의 1.5배를 넘는 비주거성 행 제외(대부분 2025.1~3 고압 종합, 월 ${fmt(sum(B.dropped.filter(d => d.group === "고압·종합").map(d => d.kwh)) / 3 / 1e6, 0)}GWh 안팎).`;
-  CSV.resbins = [["구간", "가구비중%", "사용량비중%", "평균kWh", "가구당요금원", "kWh당요금", "복지할인가구비율%"], ...rows.map(r => [r.name, (r.hh / T.hh * 100).toFixed(2), (r.kwh / T.kwh * 100).toFixed(2), (r.kwh / r.hh).toFixed(0), (r.bill / r.hh).toFixed(0), r.kwh ? (r.bill / r.kwh).toFixed(1) : "", r.hh ? (r.whh / r.hh * 100).toFixed(1) : ""])];
-  if (season !== "all") return "";
-  const big = rows.slice(7), bigW = sum(big.map(r => r.whh)) / sum(big.map(r => r.hh)) * 100;
-  return `<b>주택용 가구 분포 — 3단계는 가구 ${fmt(tN.hh[2], 0)}%가 사용량 ${fmt(tN.kw[2], 0)}%</b> — ${yr}년 하계 외 청구에서 누진 1단계(200kWh 이하) 가구가 ${fmt(tN.hh[0], 0)}%, 3단계(400kWh 초과)가 ${fmt(tN.hh[2], 0)}%입니다. 3단계 가구는 적지만 사용량의 ${fmt(tN.kw[2], 0)}%를 차지해 누진 수입의 축입니다. 복지할인 가구는 평균 ${fmt(T.whh ? sum(W.all.kwh.map(r => sum(r))) / sum(W.all.hh.map(r => sum(r))) : 0, 0)}kWh로 전체 평균(${fmt(T.kwh / T.hh, 0)}kWh)보다 많이 쓰고, 700kWh 넘게 쓰는 가구의 ${fmt(bigW, 0)}%가 복지할인 가구입니다(다자녀·대가족 등). 누진 3단계 단가 인상은 이들에게 크게 돌아갑니다.`;
+  const salesRatio = ym.map(([i, m]) => { const s = D.mon.sales.res[m]; return s ? sum(G.map(g => sum(g.kwh[i]))) / (s * 1e3) : null; }).filter(x => x != null);
+  const sw = mo => fmt(B.summer_w[B.months.indexOf(`${yr}-${mo}`)] * 100, 0), dropBig = B.dropped.filter(d => d.kwh > 5e7);
+  $("#rbNote").innerHTML = `가구당 월 요금 = 기본 + 전력량요금 추정(${yr}년 요금표, 기후·연료비·부가세·기금·복지할인 제외). 구간별 가구당 평균 사용량으로 다시 계산한 요금이 실제 청구액(기본+전력량)과 월평균 ${fmt(avgCk, 2)}% 이내로 맞습니다(${B.years.join("·")}년 ${B.months.length}개월). ` +
+    `<b>적용 요금표</b>: 저압 전체와 고압 종합계약 세대(${yr}.1 ${fmt(sum(comp.map(gh)) / 1e4, 0)}만 가구)는 저압 요금표, 고압 단일계약(${fmt(sum(single.map(gh)) / 1e4, 0)}만 가구)·고압 일반은 고압 요금표가 적용됩니다. ` +
+    `하계 누진 구간은 검침 주기 때문에 7월 청구의 ${sw("07")}%, 8월 ${sw("08")}%, 9월 ${sw("09")}%에 반영됩니다. ` +
+    `${yr}년 분포 합계는 월보 주택용 판매량의 ${fmt(Math.min(...salesRatio) * 100, 0)}~${fmt(Math.max(...salesRatio) * 100, 0)}%이며, 시뮬레이터는 기준 연도의 분포 모양을 유지한 채 월 판매량에 맞춰 확대합니다(분포가 없는 연도는 가장 가까운 연도). ` +
+    `정제: ${B.replaced.map(r => `${r.month.replace("-", ".")} ${r.group}는 복지할인 가구만 뽑혀 ${r.used.replace("-", ".")} 분포로 대체; `).join("")}가구당 기본요금이 누진 상한(7,300원)의 1.5배를 넘는 비주거성 행 제외${dropBig.length ? `(대부분 ${[...new Set(dropBig.map(d => d.month.replace("-", ".")))].join("·")} ${dropBig[0].group}, 월 ${fmt(sum(dropBig.map(d => d.kwh)) / dropBig.length / 1e6, 0)}GWh 안팎)` : ""}.`;
+  CSV.resbins = [["연도", "구간", "가구비중%", "사용량비중%", "평균kWh", "가구당요금원", "kWh당요금", "복지할인가구비율%"], ...rows.map(r => [yr, r.name, (r.hh / T.hh * 100).toFixed(2), (r.kwh / T.kwh * 100).toFixed(2), (r.kwh / r.hh).toFixed(0), (r.bill / r.hh).toFixed(0), r.kwh ? (r.bill / r.kwh).toFixed(1) : "", wOn && r.hh ? (r.whh / r.hh * 100).toFixed(1) : ""])];
+  // 발견: 최신 연도 기준(선택과 무관)
+  const yL = B.years.at(-1), L = yL === yr && season === "all" ? { rows, T, tN, tS } : resBinStats(yL, "all"), P0 = B.years.length > 1 ? S[0][1] : null;
+  const big = L.rows.slice(7), bigW = sum(big.map(r => r.whh)) / sum(big.map(r => r.hh)) * 100;
+  const trend = P0 ? ` ${B.years[0]}년과 비교하면 하계 3단계 가구 비중이 ${fmt(P0.tS.hh[2], 1)}% → ${fmt(L.tS.hh[2], 1)}%로, 하계 외는 ${fmt(P0.tN.hh[2], 1)}% → ${fmt(L.tN.hh[2], 1)}%로 바뀌었습니다.` : "";
+  return `<b>주택용 가구 분포 — 3단계는 가구 ${fmt(L.tN.hh[2], 0)}%가 사용량 ${fmt(L.tN.kw[2], 0)}%</b> — ${yL}년 하계 외 청구에서 누진 1단계(200kWh 이하) 가구가 ${fmt(L.tN.hh[0], 0)}%, 3단계(400kWh 초과)가 ${fmt(L.tN.hh[2], 0)}%입니다. 3단계 가구는 적지만 사용량의 ${fmt(L.tN.kw[2], 0)}%를 차지해 누진 수입의 축이고, 8월 청구에서는 가구 ${fmt(L.tS.hh[2], 0)}%·사용량 ${fmt(L.tS.kw[2], 0)}%로 커집니다.${trend}` +
+    (W ? ` 복지할인 가구는 평균 ${fmt(sum(W.all.kwh.map(r => sum(r))) / sum(W.all.hh.map(r => sum(r))), 0)}kWh로 전체 평균(${fmt(L.T.kwh / L.T.hh, 0)}kWh)보다 많이 쓰고, 700kWh 넘게 쓰는 가구의 ${fmt(bigW, 0)}%가 복지할인 가구입니다(다자녀·대가족 등). 누진 3단계 단가 인상은 이들에게 크게 돌아갑니다.` : "");
 }
 
 function renderWelfareBins() {
@@ -1248,6 +1262,7 @@ async function boot() {
   on("#item", "change", e => { S.item = e.target.value; renderAll(); });
   on("#wbSeason", "change", () => renderWelfareBins());
   on("#rbSeason", "change", () => renderResBins());
+  on("#rbYearSel", "change", () => renderResBins());
   for (const k of ["year", "base", "season", "dtype"]) on("#" + k, "change", e => { S[k] = e.target.value; renderAll(); });
   on('input[name="scheme"]', "change", e => { S.scheme = e.target.value; renderAll(); });
   on('input[name="norm"]', "change", e => { S.norm = e.target.value; renderAll(); });

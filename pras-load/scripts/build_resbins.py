@@ -12,15 +12,16 @@
   3) 적용 요금표: 구간별 '가구당 평균 사용량'으로 누진 계산해 실제 기본+전력량요금과 맞춰 보면
      저압 전체와 고압 종합(세대별 계약)은 저압 요금표, 고압 단일·고압 일반·저압 단일은 고압 요금표와 일치 → rate 에 기록.
   4) 하계(7·8월 사용분) 누진 구간은 검침 주기 때문에 청구월 7·8·9월에 나뉘어 반영 → 청구월별 하계 비중을 최소제곱으로 추정.
-사용: python build_resbins.py <xlsx 폴더> <build 폴더> [복지할인 분포 폴더(검증용)]
+사용: python build_resbins.py <xlsx 폴더[,폴더...]> <build 폴더> [복지할인 분포 폴더[,폴더...](검증용)]
+  여러 해는 쉼표로 이어 준다(예: raw/resall2024,raw/resall2025).
 """
 import json, re, sys
 from pathlib import Path
 import numpy as np
 import pandas as pd
 
-src, out = Path(sys.argv[1]), Path(sys.argv[2])
-wel_src = Path(sys.argv[3]) if len(sys.argv) > 3 else None
+srcs, out = [Path(x) for x in sys.argv[1].split(",")], Path(sys.argv[2])
+wel_srcs = [Path(x) for x in sys.argv[3].split(",")] if len(sys.argv) > 3 else []
 COLS = ["bin", "cust", "hh", "kwh", "bas", "en", "clim", "fuel", "tot", "up"]
 RATE = {("저압", "일반"): "low", ("저압", "종합"): "low", ("고압", "종합"): "low", ("고압", "단일"): "high", ("고압", "일반"): "high", ("저압", "단일"): "high"}
 
@@ -41,23 +42,25 @@ def read(f):
 
 
 files = {}
-for f in sorted(src.glob("*.xlsx")):
+for f in sorted(f for src in srcs for f in src.glob("*.xlsx")):
     d, m = read(f)
     assert "사용량 구간별" in m["title"] and m["ym"] == m["ym2"] and re.match(r"^\d{4}-\d{2}$", m["ym"]), f
     assert (d.tot - d[["bas", "en", "clim", "fuel"]].sum(axis=1)).abs().max() == 0, f
+    assert (m["ym"], m["volt"], m["apt"]) not in files, f
     files[(m["ym"], m["volt"], m["apt"])] = (d, m, f.name)
 months = sorted({k[0] for k in files})
 groups = sorted({(k[1], k[2]) for k in files}, key=lambda g: (g[0] != "저압", g[1]))
 assert len(files) == len(months) * len(groups)
 bins = list(files[next(iter(files))][0].bin)
+assert all(list(v[0].bin) == bins for v in files.values()), "구간 정의가 파일마다 다름"
 lo = np.array([int(b.split("~")[0]) for b in bins])
 hi = np.array([int(b.split("~")[1]) for b in bins])
 
 # 1) 복지할인 가구만 뽑힌 파일 대체
 replaced = []
 wel = {}
-if wel_src:
-    for f in sorted(wel_src.glob("*.xlsx")):
+if wel_srcs:
+    for f in sorted(f for w in wel_srcs for f in w.glob("*.xlsx")):
         df = pd.read_excel(f, header=None)
         first = df.index[df.iloc[:, 1].astype(str).str.match(r"^\d+~\d+$")][0]
         wel[(str(df.iat[2, 7]), str(df.iat[2, 3])[2:], str(df.iat[3, 1])[2:])] = num(df.iloc[first:, 3]).sum()
@@ -118,7 +121,7 @@ for ym in months:
 doc = {
     "source": "한전 영업정보 사용량 구간별 분포(요금년월 기준, 사용자 제공)",
     "unit": {"hh": "가구", "kwh": "kWh", "amount": "원"},
-    "months": months, "bins": bins, "lo": lo.tolist(), "hi": hi.tolist(),
+    "months": months, "years": sorted({m[:4] for m in months}), "bins": bins, "lo": lo.tolist(), "hi": hi.tolist(),
     "groups": [], "summer_w": summer_w, "super_months": sorted(SUPER), "check": check,
     "replaced": replaced, "dropped": dropped,
     "note": "구간 = 가구당 월 사용량(단일계약은 세대 평균). 총액 = 기본+전력량+기후+연료(복지할인 차감 전). "

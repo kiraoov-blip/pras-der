@@ -59,7 +59,7 @@ python3 scripts/analyze_cost.py build
 python3 scripts/build_monthly.py <월보_폴더(연도별 하위폴더)> build   # build_ref.py 다음에 실행
 python3 scripts/build_regionmap.py build
 python3 scripts/build_discount.py build
-python3 scripts/build_resbins.py <주택용_구간분포_xlsx_폴더> build <복지할인_구간분포_폴더>   # tariffs.json 다음
+python3 scripts/build_resbins.py <2024폴더>,<2025폴더> build <복지할인_구간분포_폴더>   # tariffs.json 다음
 python3 scripts/build_welfare_bins.py <복지할인_구간분포_xlsx_폴더> build
 python3 scripts/build_network.py build
 python3 scripts/build_fuel.py <산정내역_txt_dir> build      # pdftotext -layout 결과(이미지 판은 OCR 후 MANUAL 반영)
@@ -118,13 +118,14 @@ python3 scripts/build_page.py ../ember-sim/index.html
 
 ## 주택용 사용량 구간 분포
 
-- 2025년 월별 청구 72개 파일. 구간 = 가구당 월 사용량(단일계약은 세대 평균), 총액 = 기본+전력량+기후+연료(복지할인 전).
+- 2024·2025년 월별 청구 144개 파일(연도별 폴더를 쉼표로 이어 입력). 구간 = 가구당 월 사용량(단일계약은 세대 평균), 총액 = 기본+전력량+기후+연료(복지할인 전).
 - 요금표 검증: 구간 평균 사용량으로 누진 재계산 → 실제 기본+전력량과 월 ±0.1% 이내. 저압 전체·고압 종합계약 세대 = 저압 요금표,
   고압 단일·고압 일반·저압 단일 = 고압 요금표. 하계 누진 구간은 청구월 7월 48%·8월 99%·9월 56%에 반영(최소제곱 추정).
 - 정제: 복지할인유형 '-전체-'로 뽑힌 파일은 복지할인 가구만 담기므로 직전 달 분포로 대체(2025.12 저압 일반은 재추출본으로 교체 완료).
   가구당 기본요금 > 1.5 × 7,300원인 비주거성 행 제외(2025.1~3 고압 종합 월 320~380GWh, 4월부터 사라짐).
 - 분포 합계 = 월보 주택용 판매량의 91~96%. 시뮬레이터 '실측 구간 분포' 모드는 분포 모양을 고정하고 월 판매량으로 확대
-  → 주택용 실적 보정계수 0.78(로그정규) → 1.02.
+  → 주택용 실적 보정계수 0.78(로그정규) → 1.02(2024·2025). 기준 연도 분포가 없으면 가장 가까운 연도 분포를 씀.
+- 2024년은 비주거성 대량 행 없음. 누진 3단계 가구 비중: 하계 외 8.3%(2024) → 8.8%(2025), 8월 청구 34.3% → 33.9%.
 
 ## 연료비조정단가
 
