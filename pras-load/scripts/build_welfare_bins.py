@@ -5,13 +5,13 @@
       요금동결할인액, 복지할인액], 총할인액, 할인 전 요금, 할인 후 요금.
   - 구간은 가구당 사용량 기준(단일계약은 세대 평균). 총할인 = 네 항목 합, 할인 후 = 할인 전 + 총할인 (전 행 검증).
   - 단일계약(아파트 일괄)은 '할인 전 요금'이 거의 비어 있어(단지 단위 청구) 할인율 계산에서 제외.
-사용: python build_welfare_bins.py <xlsx 폴더> <build 폴더>
+사용: python build_welfare_bins.py <xlsx 폴더[,폴더...]> <build 폴더>   (여러 해는 쉼표로)
 """
 import json, re, sys
 from pathlib import Path
 import pandas as pd
 
-src, out = Path(sys.argv[1]), Path(sys.argv[2])
+srcs, out = [Path(x) for x in sys.argv[1].split(",")], Path(sys.argv[2])
 V = ["hh", "kwh", "ess", "le200", "frz", "wel", "disc", "pre", "post"]
 COLS = ["bin", "cust"] + V
 
@@ -21,7 +21,7 @@ def num(s):
 
 
 frames = []
-for f in sorted(src.glob("*.xlsx")):
+for f in sorted(f for src in srcs for f in src.glob("*.xlsx")):
     df = pd.read_excel(f, header=None)
     assert "복지할인" in str(df.iat[0, 0]), f
     first = df.index[df.iloc[:, 1].astype(str).str.match(r"^\d+~\d+$")][0]
@@ -62,6 +62,7 @@ doc = {
     "source": "한전 영업정보 복지할인 구간별 분포(요금년월 기준, 사용자 제공)",
     "unit": {"hh": "가구", "kwh": "kWh", "amount": "원"},
     "months": months,
+    "years": sorted({m[:4] for m in months}),
     "bins": bins,
     "lo": [int(b.split("~")[0]) for b in bins],
     "hi": [int(b.split("~")[1]) for b in bins],

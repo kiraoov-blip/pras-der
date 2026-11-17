@@ -210,6 +210,7 @@ footer{background:#061a3d;color:#b9c6dc}
             <p class="mini-note" id="rbNote"></p>
             <h3 class="sub-h" style="margin-top:22px">복지할인 가구의 사용량 구간별 분포 (<span id="wbYear"></span>, 월별 청구)</h3>
             <div class="grid-in wide" style="margin:6px 0 10px">
+              <div class="field"><label for="wbYearSel">연도</label><select id="wbYearSel"></select></div>
               <div class="field"><label for="wbSeason">기간</label><select id="wbSeason"><option value="all">연간</option><option value="non">하계 외 (1~6·9~12월)</option><option value="sum">하계 (7·8월)</option></select><span class="hint">하계는 누진 구간 300/450kWh·할인 한도 상향</span></div>
             </div>
             <div class="lg" id="wbLegend"></div>
@@ -904,11 +905,11 @@ function discountOf(year, genShare) {
   return { 주택용: tot - sc - night + sc * (1 - genShare), 일반용: sc * genShare, 심야: night };
 }
 // 실적표 밖의 주택용 감액(억원): 취약계층 요금인상 유예(요금동결 할인)·200kWh 이하 감액.
-// 2023·2024 유예액은 정부 발표(2024.1.16: 2023년 1,860억, 2024년 2,615억 계획), 2025는 구간별 분포 실측.
+// 2023 유예액은 정부 발표(2024.1.16: 2023년 1,860억), 2024·2025는 구간별 분포 실측(2024 발표 계획 2,615억 → 실측 2,057억).
 const FREEZE_PUB = { 2023: 1860, 2024: 2615 };
 function extraDiscOf(year) {
   const W = D.wbin, out = { 동결: FREEZE_PUB[year] || 0, 감액: 0, src: FREEZE_PUB[year] ? "발표" : "" };
-  if (W && W.months[0].startsWith(String(year))) { const t = v => -sum(W.all[v].map(r => sum(r))) / 1e8; out.동결 = t("frz"); out.감액 = t("le200"); out.src = "실측"; }
+  if (W && W.years.includes(String(year))) { const ix = W.months.map((m, i) => m.startsWith(String(year)) ? i : -1).filter(i => i >= 0); const t = v => -sum(ix.map(i => sum(W.all[v][i]))) / 1e8; out.동결 = t("frz"); out.감액 = t("le200"); out.src = "실측"; }
   return out;
 }
 function renderSim() {
@@ -1057,7 +1058,7 @@ function resBinStats(yr, season) {
   const B = D.rbin, W = D.wbin, isS = m => m >= 7 && m <= 9;
   const ym = B.months.map((m, i) => [i, m]).filter(([, m]) => m.startsWith(yr));
   const mm = ym.filter(([, m]) => season === "all" || (season === "sum") === isS(+m.slice(5))).map(([i]) => i);
-  const wOn = W && W.months[0].startsWith(yr), wIdx = gi => W.months.indexOf(B.months[gi]);
+  const wOn = W && W.years.includes(yr), wIdx = gi => W.months.indexOf(B.months[gi]);
   const bandSum = (arrs, lo, hi, idx) => { let s = 0; for (const mi of idx) if (mi >= 0) arrs[mi].forEach((x, bi) => { if (B.lo[bi] >= lo && B.lo[bi] <= hi) s += x; }); return s; };
   const ver = D.tar.versions.filter(v => v.effective <= `${yr}-07-01`).pop();
   const rows = WB_BANDS.map(([lo, hi, name]) => {
@@ -1114,21 +1115,23 @@ function renderResBins() {
   const big = L.rows.slice(7), bigW = sum(big.map(r => r.whh)) / sum(big.map(r => r.hh)) * 100;
   const trend = P0 ? ` ${B.years[0]}년과 비교하면 하계 3단계 가구 비중이 ${fmt(P0.tS.hh[2], 1)}% → ${fmt(L.tS.hh[2], 1)}%로, 하계 외는 ${fmt(P0.tN.hh[2], 1)}% → ${fmt(L.tN.hh[2], 1)}%로 바뀌었습니다.` : "";
   return `<b>주택용 가구 분포 — 3단계는 가구 ${fmt(L.tN.hh[2], 0)}%가 사용량 ${fmt(L.tN.kw[2], 0)}%</b> — ${yL}년 하계 외 청구에서 누진 1단계(200kWh 이하) 가구가 ${fmt(L.tN.hh[0], 0)}%, 3단계(400kWh 초과)가 ${fmt(L.tN.hh[2], 0)}%입니다. 3단계 가구는 적지만 사용량의 ${fmt(L.tN.kw[2], 0)}%를 차지해 누진 수입의 축이고, 8월 청구에서는 가구 ${fmt(L.tS.hh[2], 0)}%·사용량 ${fmt(L.tS.kw[2], 0)}%로 커집니다.${trend}` +
-    (W ? ` 복지할인 가구는 평균 ${fmt(sum(W.all.kwh.map(r => sum(r))) / sum(W.all.hh.map(r => sum(r))), 0)}kWh로 전체 평균(${fmt(L.T.kwh / L.T.hh, 0)}kWh)보다 많이 쓰고, 700kWh 넘게 쓰는 가구의 ${fmt(bigW, 0)}%가 복지할인 가구입니다(다자녀·대가족 등). 누진 3단계 단가 인상은 이들에게 크게 돌아갑니다.` : "");
+    (L.T.whh ? ` 복지할인 가구는 평균 ${fmt((() => { const ix = W.months.map((m, i) => m.startsWith(yL) ? i : -1).filter(i => i >= 0); return sum(ix.map(i => sum(W.all.kwh[i]))) / sum(ix.map(i => sum(W.all.hh[i]))); })(), 0)}kWh로 전체 평균(${fmt(L.T.kwh / L.T.hh, 0)}kWh)보다 많이 쓰고, 700kWh 넘게 쓰는 가구의 ${fmt(bigW, 0)}%가 복지할인 가구입니다(다자녀·대가족 등). 누진 3단계 단가 인상은 이들에게 크게 돌아갑니다.` : "");
 }
 
 function renderWelfareBins() {
   const W = D.wbin; if (!W) return "";
-  const season = $("#wbSeason").value;
-  const mm = W.months.map((m, i) => [i, +m.slice(5)]).filter(([, m]) => season === "all" || (season === "sum") === (m === 7 || m === 8)).map(([i]) => i);
+  const sel = $("#wbYearSel");
+  if (!sel.options.length) { sel.innerHTML = W.years.map(y => `<option>${y}</option>`).join(""); sel.value = W.years.at(-1); }
+  const season = $("#wbSeason").value, yr = sel.value;
+  const yIdx = y => W.months.map((m, i) => m.startsWith(y) ? i : -1).filter(i => i >= 0);
+  const mm = yIdx(yr).filter(i => { const m = +W.months[i].slice(5); return season === "all" || (season === "sum") === (m === 7 || m === 8); });
   const agg = (cube, v, lo, hi) => { let s = 0; for (const mi of mm) cube[v][mi].forEach((x, bi) => { if (W.lo[bi] >= lo && W.lo[bi] <= hi) s += x; }); return s; };
   const rows = WB_BANDS.map(([lo, hi, name]) => {
     const g = v => agg(W.all, v, lo, hi), r = v => agg(W.rate, v, lo, hi);
     return { name, hh: g("hh"), kwh: g("kwh"), wel: 0 - g("wel"), le200: 0 - g("le200"), frz: 0 - g("frz"), disc: 0 - g("disc"), rDisc: 0 - r("disc"), rPre: r("pre") };
   });
   const T = rows.reduce((a, r) => { for (const k in r) if (k !== "name") a[k] = (a[k] || 0) + r[k]; return a; }, {});
-  const yr = W.months[0].slice(0, 4);
-  $("#wbYear").textContent = yr;
+  $("#wbYear").textContent = W.years.length > 1 ? `${W.years[0]}~${W.years.at(-1)}` : yr;
   const ser = [{ name: "가구 비중(%)", color: "#003b8e", values: rows.map(r => r.hh / T.hh * 100) }, { name: "할인액 비중(%)", color: "#e60012", values: rows.map(r => r.disc / T.disc * 100) }];
   legend($("#wbLegend"), ser);
   barChart($("#wbChart"), rows.map(r => r.name), ser, { yTitle: "%" });
@@ -1140,13 +1143,16 @@ function renderWelfareBins() {
   const dTab = D.disc.rows.filter(r => r.tariff === "주택용").reduce((a, r) => a + r.amount[D.disc.years.indexOf(+yr)], 0);
   $("#wbNote").innerHTML = `구간 = 가구당 월 사용량(아파트 단일계약은 세대 평균). 월평균 ${fmt(T.hh / n / 1e4, 0)}만 가구, ${season === "all" ? "연간" : n + "개월"} 총할인 ${fmt(T.disc / 1e8, 0)}억원(복지 ${fmt(T.wel / 1e8, 0)} · 200kWh 이하 감액 ${fmt(T.le200 / 1e8, 0)} · 요금동결 ${fmt(T.frz / 1e8, 0)}).` +
     (season === "all" && dTab ? ` 복지할인액은 실적표의 주택용 항목 합(${fmt(dTab, 0)}억원)의 ${fmt(T.wel / 1e8 / dTab * 100, 0)}%로, 실적표의 일부 항목(사회복지시설·심야)은 이 분포에 들어 있지 않습니다.` : "") +
-    ` 할인율은 할인 전 요금이 기재된 개별·종합계약 기준(단일계약 ${fmt(gtot("hh") ? sum(W.groups.filter(g => g.apt === "단일").map(g => sum(mm.map(i => g.hh[i])))) / gtot("hh") * 100 : 0, 0)}%는 단지 단위 청구라 제외). <b>요금동결 할인</b> = 2023년 주택용 인상분(1월 13.1원 + 5월 8.0원 = 21.1원/kWh)을 취약계층(약 365만 호)에 월 313kWh까지 유예한 조치로, 2024.1 1년 연장되었습니다(가구당 월 최대 6,604원 = 313kWh × 21.1원). ${yr}년에는 1~4월 청구분에만 남아 ${fmt(-sum(W.all.frz.map(r => sum(r))) / 1e8, 0)}억원(정부 발표 2025년분 274억원)이고 5월 이후 0이라, 연간·하계 외 평균의 이 열은 희석되어 보입니다. 313kWh까지만 유예하므로 사용량이 그 이상인 구간에서는 가구당 금액이 더 늘지 않습니다. <a href="https://zdnet.co.kr/view/?no=20240116085234" target="_blank" rel="noopener">기사(2024.1.16)</a>`;
-  CSV.welfare = [["구간", "가구비중%", "평균kWh", "가구당할인원", "복지", "200kWh이하감액", "요금동결", "할인율%"], ...rows.map(r => [r.name, (r.hh / T.hh * 100).toFixed(2), (r.kwh / r.hh).toFixed(0), (r.disc / r.hh).toFixed(0), (r.wel / r.hh).toFixed(0), (r.le200 / r.hh).toFixed(0), (r.frz / r.hh).toFixed(0), r.rPre > 0 ? (r.rDisc / r.rPre * 100).toFixed(1) : ""])];
-  // 발견 (연간 기준으로 고정)
-  const A = WB_BANDS.map(([lo, hi]) => { let d = 0, p = 0, hh = 0; W.months.forEach((_, mi) => W.rate.hh[mi].forEach((x, bi) => { if (W.lo[bi] >= lo && W.lo[bi] <= hi) { hh += x; d -= W.rate.disc[mi][bi]; p += W.rate.pre[mi][bi]; } })); return { d, p, hh }; });
+    ` 할인율은 할인 전 요금이 기재된 개별·종합계약 기준(단일계약 ${fmt(gtot("hh") ? sum(W.groups.filter(g => g.apt === "단일").map(g => sum(mm.map(i => g.hh[i])))) / gtot("hh") * 100 : 0, 0)}%는 단지 단위 청구라 제외). <b>요금동결 할인</b> = 2023년 주택용 인상분(1월 13.1원 + 5월 8.0원 = 21.1원/kWh)을 취약계층(약 365만 호)에 월 313kWh까지 유예한 조치로, 2024.1 1년 연장되었습니다(가구당 월 최대 6,604원 = 313kWh × 21.1원). 실측 유예액: ${W.years.map(y => { const ix = yIdx(y), mon = ix.filter(i => -sum(W.all.frz[i]) > 1e8).map(i => +W.months[i].slice(5)); return `${y}년 ${fmt(-sum(ix.map(i => sum(W.all.frz[i]))) / 1e8, 0)}억원(${mon.length === ix.length ? "매월" : mon.length ? `${mon[0]}~${mon.at(-1)}월 청구분` : "없음"}${FREEZE_PUB[y] ? `, 정부 발표 계획 ${fmt(FREEZE_PUB[y], 0)}억원` : y === "2025" ? ", 정부 발표 274억원" : ""})`; }).join(", ")}. 유예가 끝난 달은 0이라, 해당 연도의 연간 평균에서는 이 열이 희석되어 보입니다. 313kWh까지만 유예하므로 사용량이 그 이상인 구간에서는 가구당 금액이 더 늘지 않습니다. <a href="https://zdnet.co.kr/view/?no=20240116085234" target="_blank" rel="noopener">기사(2024.1.16)</a>`;
+  CSV.welfare = [["연도", "구간", "가구비중%", "평균kWh", "가구당할인원", "복지", "200kWh이하감액", "요금동결", "할인율%"], ...rows.map(r => [yr, r.name, (r.hh / T.hh * 100).toFixed(2), (r.kwh / r.hh).toFixed(0), (r.disc / r.hh).toFixed(0), (r.wel / r.hh).toFixed(0), (r.le200 / r.hh).toFixed(0), (r.frz / r.hh).toFixed(0), r.rPre > 0 ? (r.rDisc / r.rPre * 100).toFixed(1) : ""])];
+  // 발견 (최신 연도 연간 기준으로 고정)
+  const yL = W.years.at(-1), iL = yIdx(yL);
+  const A = WB_BANDS.map(([lo, hi]) => { let d = 0, p = 0, hh = 0; iL.forEach(mi => W.rate.hh[mi].forEach((x, bi) => { if (W.lo[bi] >= lo && W.lo[bi] <= hi) { hh += x; d -= W.rate.disc[mi][bi]; p += W.rate.pre[mi][bi]; } })); return { d, p, hh }; });
   const rate = i => A[i].d / A[i].p * 100, per = i => A[i].d / A[i].hh;
-  let hhAll = 0, kAll = 0; W.months.forEach((_, mi) => { hhAll += sum(W.all.hh[mi]); kAll += sum(W.all.kwh[mi]); });
-  return `<b>복지할인은 사용량과 거의 무관한 정액</b> — ${yr}년 할인 가구(월평균 ${fmt(hhAll / 12 / 1e4, 0)}만 가구, 평균 ${fmt(kAll / hhAll, 0)}kWh)는 사용량이 101~200kWh든 501~700kWh든 가구당 월 ${fmt(Math.min(...[2,3,4,5,6].map(per)) / 1e4, 1)}~${fmt(Math.max(...[2,3,4,5,6].map(per)) / 1e4, 1)}만원을 받습니다. 그래서 할인율은 101~200kWh 구간 ${fmt(rate(2), 0)}%에서 501~700kWh 구간 ${fmt(rate(6), 0)}%로 떨어집니다. 한도에 걸린 뒤의 추가 사용분은 할인 없이 누진 단가를 그대로 내므로 절약 신호는 살아 있지만, 요금이 오를수록 할인의 실질 비중은 계속 줄어드는 구조입니다.`;
+  let hhAll = 0, kAll = 0; iL.forEach(mi => { hhAll += sum(W.all.hh[mi]); kAll += sum(W.all.kwh[mi]); });
+  const tot = (y, v) => -sum(yIdx(y).map(i => sum(W.all[v][i]))) / 1e8, y0 = W.years[0];
+  const cmp = W.years.length > 1 ? ` ${y0}년 대비 총할인은 ${fmt(tot(y0, "disc"), 0)}억 → ${fmt(tot(yL, "disc"), 0)}억원으로 줄었는데, 대부분 요금인상 유예 종료(${fmt(tot(y0, "frz"), 0)}억 → ${fmt(tot(yL, "frz"), 0)}억) 때문이고 복지할인 자체는 ${fmt(tot(y0, "wel"), 0)}억 → ${fmt(tot(yL, "wel"), 0)}억원입니다.` : "";
+  return `<b>복지할인은 사용량과 거의 무관한 정액</b> — ${yL}년 할인 가구(월평균 ${fmt(hhAll / iL.length / 1e4, 0)}만 가구, 평균 ${fmt(kAll / hhAll, 0)}kWh)는 사용량이 101~200kWh든 501~700kWh든 가구당 월 ${fmt(Math.min(...[2,3,4,5,6].map(per)) / 1e4, 1)}~${fmt(Math.max(...[2,3,4,5,6].map(per)) / 1e4, 1)}만원을 받습니다. 그래서 할인율은 101~200kWh 구간 ${fmt(rate(2), 0)}%에서 501~700kWh 구간 ${fmt(rate(6), 0)}%로 떨어집니다. 한도에 걸린 뒤의 추가 사용분은 할인 없이 누진 단가를 그대로 내므로 절약 신호는 살아 있지만, 요금이 오를수록 할인의 실질 비중은 계속 줄어드는 구조입니다.${cmp}`;
 }
 
 function renderDiscount() {
@@ -1261,6 +1267,7 @@ async function boot() {
   on("#dim", "change", async e => { S.dim = e.target.value; await fillItems(); renderAll(); });
   on("#item", "change", e => { S.item = e.target.value; renderAll(); });
   on("#wbSeason", "change", () => renderWelfareBins());
+  on("#wbYearSel", "change", () => renderWelfareBins());
   on("#rbSeason", "change", () => renderResBins());
   on("#rbYearSel", "change", () => renderResBins());
   for (const k of ["year", "base", "season", "dtype"]) on("#" + k, "change", e => { S[k] = e.target.value; renderAll(); });
