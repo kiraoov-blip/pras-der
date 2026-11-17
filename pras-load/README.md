@@ -33,6 +33,7 @@
 | `scripts/build_regionmap.py` | 본부 ↔ 시도 10개 권역 대응(한전 조직표 기준), 권역별 표본 비중 → `region_map.json` |
 | `scripts/build_network.py` | 송배전 이용요금 총괄원가(송전·배전, 적정원가·적정투자보수, 배전 저압·고압 단가) → `network.json` |
 | `scripts/build_discount.py` | 복지할인 실적(2021~2025 항목별 금액, 2025.12 호수) → `discount.json` |
+| `scripts/build_contract.py` | 계약종별 판매실적(2022~2025 월별, 본부 × 계약전력구간 × 계약종) → `contract.json` (월보 대조) |
 | `scripts/build_resbins.py` | 주택용 전체 가구 사용량 구간별 분포(2025 월별, 저/고압 × 일반·단일·종합) → `res_bins.json` (요금표 검증·하계 비중 포함) |
 | `scripts/build_welfare_bins.py` | 복지할인 가구 사용량 구간별 분포(2025 월별, 저/고압 × 일반·단일·종합) → `welfare_bins.json` |
 | `scripts/build_fuel.py` | 연료비조정단가 산정내역(분기 PDF 텍스트) → `fuel.json` (필요·규칙·적용 단가, 원 게시값) |
@@ -59,6 +60,7 @@ python3 scripts/analyze_cost.py build
 python3 scripts/build_monthly.py <월보_폴더(연도별 하위폴더)> build   # build_ref.py 다음에 실행
 python3 scripts/build_regionmap.py build
 python3 scripts/build_discount.py build
+python3 scripts/build_contract.py <계약종별_판매실적_xlsx_폴더> build   # monthly.json·meta.json 다음
 python3 scripts/build_resbins.py <2024폴더>,<2025폴더> build <복지할인_구간분포_폴더>   # tariffs.json 다음
 python3 scripts/build_welfare_bins.py <2024폴더>,<2025폴더> build
 python3 scripts/build_network.py build
@@ -117,6 +119,16 @@ python3 scripts/build_page.py ../ember-sim/index.html
   2023 1,860억(정부 발표), 2024 실측 2,512억(유예 2,057 + 200kWh 이하 감액 455), 2025 실측 760억(291 + 469).
   2024→2025 총할인 7,947억 → 6,474억: 감소분 대부분이 유예 종료, 복지할인은 5,435억 → 5,714억.
   단일계약은 '할인 전 요금'이 비어 있어 할인율에서 제외. 가구당 할인은 사용량과 무관하게 월 1.5만원 안팎 → 할인율 101~200kWh 78% → 501~700kWh 13%.
+
+## 계약종별 판매실적
+
+- 한전 영업정보 '계약전력구간별 판매실적' 2022~2025 연도별 xlsx(6만5천 행 제한으로 시트 2개 → 이어 붙임, 조회기간은 문자로 읽음).
+- 대분류 × 월 판매량·판매수입·월말 고객호수가 월보와 전부 일치(최대 오차 0.00005%). 판매수입 = 기본 + 사용량요금(기후·연료 포함, 복지할인 후).
+- 주택용저압+고압 → 주택용전력, '구 농사용(을)'(2023) → 농사용(을)저압, 중복 키 3행 합산.
+- 시뮬레이터(기준 연도 2022~2025): 계약종 × 월 판매량으로 확대, 기본요금 = 요금적용전력 실측 × 단가, 배전 원가 kW = 요금적용전력 연평균,
+  실적 보정은 계약종 단위(대분류 할인은 추정 비례 배분). 요금표 미산정 계약종(가로등(갑)·임시전력 일부)은 실적 수입 그대로.
+- 2025 회수율(영업비용 기준): 일반용 105.9%(갑 저압 103%, 을 고압A 109%), 산업용(을)고압A 123%·B·C 130%, 교육용 86%, 농사용 54%.
+- 2022 보정계수가 0.84~0.93으로 낮은 것은 연말 시행 요금표를 연중 전체에 적용하기 때문(2022.4·10 인상 전 요금이 실적에 섞임).
 
 ## 주택용 사용량 구간 분포
 
