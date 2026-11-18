@@ -598,7 +598,7 @@ footer{background:#061a3d;color:#b9c6dc}
 
 <script>
 "use strict";
-const VER = "f08d8f2815";
+const VER = "b5161bcfd6";
 const D = {};
 const $ = s => document.querySelector(s);
 const SEASONS = ["여름", "봄·가을", "겨울"], DTYPES = ["평일", "토요일", "일요일·공휴일"];
@@ -1188,7 +1188,7 @@ function discountOf(year, genShare) {
   return { 주택용: tot - sc - night + sc * (1 - genShare), 일반용: sc * genShare, 심야: night };
 }
 // 실적표 밖의 주택용 감액(억원): 취약계층 요금인상 유예(요금동결 할인)·200kWh 이하 감액.
-// 2023 유예액은 정부 발표(2024.1.16: 2023년 1,860억), 2024·2025는 구간별 분포 실측(2024 발표 계획 2,615억 → 실측 2,057억).
+// 2023~2025는 복지할인 구간별 분포 실측(정부 발표 2023년 1,860억 → 실측 1,666억, 2024 계획 2,615억 → 실측 2,057억). 분포가 없는 연도만 발표치.
 const FREEZE_PUB = { 2023: 1860, 2024: 2615 };
 function extraDiscOf(year) {
   const W = D.wbin, out = { 동결: FREEZE_PUB[year] || 0, 감액: 0, src: FREEZE_PUB[year] ? "발표" : "" };
