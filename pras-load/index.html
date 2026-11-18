@@ -443,7 +443,7 @@ footer{background:#061a3d;color:#b9c6dc}
         <section class="sec" id="s-diag">
           <div class="sec-h">
             <div><p class="eyebrow">04 · Tariff Diagnosis</p><h2>요금체계 진단</h2><p class="desc" id="diagDesc"></p></div>
-            <div class="tools"><button class="btn" type="button" data-csv="diag">단가 <small>CSV</small></button><button class="btn" type="button" data-csv="monthly">월별 <small>CSV</small></button><button class="btn" type="button" data-csv="contract">계약종 실적 <small>CSV</small></button><button class="btn" type="button" data-csv="resbins">주택용 구간 <small>CSV</small></button><button class="btn" type="button" data-csv="welfare">복지할인 구간 <small>CSV</small></button></div>
+            <div class="tools"><button class="btn" type="button" data-csv="diag">단가 <small>CSV</small></button><button class="btn" type="button" data-csv="monthly">월별 <small>CSV</small></button><button class="btn" type="button" data-csv="region">시도별 <small>CSV</small></button><button class="btn" type="button" data-csv="contract">계약종 실적 <small>CSV</small></button><button class="btn" type="button" data-csv="resbins">주택용 구간 <small>CSV</small></button><button class="btn" type="button" data-csv="welfare">복지할인 구간 <small>CSV</small></button></div>
           </div>
           <div class="sec-b">
             <div id="findings"></div>
@@ -488,6 +488,26 @@ footer{background:#061a3d;color:#b9c6dc}
             <div class="tbl-scroll" id="ctSize" style="margin-top:10px"></div>
             <div class="tbl-scroll" id="ctHq" style="margin-top:10px"></div>
             <p class="mini-note" id="ctNote"></p>
+            <h3 class="sub-h" style="margin-top:22px">시도별 판매실적과 전력자급률 (<span id="rgRange"></span>)</h3>
+            <div class="grid-in wide" style="margin:6px 0 10px">
+              <div class="field"><label for="rgYear">연도</label><select id="rgYear"></select></div>
+              <div class="field"><label for="rgBig">용도</label><select id="rgBig"><option value="">전체</option><option>산업용</option><option>주택용</option><option>일반용</option><option>교육용</option><option>농사용</option></select></div>
+            </div>
+            <div class="lg" id="rgLegend"></div>
+            <div class="chart" id="rgChart"></div>
+            <div class="tbl-scroll" id="rgTable"></div>
+            <p class="mini-note" id="rgNote"></p>
+            <h3 class="sub-h" style="margin-top:22px">산업용 지역별 요금제 시나리오 (지역별 조정요금, 원/kWh 인하)</h3>
+            <div class="grid-in wide" style="margin:6px 0 10px">
+              <div class="field"><label for="rsS">수도권 남부</label><input id="rsS" type="number" step="0.5" min="0" value="1"><span class="hint">설계안 0~1원</span></div>
+              <div class="field"><label for="rsN">수도권 북부</label><input id="rsN" type="number" step="0.5" min="0" value="10"><span class="hint">최대 10원</span></div>
+              <div class="field"><label for="rsC">중부권</label><input id="rsC" type="number" step="0.5" min="0" value="15"><span class="hint">최대 15원</span></div>
+              <div class="field"><label for="rsP">남부권</label><input id="rsP" type="number" step="0.5" min="0" value="18"><span class="hint">최대 18원 · 제주 제외</span></div>
+            </div>
+            <div class="kpis" id="rsKpis"></div>
+            <div class="tbl-scroll" id="rsTable"></div>
+            <div class="tbl-scroll" id="rsTop" style="margin-top:10px"></div>
+            <p class="mini-note" id="rsNote"></p>
             <h3 class="sub-h" style="margin-top:22px">월별 판매단가 vs 전력구입 정산단가 (전력통계월보, 2016.1~)</h3>
             <div class="lg" id="monLegend"></div>
             <div class="chart" id="monChart"></div>
@@ -598,7 +618,7 @@ footer{background:#061a3d;color:#b9c6dc}
 
 <script>
 "use strict";
-const VER = "b5161bcfd6";
+const VER = "07f729df6b";
 const D = {};
 const $ = s => document.querySelector(s);
 const SEASONS = ["여름", "봄·가을", "겨울"], DTYPES = ["평일", "토요일", "일요일·공휴일"];
@@ -990,7 +1010,7 @@ function renderDiag() {
   CSV.diag = rows;
   $("#diagDesc").textContent = `${$("#dLoad").value}년 시간별 부하를 고정하고 요금표만 바꿔 계약종별 평균단가를 비교합니다. 주택용은 누진 구조라 호당 사용량 분포가 필요해 시뮬레이터에서 다룹니다.`;
   const under = renderMonthly();
-  const discF = [].concat(renderDiscount(), renderContract());
+  const discF = [].concat(renderDiscount(), renderContract(), renderRegion());
   renderFindings(out, yi, under, discF);
   // 원가 회수 추이
   const R = D.ref, map = { res: "주택용", gen: "일반용", edu: "교육용", ind: "산업용", agr: "농사용", str: "가로등", night: "심야" };
@@ -1237,6 +1257,7 @@ function renderSim() {
   const bmap = Object.fromEntries(base.map(r => [r.t, r]));
   const agg = rs => { const o = {}; for (const r of rs) { if (r.total == null) continue; const g = o[r.big] = o[r.big] || { sales: 0, rev: 0, cost: 0, pk: 0, es: 0, disc: 0, cp: 0, ct: 0, cd: 0, cr: 0 }; g.disc += r.discount || 0; g.cp += r.costPur || 0; g.ct += r.costTx || 0; g.cd += r.costDx || 0; g.cr += r.costRt || 0; g.sales += r.salesKWh; g.rev += r.total; g.cost += r.cost; g.pk += r.peakShare; g.es += r.energyShare; } return o; };
   const A = agg(scn), B = agg(base);
+  S.lastSim = { year: P.refYear, B }; if (D.region) renderRegionScn();
   const totS = Object.values(A).reduce((a, g) => ({ rev: a.rev + g.rev, cost: a.cost + g.cost, sales: a.sales + g.sales }), { rev: 0, cost: 0, sales: 0 });
   const totB = Object.values(B).reduce((a, g) => ({ rev: a.rev + g.rev, cost: a.cost + g.cost, sales: a.sales + g.sales }), { rev: 0, cost: 0, sales: 0 });
   const R = D.ref, ri = R.years.indexOf(+P.refYear), actual = R.rev.total[ri] * 1e3;
@@ -1485,6 +1506,63 @@ function renderContract() {
   return F;
 }
 
+const RG_SRC = [["nuclear", "원자력"], ["coal", "석탄"], ["lng", "LNG"], ["renew", "신재생"], ["pumped", "양수"], ["oil", "유류"], ["other", "기타"]];
+function renderRegion() {
+  const G = D.region; if (!G) return [];
+  const ys = $("#rgYear");
+  if (!ys.options.length) { ys.innerHTML = G.years.map(y => `<option>${y}</option>`).join(""); ys.value = G.years.at(-1); }
+  const yr = ys.value, y = G.years.indexOf(yr), bg = $("#rgBig").value, gy = G.gen[yr];
+  $("#rgRange").textContent = `${G.years[0]}~${G.years.at(-1)}, 발전량 ${G.gen_years[0]}~`;
+  const val = (s, b, v) => b ? G.sido_data[s][b][v][y] : sum(G.bigs.map(bb => G.sido_data[s][bb][v][y]));
+  const tot = sum(G.sido.map(s => val(s, bg, "kwh")));
+  const rows = G.sido.map(s => { const kwh = val(s, bg, "kwh"), all = val(s, "", "kwh"), g = gy ? sum(Object.values(gy[s].gen_MWh)) * 1e3 : null;
+    const top = gy ? RG_SRC.map(([k, n]) => [n, gy[s].gen_MWh[k] || 0]).sort((a, b) => b[1] - a[1])[0] : null;
+    return { s, kwh, rev: val(s, bg, "rev"), cust: val(s, bg, "cust") / 12, ind: G.sido_data[s]["산업용"].kwh[y] / all, gen: g, self: g != null ? g / all * 100 : null, top: top && g ? `${top[0]} ${fmt(top[1] * 1e3 / g * 100, 0)}%` : "-" }; });
+  const natSelf = gy ? sum(rows.map(r => r.gen)) / sum(rows.map(r => val(r.s, "", "kwh"))) * 100 : null;
+  const order = [...rows].sort((a, b) => (b.self ?? b.kwh) - (a.self ?? a.kwh));
+  const ser = gy ? [{ name: `전력자급률(%) — 발전량 ÷ 판매량, 전국 ${fmt(natSelf, 0)}%`, color: "#003b8e", values: order.map(r => r.self) }] : [{ name: "판매량(TWh)", color: "#003b8e", values: order.map(r => r.kwh / 1e9) }];
+  legend($("#rgLegend"), ser); barChart($("#rgChart"), order.map(r => r.s), ser, { yTitle: gy ? "%" : "TWh" });
+  let h = `<table class="tbl"><thead><tr><th>시도</th><th>${bg || "전체"} 판매량(TWh)</th><th>비중</th><th>판매단가(원/kWh)</th><th>고객 수(월평균)</th><th>산업용 비중(전체 판매량 중)</th><th>발전량(TWh)</th><th>전력자급률</th><th>주 발전원</th></tr></thead><tbody>`;
+  for (const r of order) h += `<tr><td>${r.s}</td><td>${fmt(r.kwh / 1e9, 1)}</td><td>${fmt(r.kwh / tot * 100, 1)}%</td><td>${r.kwh ? fmt(r.rev / r.kwh, 1) : "-"}</td><td>${fmt(r.cust, 0)}</td><td>${fmt(r.ind * 100, 0)}%</td><td>${r.gen != null ? fmt(r.gen / 1e9, 1) : "-"}</td><td>${r.self != null ? `<b>${fmt(r.self, 0)}%</b>` : "-"}</td><td>${r.top}</td></tr>`;
+  const T = { kwh: tot, rev: sum(rows.map(r => r.rev)), cust: sum(rows.map(r => r.cust)) };
+  h += `<tr class="tot"><td>전국</td><td>${fmt(T.kwh / 1e9, 1)}</td><td>100%</td><td>${fmt(T.rev / T.kwh, 1)}</td><td>${fmt(T.cust, 0)}</td><td>${fmt(sum(G.sido.map(s => G.sido_data[s]["산업용"].kwh[y])) / sum(G.sido.map(s => val(s, "", "kwh"))) * 100, 0)}%</td><td>${gy ? fmt(sum(rows.map(r => r.gen)) / 1e9, 1) : "-"}</td><td>${natSelf != null ? fmt(natSelf, 0) + "%" : "-"}</td><td></td></tr>`;
+  $("#rgTable").innerHTML = h + "</tbody></table>";
+  $("#rgNote").innerHTML = `${G.note} 발전량은 한국전력통계 8-2(${G.gen_years[0]}년부터 수록; 2016·2017년판에는 이 표가 없음). 전국 자급률이 100%를 넘는 것은 발전단 발전량에 소내소비·송배전 손실이 포함되기 때문입니다. 2023년 값은 에너지경제연구원 지역에너지통계연보(서울 10.4%, 충남 213.6%, 경북 215.6%, 대전 3.1%)와 일치합니다.`;
+  CSV.region = [["연도", "시도", "용도", "판매량kWh", "판매수입원", "고객수월평균", "발전량MWh"], ...G.years.flatMap((yy, j) => G.sido.flatMap(s => G.bigs.map(b => [yy, s, b, G.sido_data[s][b].kwh[j], G.sido_data[s][b].rev[j], Math.round(G.sido_data[s][b].cust[j] / 12), b === "산업용" && G.gen[yy] ? sum(Object.values(G.gen[yy][s].gen_MWh)) : ""])))];
+  renderRegionScn();
+  // 발견(최신 연도)
+  const yl = G.years.at(-1), jl = G.years.length - 1, gl = G.gen[yl]; if (!gl) return [];
+  const sf = s => sum(Object.values(gl[s].gen_MWh)) * 1e3 / sum(G.bigs.map(b => G.sido_data[s][b].kwh[jl])) * 100;
+  const sr = [...G.sido].sort((a, b) => sf(b) - sf(a)), up = s => G.sido_data[s]["산업용"].rev[jl] / G.sido_data[s]["산업용"].kwh[jl];
+  const ups = G.sido.filter(s => s !== "제주").map(up);
+  return [`<b>전력자급률은 ${fmt(sf(sr.at(-1)), 0)}%~${fmt(sf(sr[0]), 0)}%로 갈리지만 산업용 단가는 거의 같다</b> — ${yl}년 ${sr.slice(0, 3).map(s => `${s} ${fmt(sf(s), 0)}%`).join(", ")}는 쓰는 전력의 두 배 이상을 만들고, ${sr.slice(-3).reverse().map(s => `${s} ${fmt(sf(s), 0)}%`).join(", ")}는 대부분을 다른 지역에서 받아 씁니다. 그런데 산업용 판매단가는 제주를 빼면 ${fmt(Math.min(...ups), 1)}~${fmt(Math.max(...ups), 1)}원/kWh로 차이가 거의 없습니다(차이는 계약종·부하율 구성 탓). 송전 비용과 입지 신호가 요금에 전혀 반영되지 않는 전국 단일요금의 모습으로, 지역별 조정요금이 처음으로 이 차이를 만들게 됩니다.`];
+}
+function renderRegionScn() {
+  const G = D.region; if (!G) return;
+  const yr = $("#rgYear").value, y = G.years.indexOf(yr);
+  const disc = { 수도권남부: +$("#rsS").value || 0, 수도권북부: +$("#rsN").value || 0, 중부권: +$("#rsC").value || 0, 남부권: +$("#rsP").value || 0, 제주: 0 };
+  const R = {}; for (const r of G.regions) R[r] = { kwh: 0, rev: 0, cust: 0, n: 0 };
+  const items = [];
+  for (const g of G.sgg) { const d = g["산업용"]; if (!d) continue; const kwh = d.kwh[y], rev = d.rev[y]; if (!kwh) continue;
+    const a = R[g.region]; a.kwh += kwh; a.rev += rev; a.cust += d.cust[y] / 12; a.n++; items.push({ ...g, kwh, rev, loss: kwh * disc[g.region] }); }
+  for (const [k, a] of Object.entries(R)) { a.loss = a.kwh * disc[k]; }
+  const T = Object.values(R).reduce((o, a) => ({ kwh: o.kwh + a.kwh, rev: o.rev + a.rev, loss: o.loss + a.loss, cust: o.cust + a.cust }), { kwh: 0, rev: 0, loss: 0, cust: 0 });
+  const allRev = sum(G.sido.map(s => sum(G.bigs.map(b => G.sido_data[s][b].rev[y]))));
+  const k = (lab, v, sub, lead) => `<div class="kpi${lead ? " lead" : ""}"><div class="k">${lab}</div><div class="v">${v}</div><div class="n">${sub}</div></div>`;
+  const L = S.lastSim && String(S.lastSim.year) === yr && S.lastSim.B["산업용"] ? S.lastSim.B["산업용"] : null;
+  $("#rsKpis").innerHTML = k("한전 판매수입 감소", fmt(T.loss / 1e12, 2) + " <small>조원</small>", `${yr}년 산업용 판매량 기준 · 정부 추산 약 2.8조원`, true) +
+    k("산업용 평균 인하", fmt(T.loss / T.kwh, 1) + " <small>원/kWh</small>", `산업용 수입의 ${fmt(T.loss / T.rev * 100, 1)}% · 전체 판매수입의 ${fmt(T.loss / allRev * 100, 1)}%`) +
+    k("산업용 원가 회수율", L ? `${fmt(L.rev / L.cost * 100, 1)} → ${fmt((L.rev - T.loss) / L.cost * 100, 1)}<small>%</small>` : "-", L ? `06 시뮬레이터 비교 요금표·${yr}년 기준` : `06 시뮬레이터 기준 연도를 ${yr}년으로 두면 표시`);
+  let h = `<table class="tbl"><thead><tr><th>권역</th><th>시군구</th><th>산업용 판매량(TWh)</th><th>고객 수</th><th>현재 단가</th><th>인하(원/kWh)</th><th>인하 후 단가</th><th>인하율</th><th>수입 감소(억원)</th></tr></thead><tbody>`;
+  for (const [r, a] of Object.entries(R)) { if (!a.kwh) continue; const up = a.rev / a.kwh;
+    h += `<tr><td>${r}</td><td>${a.n}</td><td>${fmt(a.kwh / 1e9, 1)}</td><td>${fmt(a.cust, 0)}</td><td>${fmt(up, 1)}</td><td>${fmt(disc[r], 1)}</td><td>${fmt(up - disc[r], 1)}</td><td>${fmt(disc[r] / up * 100, 1)}%</td><td>${fmt(a.loss / 1e8, 0)}</td></tr>`; }
+  h += `<tr class="tot"><td>전국</td><td>${sum(Object.values(R).map(a => a.n))}</td><td>${fmt(T.kwh / 1e9, 1)}</td><td>${fmt(T.cust, 0)}</td><td>${fmt(T.rev / T.kwh, 1)}</td><td>${fmt(T.loss / T.kwh, 1)}</td><td>${fmt((T.rev - T.loss) / T.kwh, 1)}</td><td>${fmt(T.loss / T.rev * 100, 1)}%</td><td>${fmt(T.loss / 1e8, 0)}</td></tr>`;
+  $("#rsTable").innerHTML = h + "</tbody></table>";
+  const top = items.sort((a, b) => b.kwh - a.kwh).slice(0, 12);
+  $("#rsTop").innerHTML = `<table class="tbl"><thead><tr><th>산업용 판매량 상위 시군구</th><th>권역</th><th>판매량(TWh)</th><th>인하(원/kWh)</th><th>수입 감소(억원)</th></tr></thead><tbody>${top.map(g => `<tr><td>${g.s} ${g.g}</td><td>${g.region}</td><td>${fmt(g.kwh / 1e9, 1)}</td><td>${fmt(disc[g.region], 1)}</td><td>${fmt(g.loss / 1e8, 0)}</td></tr>`).join("")}</tbody></table>`;
+  $("#rsNote").innerHTML = `권역은 설계안(2026.8)의 4개 광역 근사: 수도권 남부 = 서울 한강 이남 11구·경기 남부, 수도권 북부 = 서울 한강 이북 14구·경기 북부 10개 시군(고양·남양주·파주·의정부·양주·구리·포천·동두천·가평·연천)·인천, 중부권 = 강원·충청·대전·세종, 남부권 = 경상·전라·부산·대구·울산·광주, 제주 제외. 경계의 김포·양평은 남부로 가정. 설계안은 균형성장 지표(지방우대지수·산업위기지역)로 11개 지역으로 나누어 같은 권역 안에서도 인하폭이 다르므로, 권역별 최대 인하폭을 넣은 기본값은 상한입니다. 수요 이동(입지 변화)과 도매가격 차등은 반영하지 않았습니다.`;
+}
+
 function renderDiscount() {
   const X = D.disc, M = D.mon;
   const resRev = y => sum(Object.entries(M.rev.res).filter(([k]) => k.startsWith(String(y))).map(([, v]) => v)) / 100;   // 백만원 → 억원
@@ -1575,7 +1653,7 @@ function renderData() {
 // ── 초기화 ──────────────────────────────────────────────────────────────────
 function opts(el, arr, val) { el.innerHTML = arr.map(a => Array.isArray(a) ? `<option value="${a[0]}">${a[1]}</option>` : `<option>${a}</option>`).join(""); if (val != null) el.value = val; }
 async function boot() {
-  [D.meta, D.tar, D.ana, D.cube_tariff, D.daily, D.ref, D.audit, D.cost, D.fuel, D.mon, D.zone, D.disc, D.net, D.wbin, D.rbin, D.ctr] = await Promise.all(["meta", "tariffs", "analysis", "cube_tariff", "daily_tariff", "kepco_ref", "audit", "cost", "fuel", "monthly", "region_map", "discount", "network", "welfare_bins", "res_bins", "contract"].map(j));
+  [D.meta, D.tar, D.ana, D.cube_tariff, D.daily, D.ref, D.audit, D.cost, D.fuel, D.mon, D.zone, D.disc, D.net, D.wbin, D.rbin, D.ctr, D.region] = await Promise.all(["meta", "tariffs", "analysis", "cube_tariff", "daily_tariff", "kepco_ref", "audit", "cost", "fuel", "monthly", "region_map", "discount", "network", "welfare_bins", "res_bins", "contract", "region"].map(j));
   D.cube_tariff_full = D.cube_tariff;
   const Y = D.meta.years;
   opts($("#year"), Y, S.year); opts($("#base"), Y, S.base); opts($("#dLoad"), Y, Y.at(-1)); opts($("#simLoad"), Y, Y.at(-1));
@@ -1601,6 +1679,9 @@ async function boot() {
   on("#rbSeason", "change", () => renderResBins());
   on("#rbYearSel", "change", () => renderResBins());
   on("#ctYear", "change", () => renderContract());
+  on("#rgYear", "change", () => renderRegion());
+  on("#rgBig", "change", () => renderRegion());
+  for (const id of ["#rsS", "#rsN", "#rsC", "#rsP"]) on(id, "input", () => renderRegionScn());
   on("#ctTariff", "change", () => renderContract());
   for (const k of ["year", "base", "season", "dtype"]) on("#" + k, "change", e => { S[k] = e.target.value; renderAll(); });
   on('input[name="scheme"]', "change", e => { S.scheme = e.target.value; renderAll(); });

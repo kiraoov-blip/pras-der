@@ -34,6 +34,7 @@
 | `scripts/build_network.py` | 송배전 이용요금 총괄원가(송전·배전, 적정원가·적정투자보수, 배전 저압·고압 단가) → `network.json` |
 | `scripts/build_discount.py` | 복지할인 실적(2021~2025 항목별 금액, 2025.12 호수) → `discount.json` |
 | `scripts/build_contract.py` | 계약종별 판매실적(2022~2025 월별, 본부 × 계약전력구간 × 계약종) → `contract.json` (월보 대조) |
+| `scripts/build_region.py` | 시도·시군구별 판매실적(2016~2025 연간) + 한국전력통계 8-2 시도별 발전설비·발전량(2018~) → `region.json` |
 | `scripts/build_resbins.py` | 주택용 전체 가구 사용량 구간별 분포(2025 월별, 저/고압 × 일반·단일·종합) → `res_bins.json` (요금표 검증·하계 비중 포함) |
 | `scripts/build_welfare_bins.py` | 복지할인 가구 사용량 구간별 분포(2025 월별, 저/고압 × 일반·단일·종합) → `welfare_bins.json` |
 | `scripts/build_fuel.py` | 연료비조정단가 산정내역(분기 PDF 텍스트) → `fuel.json` (필요·규칙·적용 단가, 원 게시값) |
@@ -61,6 +62,7 @@ python3 scripts/build_monthly.py <월보_폴더(연도별 하위폴더)> build  
 python3 scripts/build_regionmap.py build
 python3 scripts/build_discount.py build
 python3 scripts/build_contract.py <계약종별_판매실적_xlsx_폴더> build   # monthly.json·meta.json 다음
+python3 scripts/build_region.py <시도_xlsx> <시군구_xlsx> <한국전력통계_폴더> build   # monthly.json 다음
 python3 scripts/build_resbins.py <2024폴더>,<2025폴더> build <복지할인_구간분포_폴더>   # tariffs.json 다음
 python3 scripts/build_welfare_bins.py <2023폴더>,<2024폴더>,<2025폴더> build
 python3 scripts/build_network.py build
@@ -129,6 +131,16 @@ python3 scripts/build_page.py ../ember-sim/index.html
   실적 보정은 계약종 단위(대분류 할인은 추정 비례 배분). 요금표 미산정 계약종(가로등(갑)·임시전력 일부)은 실적 수입 그대로.
 - 2025 회수율(영업비용 기준): 일반용 105.9%(갑 저압 103%, 을 고압A 109%), 산업용(을)고압A 123%·B·C 130%, 교육용 86%, 농사용 54%.
 - 2022 보정계수가 0.84~0.93으로 낮은 것은 연말 시행 요금표를 연중 전체에 적용하기 때문(2022.4·10 인상 전 요금이 실적에 섞임).
+
+## 지역 (시도·시군구, 전력자급률, 지역별 요금제)
+
+- 시도 × 계약종 연간 2016~2025: 판매량 단위 MWh(머리말 kWh는 오기), 고객호수·요금적용전력은 12개월 합계. 월보 연합계와 일치(최대 0.01%).
+- 시군구 × 계약종(판매량 kWh): 시군구 합계 = 시도(판매수입 기준 2개 조합 외 완전 일치). 황해북도(개성공단)·기타(매칭에러) 제외, 군위군 2023 대구 편입.
+- 판매수입 = 기본 + 개편전 전력량 + 환경비용차감 + 기후환경 + 연료비조정 (전 행).
+- 발전량: 한국전력통계 8-2(제88호 2018 ~ 제95호 2025, 2016·2017년판엔 표 없음). 전력자급률 = 발전량 ÷ 판매량, 2023년 값은
+  에너지경제연구원 지역에너지통계연보와 일치(서울 10.4, 충남 213.6, 경북 215.6, 대전 3.1%). 2025: 경북 252%·전남 215%·충남 209% vs 대전 3%·서울 7%.
+- 산업용 지역별 요금제 시나리오: 설계안(2026.8) 4개 광역 근사(서울 한강 이북 14구·경기 북부 10개 시군·인천 = 수도권 북부, 김포·양평은 남부 가정),
+  권역별 인하폭(원/kWh) × 시군구 산업용 판매량. 최대 인하폭(1/10/15/18원) 기준 2025년 3.49조원(정부 추산 2.8조원은 11개 지역 차등 반영).
 
 ## 주택용 사용량 구간 분포
 
