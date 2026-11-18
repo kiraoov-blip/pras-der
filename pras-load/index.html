@@ -599,6 +599,9 @@ footer{background:#061a3d;color:#b9c6dc}
               <div class="field"><span class="hint" style="margin-top:22px">배전비는 배전이용요금 단가(저압·고압 기본 원/kW·전력량 원/kWh)로 배분하고, 154kV 이상(고압B·C)은 배전망 미이용으로 제외합니다.</span></div>
             </div>
             <h3 class="sub-h">대분류별 조정</h3>
+            <div class="grid-in wide" style="margin:6px 0 10px">
+              <div class="field"><label for="simPreset">개선안 불러오기</label><select id="simPreset"><option value="">직접 입력</option><option value="S1">안 1 · 산업용 부담 완화 (수입 중립)</option><option value="S2">안 2 · 정책 외 계약종 회수율 균등화 (수입 중립)</option><option value="S3">안 3 · 지역별 요금제만 시행 (산업용 −2.8조)</option><option value="0">초기화 (조정 없음)</option></select><span class="hint" id="simPresetHint">2025년 판매량·원가, 2026.4.16 요금표 기준으로 계산한 조정값</span></div>
+            </div>
             <div class="adj-grid" id="adjGrid"></div>
             <div class="kpis" id="simKpis" style="margin-top:16px"></div>
             <div class="lg" id="simLegend"></div>
@@ -608,6 +611,9 @@ footer{background:#061a3d;color:#b9c6dc}
             <div class="grid-in wide" style="margin:6px 0 10px">
               <div class="field"><span class="lab">목표 기준</span>
                 <div class="seg" role="radiogroup" aria-label="형평성 목표 기준"><label><input type="radio" name="eqMode" value="policy" checked><span>정책 보조 분리 + 허용 범위 · 기본</span></label><label><input type="radio" name="eqMode" value="band"><span>허용 범위만</span></label><label><input type="radio" name="eqMode" value="full"><span>전 계약종 100%</span></label></div></div>
+              <div class="field"><span class="lab">회수율 기준</span>
+                <div class="seg" role="radiogroup" aria-label="회수율 기준"><label><input type="radio" name="eqRel" value="abs" checked><span>원가 대비 · 기본</span></label><label><input type="radio" name="eqRel" value="rel"><span>전체 평균 대비</span></label></div>
+                <span class="hint" id="eqRelHint">전체 평균 대비 = 계약종 회수율 ÷ 한전 전체 회수율. 한전 전체가 원가를 넘게 걷을 때 누가 평균보다 더·덜 내는지</span></div>
               <div class="field"><label for="eqLo">허용 범위 하한 (%)</label><input id="eqLo" type="number" step="1" value="90"></div>
               <div class="field"><label for="eqHi">허용 범위 상한 (%)</label><input id="eqHi" type="number" step="1" value="110"></div>
               <div class="field"><span class="lab">보기</span>
@@ -1588,13 +1594,20 @@ function renderRegionScn() {
 
 // 형평성 진단: 시나리오 결과(S.lastSim.scn)를 목표 기준과 비교
 const EQ_POLICY = ["농사용", "심야"];
+// 개선안 프리셋(대분류별 전력량요금 ±원/kWh): 2025 판매량·원가, 시나리오·비교 요금표 2026.4.16, 원가 설정 기본값으로 계산
+const SIM_PRESETS = {"S1": {"산업용": -12.6, "주택용": 14.9, "일반용": 14.9, "교육용": 14.9}, "S2": {"주택용": 29.7, "일반용": 11.4, "교육용": 37.1, "산업용": -16.4, "가로등": 18.8, "임시": -17.3}, "S3": {"산업용": -10}};
+const SIM_PRESET_NOTE = { S1: "산업용 회수율을 전체 평균의 105%까지 낮추고, 줄어든 수입을 주택·일반·교육용이 kWh당 같은 금액으로 나눠 부담", S2: "농사용·심야(정책 요금)를 뺀 모든 계약종의 회수율을 같은 값(약 113%)으로 맞춤", S3: "산업용 지역별 조정요금(정부 추산 2.8조원)을 kWh당 평균 인하로 반영, 다른 용도 보전 없음" };
 function renderEquity() {
   const L = S.lastSim; if (!L) return;
   const mode = document.querySelector('input[name="eqMode"]:checked').value, view = document.querySelector('input[name="eqView"]:checked').value;
   const lo = (+$("#eqLo").value || 90) / 100, hi = Math.max(lo, (+$("#eqHi").value || 110) / 100);
+  const rel = document.querySelector('input[name="eqRel"]:checked').value === "rel";
   const units = {};
   for (const r of L.scn) { if (r.total == null || !r.cost) continue; const k = view === "big" ? r.big : r.t; const u = units[k] = units[k] || { k, big: r.big, rev: 0, cost: 0, disc: 0, kwh: 0 }; u.rev += r.total; u.cost += r.cost; u.disc += r.discount || 0; u.kwh += r.salesKWh; }
-  const tgt = u => mode === "full" ? [1, 1] : mode === "policy" && EQ_POLICY.includes(u.big) ? null : [lo, hi];
+  let TR = 0, TC = 0; for (const r of L.scn) if (r.total != null && r.cost) { TR += r.total; TC += r.cost; }
+  const avg = rel ? TR / TC : 1;   // 상대 기준이면 목표 회수율에 전체 평균을 곱함
+  const tgt0 = u => mode === "full" ? [1, 1] : mode === "policy" && EQ_POLICY.includes(u.big) ? null : [lo, hi];
+  const tgt = u => { const t = tgt0(u); return t && [t[0] * avg, t[1] * avg]; };
   let over = 0, under = 0, policy = 0, h = `<table class="tbl"><thead><tr><th>${view === "big" ? "대분류" : "계약종"}</th><th>판매수입(억원)</th><th>원가(억원)</th><th>회수율</th><th>목표</th><th>판정</th><th>목표까지 조정(억원)</th><th>kWh당 조정(원)</th></tr></thead><tbody>`;
   const list = Object.values(units).sort((a, b) => a.rev / a.cost - b.rev / b.cost);
   for (const u of list) {
@@ -1603,7 +1616,7 @@ function renderEquity() {
     else if (rr < t[0]) { adj = u.cost * t[0] - u.rev; under += adj; lab = `<span class="flag">원가 미달</span>`; }
     else if (rr > t[1]) { adj = u.cost * t[1] - u.rev; over -= adj; lab = `<span class="flag ok">원가 초과</span>`; }
     else lab = "범위 안";
-    h += `<tr><td>${u.k}</td><td>${fmt(u.rev / 1e8, 0)}</td><td>${fmt(u.cost / 1e8, 0)}</td><td><b>${fmt(rr * 100, 1)}%</b></td><td>${t ? (t[0] === t[1] ? fmt(t[0] * 100, 0) + "%" : `${fmt(t[0] * 100, 0)}~${fmt(t[1] * 100, 0)}%`) : "별도"}</td><td>${lab}</td><td class="${adj > 0 ? "neg" : adj < 0 ? "pos" : ""}">${adj ? (adj > 0 ? "+" : "−") + fmt(Math.abs(adj) / 1e8, 0) : (t ? "" : `(보조 ${fmt((u.cost - u.rev) / 1e8, 0)})`)}</td><td>${adj ? (adj > 0 ? "+" : "−") + fmt(Math.abs(adj) / u.kwh, 1) : ""}</td></tr>`;
+    h += `<tr><td>${u.k}</td><td>${fmt(u.rev / 1e8, 0)}</td><td>${fmt(u.cost / 1e8, 0)}</td><td><b>${fmt(rr * 100, 1)}%</b></td><td>${t ? (t[0] === t[1] ? fmt(t[0] * 100, 1) + "%" : `${fmt(t[0] * 100, rel ? 1 : 0)}~${fmt(t[1] * 100, rel ? 1 : 0)}%`) : "별도"}${rel ? `<br><small>평균 대비 ${fmt(rr / avg * 100, 0)}</small>` : ""}</td><td>${lab}</td><td class="${adj > 0 ? "neg" : adj < 0 ? "pos" : ""}">${adj ? (adj > 0 ? "+" : "−") + fmt(Math.abs(adj) / 1e8, 0) : (t ? "" : `(보조 ${fmt((u.cost - u.rev) / 1e8, 0)})`)}</td><td>${adj ? (adj > 0 ? "+" : "−") + fmt(Math.abs(adj) / u.kwh, 1) : ""}</td></tr>`;
   }
   const welfare = sum(L.scn.map(r => r.discount || 0));
   $("#eqTable").innerHTML = h + "</tbody></table>";
@@ -1613,7 +1626,7 @@ function renderEquity() {
     k("원가 미달액", jo(under) + " <small>조원</small>", `목표 하한까지 올리는 데 필요한 금액`) +
     (mode === "policy" ? k("정책 보조", jo(policy + welfare) + " <small>조원</small>", `${EQ_POLICY.join("·")} 원가 미달 ${jo(policy)}조 + 복지할인 ${jo(welfare)}조`) : k("복지할인", jo(welfare) + " <small>조원</small>", "수입에서 차감된 금액(회수율에 포함)")) +
     k("조정 후 수입 변화", (over - under >= 0 ? "−" : "+") + jo(Math.abs(over - under)) + " <small>조원</small>", over >= under ? "초과분을 돌려주고 미달분을 올리면 한전 수입 감소" : "미달분 인상이 초과분 인하보다 큼");
-  $("#eqNote").innerHTML = `${L.P.refYear}년 기준 연도·시나리오 요금표 결과. 원가는 위 원가 배분 설정(피크 ${L.P.N.endsWith("m") ? "시장수요" : "총수요"} 상위 ${parseInt(L.P.N)}시간, 판매·기타 ${L.P.retail === "kwh" ? "kWh" : L.P.retail === "cust_lamp" ? "고객 수(가로등은 kWh)" : "고객 수"})을 따릅니다. ` +
+  $("#eqNote").innerHTML = `${L.P.refYear}년 기준 연도·시나리오 요금표 결과. 한전 전체 회수율 ${fmt(TR / TC * 100, 1)}%${rel ? " — 목표 범위에 이 평균을 곱해 판정(전체 평균 대비 기준)" : TR / TC > 1.02 ? " — 한전 전체가 원가(영업비용)보다 많이 걷는 해에는 '전체 평균 대비' 기준이 계약종 간 형평을 더 잘 보여 줍니다" : ""}. 원가는 위 원가 배분 설정(피크 ${L.P.N.endsWith("m") ? "시장수요" : "총수요"} 상위 ${parseInt(L.P.N)}시간, 판매·기타 ${L.P.retail === "kwh" ? "kWh" : L.P.retail === "cust_lamp" ? "고객 수(가로등은 kWh)" : "고객 수"})을 따릅니다. ` +
     (mode === "policy" ? `<b>정책 보조 분리</b>: 농사용·심야전력은 정책 목적의 요금이라 형평성 판정에서 빼고 원가 미달액을 '정책 보조'로 따로 표시합니다. 복지할인(주택용 할인·요금인상 유예 포함)도 정책 보조로 합산합니다. 나머지 계약종은 회수율 ${fmt(lo * 100, 0)}~${fmt(hi * 100, 0)}%를 목표로 봅니다.` : mode === "band" ? `<b>허용 범위만</b>: 모든 계약종을 회수율 ${fmt(lo * 100, 0)}~${fmt(hi * 100, 0)}%로 판정합니다.` : `<b>전 계약종 100%</b>: 교차보조를 모두 없애는 기준입니다.`) +
     ` '목표까지 조정'은 범위 경계까지 올리거나(+) 내리는(−) 데 필요한 수입이며, 수요 반응은 반영하지 않았습니다.`;
 }
@@ -1760,6 +1773,12 @@ async function boot() {
   on('input[name="eqMode"]', "change", () => renderEquity());
   on('input[name="fuelBench"]', "change", () => renderFuel());
   on('input[name="eqView"]', "change", () => renderEquity());
+  on('input[name="eqRel"]', "change", () => renderEquity());
+  on("#simPreset", "change", e => { const k = e.target.value; if (!k) return; const pr = k === "0" ? {} : SIM_PRESETS[k];
+    if (k !== "0") { $("#simVer").value = "2026-04-16"; $("#simBase").value = "2026-04-16"; $("#simRef").value = "2025"; $("#simRef").dispatchEvent(new Event("change")); }
+    document.querySelectorAll("[data-adj]").forEach(i => { const [b, kk] = i.dataset.adj.split("|"); i.value = kk === "add" && pr[b] ? pr[b] : 0; });
+    $("#simPresetHint").textContent = k === "0" ? "조정값을 모두 0으로 되돌렸습니다" : `${SIM_PRESET_NOTE[k]} · ${Object.entries(pr).map(([b, v]) => `${b} ${v > 0 ? "+" : ""}${v}원`).join(", ")}`;
+    renderSim(); });
   on("#eqLo", "input", () => renderEquity()); on("#eqHi", "input", () => renderEquity());
   on("#rgYear", "change", () => renderRegion());
   on("#rgBig", "change", () => renderRegion());
