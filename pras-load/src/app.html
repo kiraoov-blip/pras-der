@@ -183,7 +183,7 @@ footer{background:#061a3d;color:#b9c6dc}
         <section class="sec" id="s-diag">
           <div class="sec-h">
             <div><p class="eyebrow">04 · Tariff Diagnosis</p><h2>요금체계 진단</h2><p class="desc" id="diagDesc"></p></div>
-            <div class="tools"><button class="btn" type="button" data-csv="diag">단가 <small>CSV</small></button><button class="btn" type="button" data-csv="monthly">월별 <small>CSV</small></button><button class="btn" type="button" data-csv="region">시도별 <small>CSV</small></button><button class="btn" type="button" data-csv="contract">계약종 실적 <small>CSV</small></button><button class="btn" type="button" data-csv="resbins">주택용 구간 <small>CSV</small></button><button class="btn" type="button" data-csv="welfare">복지할인 구간 <small>CSV</small></button></div>
+            <div class="tools"><button class="btn" type="button" data-csv="diag">단가 <small>CSV</small></button><button class="btn" type="button" data-csv="monthly">월별 <small>CSV</small></button><button class="btn" type="button" data-csv="fin">재무 <small>CSV</small></button><button class="btn" type="button" data-csv="region">시도별 <small>CSV</small></button><button class="btn" type="button" data-csv="contract">계약종 실적 <small>CSV</small></button><button class="btn" type="button" data-csv="resbins">주택용 구간 <small>CSV</small></button><button class="btn" type="button" data-csv="welfare">복지할인 구간 <small>CSV</small></button></div>
           </div>
           <div class="sec-b">
             <div id="findings"></div>
@@ -295,6 +295,14 @@ footer{background:#061a3d;color:#b9c6dc}
             <h3 class="sub-h" style="margin-top:18px">용도별 영향 — <span id="fuelBenchLab"></span> 대비 실제 적용의 차이 (억원, +는 고객이 덜 낸 금액 = 한전 미회수, −는 더 낸 금액)</h3>
             <div class="tbl-scroll" id="fuelBig"></div>
             <div class="tbl-scroll" id="fuelTable" style="margin-top:10px"></div>
+            <h3 class="sub-h" style="margin-top:26px">한전 재무 상태 — 별도 재무상태표 (<span id="finRange"></span>)</h3>
+            <div id="finFindings"></div>
+            <div class="two-col">
+              <div><div class="lg" id="finLegend"></div><div class="chart" id="finChart"></div></div>
+              <div><div class="lg" id="finLegend2"></div><div class="chart" id="finChart2"></div></div>
+            </div>
+            <div class="tbl-scroll" id="finTable" style="margin-top:10px"></div>
+            <p class="mini-note" id="finNote"></p>
           </div>
         </section>
 
@@ -333,7 +341,7 @@ footer{background:#061a3d;color:#b9c6dc}
             <p class="mini-note" id="costModelNote" style="margin:-4px 0 12px"></p>
             <h3 class="sub-h">송배전·판매 원가 (송배전 이용요금 총괄원가)</h3>
             <div class="grid-in wide" style="margin-bottom:12px">
-              <div class="field"><label for="cBasis">원가 기준</label><select id="cBasis"><option value="opex">영업비용</option><option value="roi">영업비용 + 송배전 적정투자보수</option></select><span class="hint">요금 산정의 총괄원가 방식에 가깝게 하려면 두 번째</span></div>
+              <div class="field"><label for="cBasis">원가 기준</label><select id="cBasis"><option value="opex">영업비용</option><option value="opex_fin">영업비용 + 순금융원가 (이자 등)</option><option value="roi">영업비용 + 송배전 적정투자보수</option></select><span class="hint">순금융원가 = 연결 금융원가 − 금융수익(한국전력통계). 넣으면 한전 전체 회수율이 100%에 가까워져 원가 대비 기준이 의미를 가짐</span></div>
               <div class="field"><label for="cTxPeak">송전비 중 피크 배분 (%)</label><input id="cTxPeak" type="number" step="5" value="50"><span class="hint">나머지는 kWh 비례, 모든 계약종 부담</span></div>
               <div class="field"><label for="cRetail">판매·기타 비용 배분</label><select id="cRetail"><option value="cust_lamp" selected>고객 수 (가로등은 kWh) · 기본</option><option value="cust">고객 수 (전 계약종)</option><option value="kwh">kWh</option></select><span class="hint">영업비용 − 구입비 − 송배전 적정원가. 가로등(갑)은 등 하나가 고객 1호라 고객 수 기준이면 과대</span></div>
               <div class="field"><span class="hint" style="margin-top:22px">배전비는 배전이용요금 단가(저압·고압 기본 원/kW·전력량 원/kWh)로 배분하고, 154kV 이상(고압B·C)은 배전망 미이용으로 제외합니다.</span></div>
@@ -941,7 +949,8 @@ function simulate(verEff, override, adjAll, P) {
   const tx = D.net.tx[NW], dx = D.net.dx[NW];
   const txCost = (tx.A + (P.basis === "roi" ? tx.B : 0)) * 1e8 * cov, dxCost = (dx.A + (P.basis === "roi" ? dx.B : 0)) * 1e8 * cov;
   const retailCost = opex - purCost - (tx.A + dx.A) * 1e8 * cov;
-  const totalCost = purCost + txCost + dxCost + retailCost;
+  const FIN = D.fin && D.fin.con[String(P.refYear)], finCost = P.basis === "opex_fin" && FIN ? FIN.net_fin * 1e8 * cov : 0;   // 순금융원가: 원가 비례 배분
+  const totalCost = purCost + txCost + dxCost + retailCost + finCost;
   const sW = rows.reduce((a, r) => a + r.smpW, 0), sP = rows.reduce((a, r) => a + r.peakL, 0);
   // 배전 가중: 전압별 배전이용요금 단가 × (kW, kWh)
   const vcls = t => t === "주택용전력" ? "res" : (t.includes("고압B") || t.includes("고압C")) ? "hv" : t.includes("고압") ? "high" : "low";
@@ -966,7 +975,8 @@ function simulate(verEff, override, adjAll, P) {
     r.cost = r.costPur + r.costTx + r.costDx + r.costRt;
     r.peakShare = sP ? r.peakL / sP * 100 : 0; r.energyShare = r.salesKWh / totKWh * 100;
   }
-  rows.meta = { purShare, totalCost, purCost, txCost, dxCost, retailCost, NW };
+  if (finCost) { const base = rows.reduce((a, r) => a + r.cost, 0); for (const r of rows) { r.costFin = finCost * r.cost / base; r.cost += r.costFin; } }
+  rows.meta = { purShare, totalCost, purCost, txCost, dxCost, retailCost, finCost, NW };
   return rows;
 }
 /** 기준 연도 복지할인(원) 대분류별. 자료 없는 연도는 0 */
@@ -1054,7 +1064,7 @@ function renderSim() {
   h += `<tr class="tot"><td>합계(산정분)</td><td>${fmt(totS.sales / 1e6, 0)}</td><td></td><td></td><td></td><td>${(() => { const d = scn.reduce((a, r) => a + (r.discount || 0), 0); return d ? "−" + fmt(d / 1e8, 0) : ""; })()}</td><td>${fmt(totS.rev / 1e8, 0)}</td><td>${fmt(totS.rev / totS.sales, 1)}</td><td>${fmt(totB.rev / totB.sales, 1)}</td><td>${pct((totS.rev / totS.sales) / (totB.rev / totB.sales) * 100 - 100, 2)}</td><td></td><td>${fmt(totS.cost / 1e8, 0)}</td><td></td><td>${fmt(totS.cost / totS.sales, 1)}</td><td>${fmt(totS.rev / totS.cost * 100, 1)}%</td></tr>`;
   const pm = scn.meta || {};
   const jo = v => fmt((v || 0) / 1e12, 2);
-  $("#costModelNote").innerHTML = `총원가 ${jo(pm.totalCost)}조원 = 전력구입비 ${jo(pm.purCost)}조 (SMP ${P.smpYear}년 시간별 가중 ${fmt((1 - P.cp) * 100, 0)}% + 피크 ${fmt(P.cp * 100, 0)}%) + 송전 ${jo(pm.txCost)}조 (피크 ${fmt(P.txPeak * 100, 0)}% + kWh) + 배전 ${jo(pm.dxCost)}조 (배전이용요금 단가, 고압B·C 제외) + 판매·기타 ${jo(pm.retailCost)}조 (${P.retail === "cust" ? "고객 수" : P.retail === "cust_lamp" ? "고객 수, 가로등은 kWh" : "kWh"}). 송배전 원가 ${pm.NW}년 결산${P.basis === "roi" ? " · 적정투자보수 포함" : " · 적정원가"}. 피크 = ${P.loadYear}년 ${P.N.endsWith("m") ? "시장수요" : "총수요"} 상위 ${parseInt(P.N)}시간${(D.cost.sys_source || {})[P.loadYear] === "표본합 대리" ? " (표본합 대리)" : " (KPX)"}.`;
+  $("#costModelNote").innerHTML = `총원가 ${jo(pm.totalCost)}조원 = 전력구입비 ${jo(pm.purCost)}조 (SMP ${P.smpYear}년 시간별 가중 ${fmt((1 - P.cp) * 100, 0)}% + 피크 ${fmt(P.cp * 100, 0)}%) + 송전 ${jo(pm.txCost)}조 (피크 ${fmt(P.txPeak * 100, 0)}% + kWh) + 배전 ${jo(pm.dxCost)}조 (배전이용요금 단가, 고압B·C 제외) + 판매·기타 ${jo(pm.retailCost)}조 (${P.retail === "cust" ? "고객 수" : P.retail === "cust_lamp" ? "고객 수, 가로등은 kWh" : "kWh"})${pm.finCost ? ` + 순금융원가 ${jo(pm.finCost)}조 (연결 금융원가 − 금융수익, 원가 비례 배분)` : P.basis === "opex_fin" ? " (순금융원가: 해당 연도 자료 없음)" : ""}. 송배전 원가 ${pm.NW}년 결산${P.basis === "roi" ? " · 적정투자보수 포함" : " · 적정원가"}. 피크 = ${P.loadYear}년 ${P.N.endsWith("m") ? "시장수요" : "총수요"} 상위 ${parseInt(P.N)}시간${(D.cost.sys_source || {})[P.loadYear] === "표본합 대리" ? " (표본합 대리)" : " (KPX)"}.`;
   $("#simTable").innerHTML = h + "</tbody></table>";
   CSV.sim = rows;
   const fx = Object.entries(factors).map(([b, f]) => `${b} ${fmt(f, 3)}`).join(", ");
@@ -1366,7 +1376,8 @@ function renderEquity() {
     k("원가 미달액", jo(under) + " <small>조원</small>", `목표 하한까지 올리는 데 필요한 금액`) +
     (mode === "policy" ? k("정책 보조", jo(policy + welfare) + " <small>조원</small>", `${EQ_POLICY.join("·")} 원가 미달 ${jo(policy)}조 + 복지할인 ${jo(welfare)}조`) : k("복지할인", jo(welfare) + " <small>조원</small>", "수입에서 차감된 금액(회수율에 포함)")) +
     k("조정 후 수입 변화", (over - under >= 0 ? "−" : "+") + jo(Math.abs(over - under)) + " <small>조원</small>", over >= under ? "초과분을 돌려주고 미달분을 올리면 한전 수입 감소" : "미달분 인상이 초과분 인하보다 큼");
-  $("#eqNote").innerHTML = `${L.P.refYear}년 기준 연도·시나리오 요금표 결과. 한전 전체 회수율 ${fmt(TR / TC * 100, 1)}%${rel ? " — 목표 범위에 이 평균을 곱해 판정(전체 평균 대비 기준)" : TR / TC > 1.02 ? " — 한전 전체가 원가(영업비용)보다 많이 걷는 해에는 '전체 평균 대비' 기준이 계약종 간 형평을 더 잘 보여 줍니다" : ""}. 원가는 위 원가 배분 설정(피크 ${L.P.N.endsWith("m") ? "시장수요" : "총수요"} 상위 ${parseInt(L.P.N)}시간, 판매·기타 ${L.P.retail === "kwh" ? "kWh" : L.P.retail === "cust_lamp" ? "고객 수(가로등은 kWh)" : "고객 수"})을 따릅니다. ` +
+  const FN = D.fin && D.fin.con[String(L.P.refYear)], fdec = FN && L.P.basis !== "opex_fin" ? ` (원가에 순금융원가 ${fmt(FN.net_fin / 1e4, 1)}조원을 넣으면 약 ${fmt(TR / (TC + FN.net_fin * 1e8 * (TC / (FN.opex * 1e8))) * 100, 1)}%; 원가 기준에서 '영업비용 + 순금융원가'를 고르면 반영)` : "";
+  $("#eqNote").innerHTML = `${L.P.refYear}년 기준 연도·시나리오 요금표 결과. 한전 전체 회수율 ${fmt(TR / TC * 100, 1)}%${fdec}${rel ? " — 목표 범위에 이 평균을 곱해 판정(전체 평균 대비 기준)" : TR / TC > 1.02 ? " — 한전 전체가 원가(영업비용)보다 많이 걷는 해에는 '전체 평균 대비' 기준이 계약종 간 형평을 더 잘 보여 줍니다" : ""}. 원가는 위 원가 배분 설정(피크 ${L.P.N.endsWith("m") ? "시장수요" : "총수요"} 상위 ${parseInt(L.P.N)}시간, 판매·기타 ${L.P.retail === "kwh" ? "kWh" : L.P.retail === "cust_lamp" ? "고객 수(가로등은 kWh)" : "고객 수"})을 따릅니다. ` +
     (mode === "policy" ? `<b>정책 보조 분리</b>: 농사용·심야전력은 정책 목적의 요금이라 형평성 판정에서 빼고 원가 미달액을 '정책 보조'로 따로 표시합니다. 복지할인(주택용 할인·요금인상 유예 포함)도 정책 보조로 합산합니다. 나머지 계약종은 회수율 ${fmt(lo * 100, 0)}~${fmt(hi * 100, 0)}%를 목표로 봅니다.` : mode === "band" ? `<b>허용 범위만</b>: 모든 계약종을 회수율 ${fmt(lo * 100, 0)}~${fmt(hi * 100, 0)}%로 판정합니다.` : `<b>전 계약종 100%</b>: 교차보조를 모두 없애는 기준입니다.`) +
     ` '목표까지 조정'은 범위 경계까지 올리거나(+) 내리는(−) 데 필요한 수입이며, 수요 반응은 반영하지 않았습니다.`;
 }
@@ -1456,6 +1467,26 @@ function renderFuel() {
   $("#fuelFindings").innerHTML = fs.map(x => `<p class="finding">${x}</p>`).join("");
 }
 
+function renderFin() {
+  const F = D.fin; if (!F) return;
+  const ys = F.sep_years.filter(y => +y >= 2016), S_ = F.sep, C_ = F.con;
+  $("#finRange").textContent = `${ys[0]}~${ys.at(-1)} 연말`;
+  const debt = y => (S_[y].fin_cur + S_[y].fin_non) / 1e4, ratio = y => S_[y].liab / S_[y].equity * 100;
+  const s1 = [{ name: "별도 금융부채(조원)", values: ys.map(debt), color: "#003b8e", width: 2.6 }, { name: "별도 이익잉여금(조원)", values: ys.map(y => S_[y].re / 1e4), color: "#94a3b8", width: 2 }];
+  legend($("#finLegend"), s1); lineChart($("#finChart"), { labels: ys, series: s1, yTitle: "조원", height: 250, zero: true, tipFmt: v => fmt(v, 1) + "조원" });
+  const s2 = [{ name: "부채비율(%) = 부채 ÷ 자본", values: ys.map(ratio), color: "#e60012", width: 2.6 }];
+  legend($("#finLegend2"), s2); lineChart($("#finChart2"), { labels: ys, series: s2, yTitle: "%", height: 250, zero: true, tipFmt: v => fmt(v, 0) + "%" });
+  let h = `<table class="tbl"><thead><tr><th>연도</th><th>별도 자산</th><th>별도 부채</th><th>금융부채</th><th>자본</th><th>이익잉여금</th><th>부채비율</th><th>연결 영업이익</th><th>연결 순금융원가</th><th>연결 당기순이익</th></tr></thead><tbody>`;
+  for (const y of ys) { const v = S_[y], c = C_[y] || {}; h += `<tr><td>${y}</td><td>${fmt(v.assets / 1e4, 1)}</td><td>${fmt(v.liab / 1e4, 1)}</td><td><b>${fmt(debt(y), 1)}</b></td><td>${fmt(v.equity / 1e4, 1)}</td><td>${fmt(v.re / 1e4, 1)}</td><td><b>${fmt(ratio(y), 0)}%</b></td><td>${c.op != null ? fmt(c.op / 1e4, 1) : "-"}</td><td>${c.net_fin != null ? fmt(c.net_fin / 1e4, 2) : "-"}</td><td>${c.net != null ? fmt(c.net / 1e4, 1) : "-"}</td></tr>`; }
+  $("#finTable").innerHTML = h + "</tbody></table>";
+  $("#finNote").innerHTML = `단위 조원. ${F.note}`;
+  CSV.fin = [["연도", "별도자산억", "별도부채억", "금융부채억", "자본억", "이익잉여금억", "부채비율%", "연결영업이익억", "연결순금융원가억", "연결순이익억"], ...ys.map(y => { const v = S_[y], c = C_[y] || {}; return [y, v.assets, v.liab, v.fin_cur + v.fin_non, v.equity, v.re, ratio(y).toFixed(1), c.op ?? "", c.net_fin ?? "", c.net ?? ""]; })];
+  const yl = ys.at(-1), pk = ys.reduce((a, y) => ratio(y) > ratio(a) ? y : a, ys[0]);
+  const lossSum = ["2021", "2022", "2023"].reduce((a, y) => a + (C_[y] ? C_[y].net : 0), 0) / 1e4, gain = ["2024", "2025"].reduce((a, y) => a + (C_[y] ? C_[y].net : 0), 0) / 1e4;
+  $("#finFindings").innerHTML = [`<b>연료비 미반영이 부채로 옮겨 갔다</b> — 별도 금융부채는 2020년 말 ${fmt(debt("2020"), 1)}조원에서 ${pk}년 말 ${fmt(debt(pk), 1)}조원으로, 부채비율은 ${fmt(ratio("2020"), 0)}%에서 ${fmt(ratio(pk), 0)}%로 뛰었습니다. 같은 기간 연결 순손실은 ${fmt(-lossSum, 1)}조원(2021~2023)으로, 위 연료비 연동의 산식 대비 미반영액(최대 34.5조원)과 규모가 맞습니다.`,
+    `<b>회복은 절반쯤</b> — 2024~2025년 순이익 ${fmt(gain, 1)}조원으로 ${yl}년 말 부채비율은 ${fmt(ratio(yl), 0)}%, 이익잉여금 ${fmt(S_[yl].re / 1e4, 1)}조원입니다. 2020년 말 수준(부채비율 ${fmt(ratio("2020"), 0)}%, 이익잉여금 ${fmt(S_["2020"].re / 1e4, 1)}조원)과는 아직 거리가 멉니다. 시뮬레이터의 한전 전체 회수율이 100%를 넘는 몫(2025년 약 ${fmt((C_[yl] ? C_[yl].net : 0) / 1e4, 1)}조원의 이익)이 이 회복 재원입니다.`].map(x => `<p class="finding">${x}</p>`).join("");
+}
+
 // ── 데이터·방법 ─────────────────────────────────────────────────────────────
 function renderData() {
   const A = D.audit;
@@ -1484,7 +1515,7 @@ function renderData() {
 // ── 초기화 ──────────────────────────────────────────────────────────────────
 function opts(el, arr, val) { el.innerHTML = arr.map(a => Array.isArray(a) ? `<option value="${a[0]}">${a[1]}</option>` : `<option>${a}</option>`).join(""); if (val != null) el.value = val; }
 async function boot() {
-  [D.meta, D.tar, D.ana, D.cube_tariff, D.daily, D.ref, D.audit, D.cost, D.fuel, D.mon, D.zone, D.disc, D.net, D.wbin, D.rbin, D.ctr, D.region] = await Promise.all(["meta", "tariffs", "analysis", "cube_tariff", "daily_tariff", "kepco_ref", "audit", "cost", "fuel", "monthly", "region_map", "discount", "network", "welfare_bins", "res_bins", "contract", "region"].map(j));
+  [D.meta, D.tar, D.ana, D.cube_tariff, D.daily, D.ref, D.audit, D.cost, D.fuel, D.mon, D.zone, D.disc, D.net, D.wbin, D.rbin, D.ctr, D.region, D.fin] = await Promise.all(["meta", "tariffs", "analysis", "cube_tariff", "daily_tariff", "kepco_ref", "audit", "cost", "fuel", "monthly", "region_map", "discount", "network", "welfare_bins", "res_bins", "contract", "region", "fin"].map(j));
   D.cube_tariff_full = D.cube_tariff;
   const Y = D.meta.years;
   opts($("#year"), Y, S.year); opts($("#base"), Y, S.base); opts($("#dLoad"), Y, Y.at(-1)); opts($("#simLoad"), Y, Y.at(-1));
@@ -1501,7 +1532,7 @@ async function boot() {
   setCost();
   adjInputs();
   $("#boot").hidden = true; $("#app").hidden = false;
-  await fillItems(); await renderAll(); renderCoverage(); renderDiag(); renderCost(); renderFuel(); renderSim(); renderData();
+  await fillItems(); await renderAll(); renderCoverage(); renderDiag(); renderCost(); renderFuel(); renderFin(); renderSim(); renderData();
   const on = (sel_, ev, fn) => document.querySelectorAll(sel_).forEach(e => e.addEventListener(ev, fn));
   on("#dim", "change", async e => { S.dim = e.target.value; await fillItems(); renderAll(); });
   on("#item", "change", e => { S.item = e.target.value; renderAll(); });

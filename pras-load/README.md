@@ -34,6 +34,7 @@
 | `scripts/build_network.py` | 송배전 이용요금 총괄원가(송전·배전, 적정원가·적정투자보수, 배전 저압·고압 단가) → `network.json` |
 | `scripts/build_discount.py` | 복지할인 실적(2021~2025 항목별 금액, 2025.12 호수) → `discount.json` |
 | `scripts/build_contract.py` | 계약종별 판매실적(2022~2025 월별, 본부 × 계약전력구간 × 계약종) → `contract.json` (월보 대조) |
+| `scripts/build_fin.py` | 한전 별도 재무상태표(분기 PDF 2016.1Q~2026.1Q) + 한국전력통계 34·35(연결 손익·재무상태) → `fin.json` |
 | `scripts/build_region.py` | 시도·시군구별 판매실적(2016~2025 연간) + 한국전력통계 8-2 시도별 발전설비·발전량(2018~) → `region.json` |
 | `scripts/build_resbins.py` | 주택용 전체 가구 사용량 구간별 분포(2025 월별, 저/고압 × 일반·단일·종합) → `res_bins.json` (요금표 검증·하계 비중 포함) |
 | `scripts/build_welfare_bins.py` | 복지할인 가구 사용량 구간별 분포(2025 월별, 저/고압 × 일반·단일·종합) → `welfare_bins.json` |
@@ -62,6 +63,7 @@ python3 scripts/build_monthly.py <월보_폴더(연도별 하위폴더)> build  
 python3 scripts/build_regionmap.py build
 python3 scripts/build_discount.py build
 python3 scripts/build_contract.py <계약종별_판매실적_xlsx_폴더> build   # monthly.json·meta.json 다음
+python3 scripts/build_fin.py <별도_재무상태표_PDF_폴더> <한국전력통계_폴더> build
 python3 scripts/build_region.py <시도_xlsx> <시군구_xlsx> <한국전력통계_폴더> build   # monthly.json 다음
 python3 scripts/build_resbins.py <2024폴더>,<2025폴더> build <복지할인_구간분포_폴더>   # tariffs.json 다음
 python3 scripts/build_welfare_bins.py <2023폴더>,<2024폴더>,<2025폴더> build
@@ -141,7 +143,13 @@ python3 scripts/build_page.py ../ember-sim/index.html
   안 3 지역별 요금제만(산업용 −10원 = −2.8조, 한전 회수율 110.5→107.2%).
 - 연료비: 산식 기준 잔여 미회수 +16.1조원(최대 34.5조, 2023.3분기), 규칙 기준 고객 초과 부담 −13.7조원(2023.4분기 이후 −15.2조).
 
-## 계약종별 판매실적
+## 한전 재무
+
+- 별도 재무상태표 41개 분기 PDF 중 텍스트 PDF에서 기말 값(4분기 또는 다음 분기의 전기말 열)을 읽음. 2020년 말은 스캔본이라 2021.1Q 전기말 열을 판독(MANUAL).
+- 별도 금융부채 31.2조(2020) → 89.8조(2023) → 84.9조(2025), 부채비율 112% → 644% → 444%, 이익잉여금 35.7조 → 1.0조 → 9.4조.
+- 원가 기준 '영업비용 + 순금융원가'(연결 금융원가 − 금융수익, 한국전력통계 35): 시뮬레이터 영업비용이 연결 기준이라 일관. 원가 비례 배분이라
+  계약종 간 상대 회수율은 그대로, 한전 전체 회수율만 110.5% → 106.7%(2025). 나머지 6.7%는 당기 이익 = 재무 회복분.
+
 
 - 한전 영업정보 '계약전력구간별 판매실적' 2022~2025 연도별 xlsx(6만5천 행 제한으로 시트 2개 → 이어 붙임, 조회기간은 문자로 읽음).
 - 대분류 × 월 판매량·판매수입·월말 고객호수가 월보와 전부 일치(최대 오차 0.00005%). 판매수입 = 기본 + 사용량요금(기후·연료 포함, 복지할인 후).
