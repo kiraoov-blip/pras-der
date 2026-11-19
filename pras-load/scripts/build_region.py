@@ -8,14 +8,15 @@
 검증: 시도 × 연도 × 대분류 판매량·수입이 월보 연합계와 일치, 시군구 합계 = 시도(판매수입 0.5% 이내),
       판매수입 = 기본 + 개편전 전력량 + 환경비용차감 + 기후환경 + 연료비조정.
 정리: '황해북도'(개성공단)·'기타(매칭에러)' 제외. 군위군은 2023.7 대구 편입(2023년엔 두 곳에 나뉨).
-      권역: 설계안(2026.8)의 4개 광역 — 수도권 남부(서울 한강 이남 11구·경기 남부), 수도권 북부(서울 한강 이북 14구·
-      경기 북부 10개 시군·인천), 중부권(강원·충청·대전·세종), 남부권(경상·전라·부산·대구·울산·광주), 제주(적용 제외).
-      경계의 김포·양평은 한강 이남으로 보아 수도권 남부(11개 지역 구분표 수령 시 교체).
+      권역: 한전 설계안의 11개 지역 구분(region_zones.py) — 4개 광역(수도권 남부·북부, 중부권, 남부권) × 균형성장 권역(①~④).
+      제주는 적용 제외.
 사용: python build_region.py <시도 xlsx> <시군구 xlsx> <통계 폴더> <build 폴더>
 """
 import json, re, sys
 from pathlib import Path
 import pandas as pd
+sys.path.insert(0, str(Path(__file__).parent))
+from region_zones import zone_of, ADJ, WIDE, GRADE, MOIS_DIFF
 
 sido_f, sgg_f, kstat, out = Path(sys.argv[1]), Path(sys.argv[2]), Path(sys.argv[3]), Path(sys.argv[4])
 SHORT = {"서울특별시": "서울", "부산광역시": "부산", "대구광역시": "대구", "인천광역시": "인천", "광주광역시": "광주", "대전광역시": "대전",
@@ -31,17 +32,8 @@ COLS = {"고객호수": "cust", "계약전력": "kwc", "요금적용전력": "kw
 
 
 def region_of(s, g):
-    if s == "서울":
-        return "수도권북부" if g in SEOUL_N else "수도권남부"
-    if s == "경기":
-        return "수도권북부" if g in GG_N else "수도권남부"
-    if s == "인천":
-        return "수도권북부"
-    if s in ("강원", "충북", "충남", "대전", "세종"):
-        return "중부권"
-    if s == "제주":
-        return "제주"
-    return "남부권"
+    z = zone_of(s, g)
+    return z[0] if z else "제주" if s == "제주" else None
 
 
 def load(f):
@@ -91,7 +83,7 @@ gg = G.groupby(["sg", "big", "조회기간"])[["kwh", "rev", "cust", "bas"]].sum
 sgg = []
 for k in sggs:
     s, g = k.split(" ", 1)
-    sgg.append({"s": s, "g": g, "region": region_of(s, g),
+    sgg.append({"s": s, "g": g, "region": region_of(s, g), "grade": (zone_of(s, g) or (None, None))[1],
                 **{bg: {v: [round(float(gg.at[(k, bg, y), v])) if (k, bg, y) in gg.index else 0 for y in years] for v in ["kwh", "rev", "cust", "bas"]} for bg in BIGS if any((k, bg, y) in gg.index for y in years)}})
 
 # 발전설비·발전량
@@ -128,8 +120,11 @@ doc = {
     "years": years, "sido": SIDO, "bigs": BIGS, "sido_data": sido, "ind_tariffs": ind_t, "sido_ind": sido_ind,
     "sgg": sgg, "gen": gen, "gen_years": sorted(gen),
     "regions": ["수도권남부", "수도권북부", "중부권", "남부권", "제주"],
+    "zones": {"adj": [[w, g, v] for (w, g), v in ADJ.items()], "wide": WIDE, "grade": {str(k): v for k, v in GRADE.items()},
+              "mois_diff": [[s_, g_, v] for (s_, g_), v in MOIS_DIFF.items()],
+              "source": "한전 산업용 지역 전기요금제 지역구분 내역·권역별 조정단가(2026.11), 행안부 지방우대지수 고시 제정안 별표"},
     "note": "판매량 kWh(시도 원자료 MWh 환산), 고객호수·요금적용전력은 12개월 합계(÷12 = 월평균). 판매수입 = 기본 + 개편전 전력량 + 환경비용차감 + 기후환경 + 연료비조정. "
-            "권역은 설계안의 4개 광역 근사(서울 한강 이북 14구·경기 북부 10개 시군·인천 = 수도권 북부, 김포·양평은 남부로 가정). "
+            "권역은 한전 설계안의 11개 지역 구분(4개 광역 × 균형성장 권역, 제주 제외). "
             f"월보와 대분류 연합계 일치(최대 오차 {worst:.5%}). 발전량은 발전단(양수 발전 포함), 전력자급률 = 발전량 ÷ 판매량.",
 }
 (out / "region.json").write_text(json.dumps(doc, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")

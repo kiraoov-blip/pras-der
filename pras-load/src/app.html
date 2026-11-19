@@ -439,17 +439,27 @@ details.adv[open]>summary{margin-bottom:6px}
         </section>
         <section class="sec" id="s-region">
           <div class="sec-h">
-            <div><p class="eyebrow">심화 · Regional tariff</p><h2>지역별 요금제</h2><p class="desc">산업용 지역별 조정요금(설계안 2026.8)의 권역별 효과. 시도별 판매실적·전력자급률은 '사용량·패턴' 탭에 있습니다.</p></div>
+            <div><p class="eyebrow">심화 · Regional tariff</p><h2>지역별 요금제</h2><p class="desc">산업용 지역별 조정요금(한전 설계안: 2026.8 공청회, 11개 지역 구분·권역별 조정단가)의 효과. 시도별 판매실적·전력자급률은 '사용량·패턴' 탭에 있습니다.</p></div>
             
           </div>
           <div class="sec-b">
             <div id="regFindings"></div>
-            <h3 class="sub-h">산업용 지역별 요금제 시나리오 (지역별 조정요금, 원/kWh 인하)</h3>
-            <div class="grid-in wide" style="margin:6px 0 10px">
-              <div class="field"><label for="rsS">수도권 남부</label><input id="rsS" type="number" step="0.5" min="0" value="1"><span class="hint">설계안 0~1원</span></div>
-              <div class="field"><label for="rsN">수도권 북부</label><input id="rsN" type="number" step="0.5" min="0" value="10"><span class="hint">최대 10원</span></div>
-              <div class="field"><label for="rsC">중부권</label><input id="rsC" type="number" step="0.5" min="0" value="15"><span class="hint">최대 15원</span></div>
-              <div class="field"><label for="rsP">남부권</label><input id="rsP" type="number" step="0.5" min="0" value="18"><span class="hint">최대 18원 · 제주 제외</span></div>
+            <h3 class="sub-h">산업용 지역별 요금제 — 11개 지역 조정단가 (원/kWh, 음수 = 인하)</h3>
+            <p class="mini-note" style="margin-top:-4px">조정단가 = 광역 몫(송전비용 + 전력자급률) + 권역 몫(균형성장). 한전 설계안의 11칸이 정확히 두 몫의 합으로 나뉘어, 몫을 바꾸면 11칸이 함께 바뀝니다.</p>
+            <div class="grid-in wide" style="margin:6px 0 4px">
+              <div class="field"><label for="rsS">광역 몫 · 수도권 남부</label><input id="rsS" type="number" step="0.1" max="0" value="0"><span class="hint">설계안 0</span></div>
+              <div class="field"><label for="rsN">광역 몫 · 수도권 북부</label><input id="rsN" type="number" step="0.1" max="0" value="-6.5"><span class="hint">설계안 −6.5</span></div>
+              <div class="field"><label for="rsC">광역 몫 · 중부권</label><input id="rsC" type="number" step="0.1" max="0" value="-9.2"><span class="hint">설계안 −9.2</span></div>
+              <div class="field"><label for="rsP">광역 몫 · 남부권</label><input id="rsP" type="number" step="0.1" max="0" value="-12.8"><span class="hint">설계안 −12.8 · 제주 제외</span></div>
+            </div>
+            <div class="grid-in wide" style="margin:0 0 10px">
+              <div class="field"><label for="rsG1">권역 몫 · ①권역</label><input id="rsG1" type="number" step="0.1" max="0" value="0"><span class="hint">설계안 0</span></div>
+              <div class="field"><label for="rsG2">권역 몫 · ②권역</label><input id="rsG2" type="number" step="0.1" max="0" value="-1"><span class="hint">설계안 −1.0</span></div>
+              <div class="field"><label for="rsG3">권역 몫 · ③권역</label><input id="rsG3" type="number" step="0.1" max="0" value="-4"><span class="hint">설계안 −4.0</span></div>
+              <div class="field"><label for="rsG4">권역 몫 · ④권역</label><input id="rsG4" type="number" step="0.1" max="0" value="-6"><span class="hint">설계안 −6.0</span></div>
+              <div class="field"><span class="lab">권역 구분</span>
+                <div class="seg" role="radiogroup" aria-label="권역 구분 기준"><label><input type="radio" name="rsGrade" value="kepco" checked><span>한전 설계안 · 기본</span></label><label><input type="radio" name="rsGrade" value="mois"><span>행안부 지방우대지수</span></label></div>
+                <span class="hint">7곳의 권역이 다름 <button type="button" class="text-button" id="rsReset" style="margin-left:6px">설계안 값으로</button></span></div>
             </div>
             <div class="kpis" id="rsKpis"></div>
             <div class="tbl-scroll" id="rsTable"></div>
@@ -1418,37 +1428,58 @@ function renderRegion() {
   const ups = G.sido.filter(s => s !== "제주").map(up);
   return [`<b>전력자급률은 ${fmt(sf(sr.at(-1)), 0)}%~${fmt(sf(sr[0]), 0)}%로 갈리지만 산업용 단가는 거의 같다</b> — ${yl}년 ${sr.slice(0, 3).map(s => `${s} ${fmt(sf(s), 0)}%`).join(", ")}는 쓰는 전력의 두 배 이상을 만들고, ${sr.slice(-3).reverse().map(s => `${s} ${fmt(sf(s), 0)}%`).join(", ")}는 대부분을 다른 지역에서 받아 씁니다. 그런데 산업용 판매단가는 제주를 빼면 ${fmt(Math.min(...ups), 1)}~${fmt(Math.max(...ups), 1)}원/kWh로 차이가 거의 없습니다(차이는 계약종·부하율 구성 탓). 송전 비용과 입지 신호가 요금에 전혀 반영되지 않는 전국 단일요금의 모습으로, 지역별 조정요금이 처음으로 이 차이를 만들게 됩니다.`];
 }
+// 11개 지역 조정단가로 산업용 수입 감소 계산. W = 광역 몫, Gr = 권역 몫, mois = 행안부 권역 사용
+function zoneCalc(y, W, Gr, mois) {
+  const G = D.region, md = {}; for (const [s_, g_, v] of (G.zones.mois_diff || [])) md[s_ + " " + g_] = v;
+  const Z = {}, items = []; let kwh = 0, rev = 0, loss = 0, cust = 0;
+  for (const g of G.sgg) { const d = g["산업용"]; if (!d || !d.kwh[y]) continue;
+    const gr = g.region === "제주" || !g.grade ? null : mois && md[g.s + " " + g.g] ? md[g.s + " " + g.g] : g.grade;
+    const adj = gr ? W[g.region] + Gr[gr] : 0, key = gr ? `${g.region}|${gr}` : "제주|-";
+    const z = Z[key] = Z[key] || { w: g.region, gr, adj, kwh: 0, rev: 0, cust: 0, n: 0, loss: 0 };
+    const l = -adj * d.kwh[y]; z.kwh += d.kwh[y]; z.rev += d.rev[y]; z.cust += d.cust[y] / 12; z.n++; z.loss += l;
+    kwh += d.kwh[y]; rev += d.rev[y]; cust += d.cust[y] / 12; loss += l;
+    items.push({ s: g.s, g: g.g, w: g.region, gr, adj, kwh: d.kwh[y], loss: l, moved: !!(mois && md[g.s + " " + g.g]) || (!mois && !!md[g.s + " " + g.g]) }); }
+  return { Z, items, kwh, rev, loss, cust };
+}
+function zoneLossDefault() { const G = D.region, d = zoneDefault(); return zoneCalc(G.years.length - 1, d.W, d.Gr, false).loss; }
+function zoneDefault() { const z = D.region.zones; return { W: { ...z.wide }, Gr: Object.fromEntries(Object.entries(z.grade).map(([k, v]) => [+k, v])) }; }
 function renderRegionScn() {
-  const G = D.region; if (!G) return;
-  const yr = $("#rgYear").value, y = G.years.indexOf(yr);
-  const disc = { 수도권남부: +$("#rsS").value || 0, 수도권북부: +$("#rsN").value || 0, 중부권: +$("#rsC").value || 0, 남부권: +$("#rsP").value || 0, 제주: 0 };
-  const R = {}; for (const r of G.regions) R[r] = { kwh: 0, rev: 0, cust: 0, n: 0 };
-  const items = [];
-  for (const g of G.sgg) { const d = g["산업용"]; if (!d) continue; const kwh = d.kwh[y], rev = d.rev[y]; if (!kwh) continue;
-    const a = R[g.region]; a.kwh += kwh; a.rev += rev; a.cust += d.cust[y] / 12; a.n++; items.push({ ...g, kwh, rev, loss: kwh * disc[g.region] }); }
-  for (const [k, a] of Object.entries(R)) { a.loss = a.kwh * disc[k]; }
-  const T = Object.values(R).reduce((o, a) => ({ kwh: o.kwh + a.kwh, rev: o.rev + a.rev, loss: o.loss + a.loss, cust: o.cust + a.cust }), { kwh: 0, rev: 0, loss: 0, cust: 0 });
+  const G = D.region; if (!G || !G.zones) return;
+  const yr = $("#rgYear").value || G.years.at(-1), y = G.years.indexOf(yr);
+  const W = { 수도권남부: +$("#rsS").value || 0, 수도권북부: +$("#rsN").value || 0, 중부권: +$("#rsC").value || 0, 남부권: +$("#rsP").value || 0 };
+  const Gr = { 1: +$("#rsG1").value || 0, 2: +$("#rsG2").value || 0, 3: +$("#rsG3").value || 0, 4: +$("#rsG4").value || 0 };
+  const mois = (document.querySelector('input[name="rsGrade"]:checked') || {}).value === "mois";
+  const C = zoneCalc(y, W, Gr, mois), T = C;
   const allRev = sum(G.sido.map(s => sum(G.bigs.map(b => G.sido_data[s][b].rev[y]))));
   const k = (lab, v, sub, lead) => `<div class="kpi${lead ? " lead" : ""}"><div class="k">${lab}</div><div class="v">${v}</div><div class="n">${sub}</div></div>`;
-  const L = S.lastSim && String(S.lastSim.year) === yr && S.lastSim.B["산업용"] ? S.lastSim.B["산업용"] : null;
+  const L = S.lastSim && String(S.lastSim.year) === yr && S.lastSim.B["산업용"] ? S.lastSim : null;
+  const Bi = L && L.B["산업용"], TB = L ? Object.values(L.B).reduce((o, b) => ({ rev: o.rev + (b.rev || 0), cost: o.cost + (b.cost || 0) }), { rev: 0, cost: 0 }) : null;
   $("#rsKpis").innerHTML = k("한전 판매수입 감소", fmt(T.loss / 1e12, 2) + " <small>조원</small>", `${yr}년 산업용 판매량 기준 · 정부 추산 약 2.8조원`, true) +
     k("산업용 평균 인하", fmt(T.loss / T.kwh, 1) + " <small>원/kWh</small>", `산업용 수입의 ${fmt(T.loss / T.rev * 100, 1)}% · 전체 판매수입의 ${fmt(T.loss / allRev * 100, 1)}%`) +
-    k("산업용 원가 회수율", L ? `${fmt(L.rev / L.cost * 100, 1)} → ${fmt((L.rev - T.loss) / L.cost * 100, 1)}<small>%</small>` : "-", L ? `06 시뮬레이터 비교 요금표·${yr}년 기준` : `06 시뮬레이터 기준 연도를 ${yr}년으로 두면 표시`);
-  let h = `<table class="tbl"><thead><tr><th>권역</th><th>시군구</th><th>산업용 판매량(TWh)</th><th>고객 수</th><th>현재 단가</th><th>인하(원/kWh)</th><th>인하 후 단가</th><th>인하율</th><th>수입 감소(억원)</th></tr></thead><tbody>`;
-  for (const [r, a] of Object.entries(R)) { if (!a.kwh) continue; const up = a.rev / a.kwh;
-    h += `<tr><td>${r}</td><td>${a.n}</td><td>${fmt(a.kwh / 1e9, 1)}</td><td>${fmt(a.cust, 0)}</td><td>${fmt(up, 1)}</td><td>${fmt(disc[r], 1)}</td><td>${fmt(up - disc[r], 1)}</td><td>${fmt(disc[r] / up * 100, 1)}%</td><td>${fmt(a.loss / 1e8, 0)}</td></tr>`; }
-  h += `<tr class="tot"><td>전국</td><td>${sum(Object.values(R).map(a => a.n))}</td><td>${fmt(T.kwh / 1e9, 1)}</td><td>${fmt(T.cust, 0)}</td><td>${fmt(T.rev / T.kwh, 1)}</td><td>${fmt(T.loss / T.kwh, 1)}</td><td>${fmt((T.rev - T.loss) / T.kwh, 1)}</td><td>${fmt(T.loss / T.rev * 100, 1)}%</td><td>${fmt(T.loss / 1e8, 0)}</td></tr>`;
+    k("산업용 원가 회수율", Bi ? `${fmt(Bi.rev / Bi.cost * 100, 1)} → ${fmt((Bi.rev - T.loss) / Bi.cost * 100, 1)}<small>%</small>` : "-", Bi ? `보전 없을 때 · 시뮬레이터 비교 요금표 기준` : `시뮬레이터 기준 연도를 ${yr}년으로 두면 표시`) +
+    k("한전 전체 회수율", TB && TB.cost ? `${fmt(TB.rev / TB.cost * 100, 1)} → ${fmt((TB.rev - T.loss) / TB.cost * 100, 1)}<small>%</small>` : "-", "100%를 넘는 몫 = 재무 회복분");
+  const WO = ["수도권남부", "수도권북부", "중부권", "남부권"], cell = z => `<td>${fmt(z.n, 0)}</td><td>${fmt(z.kwh / 1e9, 1)}</td><td>${fmt(z.cust, 0)}</td><td>${fmt(z.rev / z.kwh, 1)}</td><td><b>${z.gr ? (z.adj === 0 ? "0.0" : (z.adj > 0 ? "+" : "−") + fmt(Math.abs(z.adj), 1)) : "적용 제외"}</b></td><td>${fmt((z.rev + (z.gr ? z.adj * z.kwh : 0)) / z.kwh, 1)}</td><td>${fmt(z.loss / z.rev * 100, 1)}%</td><td>${fmt(z.loss / 1e8, 0)}</td>`;
+  let h = `<table class="tbl"><thead><tr><th>광역</th><th>권역</th><th>시군구</th><th>산업용 판매량(TWh)</th><th>고객 수</th><th>현재 단가</th><th>조정단가</th><th>조정 후 단가</th><th>인하율</th><th>수입 감소(억원)</th></tr></thead><tbody>`;
+  for (const w of WO) { const zs = Object.values(C.Z).filter(z => z.w === w).sort((a, b) => a.gr - b.gr); if (!zs.length) continue;
+    zs.forEach((z, i) => { h += `<tr>${i ? "<td></td>" : `<td><b>${w}</b></td>`}<td>${"①②③④"[z.gr - 1]}권역</td>${cell(z)}</tr>`; });
+    if (zs.length > 1) { const a = zs.reduce((o, z) => ({ n: o.n + z.n, kwh: o.kwh + z.kwh, rev: o.rev + z.rev, cust: o.cust + z.cust, loss: o.loss + z.loss }), { n: 0, kwh: 0, rev: 0, cust: 0, loss: 0 });
+      h += `<tr style="color:#6b7686"><td></td><td>소계</td><td>${a.n}</td><td>${fmt(a.kwh / 1e9, 1)}</td><td>${fmt(a.cust, 0)}</td><td>${fmt(a.rev / a.kwh, 1)}</td><td>${a.loss / a.kwh < 0.05 ? "0.0" : "−" + fmt(a.loss / a.kwh, 1)}</td><td>${fmt((a.rev - a.loss) / a.kwh, 1)}</td><td>${fmt(a.loss / a.rev * 100, 1)}%</td><td>${fmt(a.loss / 1e8, 0)}</td></tr>`; } }
+  if (C.Z["제주|-"]) h += `<tr><td><b>제주</b></td><td>-</td>${cell(C.Z["제주|-"])}</tr>`;
+  h += `<tr class="tot"><td>전국</td><td></td><td>${sum(Object.values(C.Z).map(z => z.n))}</td><td>${fmt(T.kwh / 1e9, 1)}</td><td>${fmt(T.cust, 0)}</td><td>${fmt(T.rev / T.kwh, 1)}</td><td>평균 −${fmt(T.loss / T.kwh, 1)}</td><td>${fmt((T.rev - T.loss) / T.kwh, 1)}</td><td>${fmt(T.loss / T.rev * 100, 1)}%</td><td>${fmt(T.loss / 1e8, 0)}</td></tr>`;
   $("#rsTable").innerHTML = h + "</tbody></table>";
-  const top = items.sort((a, b) => b.kwh - a.kwh).slice(0, 12);
-  $("#rsTop").innerHTML = `<table class="tbl"><thead><tr><th>산업용 판매량 상위 시군구</th><th>권역</th><th>판매량(TWh)</th><th>인하(원/kWh)</th><th>수입 감소(억원)</th></tr></thead><tbody>${top.map(g => `<tr><td>${g.s} ${g.g}</td><td>${g.region}</td><td>${fmt(g.kwh / 1e9, 1)}</td><td>${fmt(disc[g.region], 1)}</td><td>${fmt(g.loss / 1e8, 0)}</td></tr>`).join("")}</tbody></table>`;
-  $("#rsNote").innerHTML = `권역은 설계안(2026.8)의 4개 광역 근사: 수도권 남부 = 서울 한강 이남 11구·경기 남부, 수도권 북부 = 서울 한강 이북 14구·경기 북부 10개 시군(고양·남양주·파주·의정부·양주·구리·포천·동두천·가평·연천)·인천, 중부권 = 강원·충청·대전·세종, 남부권 = 경상·전라·부산·대구·울산·광주, 제주 제외. 경계의 김포·양평은 남부로 가정. 설계안은 균형성장 지표(지방우대지수·산업위기지역)로 11개 지역으로 나누어 같은 권역 안에서도 인하폭이 다르므로, 권역별 최대 인하폭을 넣은 기본값은 상한입니다. 수요 이동(입지 변화)과 도매가격 차등은 반영하지 않았습니다.`;
+  const zl = it => it.gr ? `${it.w} ${"①②③④"[it.gr - 1]}` : "제주(제외)";
+  const top = [...C.items].sort((a, b) => b.loss - a.loss).slice(0, 12), mv = C.items.filter(it => it.moved);
+  $("#rsTop").innerHTML = `<table class="tbl"><thead><tr><th>수입 감소 상위 시군구</th><th>권역</th><th>산업용 판매량(TWh)</th><th>조정단가(원/kWh)</th><th>수입 감소(억원)</th></tr></thead><tbody>${top.map(g => `<tr><td>${g.s} ${g.g}</td><td>${zl(g)}</td><td>${fmt(g.kwh / 1e9, 1)}</td><td>${fmt(g.adj, 1)}</td><td>${fmt(g.loss / 1e8, 0)}</td></tr>`).join("")}</tbody></table>`;
+  const D0 = zoneDefault(), dflt = zoneCalc(y, D0.W, D0.Gr, false), alt = zoneCalc(y, D0.W, D0.Gr, true);
+  $("#rsNote").innerHTML = `지역 구분은 한전 설계안의 11개 지역(4개 광역 × 균형성장 ①~④권역, 제주 제외)이고 조정단가는 설계안 권역별 표입니다. 설계안 값으로 ${yr}년 판매량에 적용하면 ${fmt(dflt.loss / 1e12, 2)}조원(정부 추산 2.8조원 내외)이며, 최대 인하율은 남부권 ④권역 약 10%로 공청회의 '최대 10% 인하'와 같습니다. `
+    + `권역 구분 중 ${mv.length ? mv.map(it => `${it.s} ${it.g}`).join("·") : "동두천·동해·부산 금정·완주·통영·영주·부여"} 7곳은 행안부 지방우대지수 고시 제정안 별표와 다릅니다(설계안은 산업 요소를 더해 조정; 행안부 기준이면 ${fmt((alt.loss - dflt.loss) / 1e8, 0)}억원 차이). 대구 군위군은 판매실적에 경북으로 남은 해도 대구 ④권역으로 보았습니다. 원자료 오기: '경가 15곳' → 경기, '강북부' → 강북구.`;
 }
 
 // 형평성 진단: 시나리오 결과(S.lastSim.scn)를 목표 기준과 비교
 const EQ_POLICY = ["농사용", "심야"];
 // 개선안 프리셋(대분류별 전력량요금 ±원/kWh): 2025 판매량·원가, 시나리오·비교 요금표 2026.4.16, 원가 설정 기본값으로 계산
-const SIM_PRESETS = {"S1": {"산업용": -12.6, "주택용": 14.9, "일반용": 14.9, "교육용": 14.9}, "S2": {"주택용": 29.7, "일반용": 11.4, "교육용": 37.1, "산업용": -16.4, "가로등": 18.8, "임시": -17.3}, "S3": {"산업용": -10}};
-const SIM_PRESET_NOTE = { S1: "산업용 회수율을 전체 평균의 105%까지 낮추고, 줄어든 수입을 주택·일반·교육용이 kWh당 같은 금액으로 나눠 부담", S2: "농사용·심야(정책 요금)를 뺀 모든 계약종의 회수율을 같은 값(약 113%)으로 맞춤", S3: "산업용 지역별 조정요금(정부 추산 2.8조원)을 kWh당 평균 인하로 반영, 다른 용도 보전 없음" };
+const SIM_PRESETS = {"S1": {"산업용": -12.6, "주택용": 14.9, "일반용": 14.9, "교육용": 14.9}, "S2": {"주택용": 29.7, "일반용": 11.4, "교육용": 37.1, "산업용": -16.4, "가로등": 18.8, "임시": -17.3}, "S3": {"산업용": -10.2}};
+const SIM_PRESET_NOTE = { S1: "산업용 회수율을 전체 평균의 105%까지 낮추고, 줄어든 수입을 주택·일반·교육용이 kWh당 같은 금액으로 나눠 부담", S2: "농사용·심야(정책 요금)를 뺀 모든 계약종의 회수율을 같은 값(약 113%)으로 맞춤", S3: "산업용 지역별 조정요금(설계안 11개 지역 조정단가, 2025년 2.86조원)을 판매량 가중 평균 −10.2원/kWh로 반영, 다른 용도 보전 없음" };
 function renderEquity() {
   const L = S.lastSim; if (!L) return;
   const mode = document.querySelector('input[name="eqMode"]:checked').value, view = document.querySelector('input[name="eqView"]:checked').value;
@@ -1667,7 +1698,7 @@ function renderOverview() {
     card("질문 3 · 재무·계통", "한전 재무와 계통에는 어떤 영향이 있나?", `부채비율 ${fmt(ratio(fy), 0)}%<small>${fy}년 말 별도 · 2020년 ${fmt(ratio("2020"), 0)}%</small>`,
       [`<b>덜 받은 요금이 부채와 이자로</b> — 금융부채 ${fmt((fs.fin_cur + fs.fin_non) / 1e4, 1)}조원, 금융원가 연 ${fmt(fi.fin_cost / 1e4, 2)}조원(평균 금융부채의 ${fmt(fi.fin_rate, 1)}%).`,
        S.fuelSum ? `<b>연료비 미회수 잔액 ${fmt(S.fuelSum.req, 1)}조원</b>(산식 기준, ${S.fuelSum.from}~${S.fuelSum.last} 누적) — 최대 ${fmt(S.fuelSum.reqPeak, 1)}조원에서 회수 중입니다.` : "",
-       `<b>계통과 요금의 어긋남</b> — 전력자급률은 ${sr.at(-1)} ${fmt(self(sr.at(-1)), 0)}%에서 ${sr[0]} ${fmt(self(sr[0]), 0)}%까지 갈리지만 요금은 전국이 같습니다. 산업용 지역별 요금제(설계안)는 최대 3.5조원(정부 추산 2.8조원)의 수입 감소를 낳습니다.`].filter(Boolean),
+       `<b>계통과 요금의 어긋남</b> — 전력자급률은 ${sr.at(-1)} ${fmt(self(sr.at(-1)), 0)}%에서 ${sr[0]} ${fmt(self(sr[0]), 0)}%까지 갈리지만 요금은 전국이 같습니다. 산업용 지역별 요금제(설계안 11개 지역 조정단가)는 연 ${fmt(zoneLossDefault() / 1e12, 2)}조원(정부 추산 2.8조원 내외)의 수입 감소를 낳습니다.`].filter(Boolean),
       goBtn("deep:s-fin", "재무·지역 분석 보기")) +
     card("질문 4 · 제안", "요금제는 어떻게 바뀌어야 하나?", `안 1 권고<small>산업용을 평균의 105%로, 2~3년 단계 적용</small>`,
       [`<b>수입은 유지하고 부담을 고르게</b> — 산업용 −12.6원, 주택·일반·교육용 +14.9원/kWh(주택 300kWh 가구 월 약 +4,500원).`,
@@ -1744,7 +1775,9 @@ async function boot() {
   on("#eqLo", "input", () => renderEquity()); on("#eqHi", "input", () => renderEquity());
   on("#rgYear", "change", () => renderRegion());
   on("#rgBig", "change", () => renderRegion());
-  for (const id of ["#rsS", "#rsN", "#rsC", "#rsP"]) on(id, "input", () => renderRegionScn());
+  for (const id of ["#rsS", "#rsN", "#rsC", "#rsP", "#rsG1", "#rsG2", "#rsG3", "#rsG4"]) on(id, "input", () => renderRegionScn());
+  on('input[name="rsGrade"]', "change", () => renderRegionScn());
+  on("#rsReset", "click", () => { const d = zoneDefault(); $("#rsS").value = d.W["수도권남부"]; $("#rsN").value = d.W["수도권북부"]; $("#rsC").value = d.W["중부권"]; $("#rsP").value = d.W["남부권"]; for (const g of [1, 2, 3, 4]) $("#rsG" + g).value = d.Gr[g]; document.querySelector('input[name="rsGrade"][value="kepco"]').checked = true; renderRegionScn(); });
   on("#ctTariff", "change", () => renderContract());
   for (const k of ["year", "base", "season", "dtype"]) on("#" + k, "change", e => { S[k] = e.target.value; renderAll(); });
   on('input[name="scheme"]', "change", e => { S.scheme = e.target.value; renderAll(); });
