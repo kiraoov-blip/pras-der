@@ -677,6 +677,9 @@ details.adv[open]>summary{margin-bottom:6px}
               <div class="field"><span class="lab">판단 기준</span>
                 <div class="seg" role="radiogroup" aria-label="연료비 연동 판단 기준"><label><input type="radio" name="fuelBench" value="req" checked><span>산식 기준 · 기본</span></label><label><input type="radio" name="fuelBench" value="rule"><span>규칙 기준 (±5원 상한)</span></label></div>
                 <span class="hint">산식 = 연료비 변동을 상한 없이 반영했어야 할 값(한전 재무 관점) · 규칙 = 약관 상하한을 지켰을 때의 값(소비자 보호 관점)</span></div>
+              <div class="field"><span class="lab">누적 시작</span>
+                <div class="seg" role="radiogroup" aria-label="누적 시작 분기"><label><input type="radio" name="fuelFrom" value="2021Q1" checked><span>2021.1분기 (연동제 시작) · 기본</span></label><label><input type="radio" name="fuelFrom" value="2022Q1"><span>2022.1분기 (산정내역 원문)</span></label></div>
+                <span class="hint">2021년 필요단가는 보도값. 연료비조정 시뮬레이터(’22.1Q~)와 같은 구간을 보려면 2022.1분기</span></div>
             </div>
             <div class="kpis" id="fuelKpis"></div>
             <div id="fuelFindings"></div>
@@ -1772,6 +1775,7 @@ function renderMonthly() {
 
 function renderFuel() {
   const F = D.fuel.quarters, R = D.ref, bench = (document.querySelector('input[name="fuelBench"]:checked') || {}).value || "req";
+  const from = (document.querySelector('input[name="fuelFrom"]:checked') || {}).value || "2021Q1", inR = q => q.q >= from;
   const BN = bench === "req" ? "산식" : "규칙", bv = q => bench === "req" ? q.required_effective : q.rule;
   const labels = F.map(q => q.q.replace("Q", "."));
   const req = F.map(q => q.required_effective), rule = F.map(q => q.rule), app = F.map(q => q.applied);
@@ -1784,7 +1788,7 @@ function renderFuel() {
   const rows = [["분기", "필요조정단가", "규칙적용", "실제적용", "산식대비(조원)", "규칙대비(조원)", "누적_산식(조원)", "누적_규칙(조원)", "정부결정"]];
   let h = `<table class="tbl"><thead><tr><th>분기</th><th>실적연료비 (원/kg)</th><th>필요조정단가</th><th>규칙 적용</th><th>실제 적용</th><th>산식 대비 (조원)</th><th>규칙 대비 (조원)</th><th>누적 · 산식</th><th>누적 · 규칙</th><th>정부 결정</th><th>원 게시 필요단가</th></tr></thead><tbody>`;
   for (const q of F) {
-    const s = salesQ(q), a = q.required_effective == null ? 0 : (q.required_effective - q.applied) * s / 1e12, b = (q.rule - q.applied) * s / 1e12;
+    const s = salesQ(q), a = !inR(q) || q.required_effective == null ? 0 : (q.required_effective - q.applied) * s / 1e12, b = !inR(q) ? 0 : (q.rule - q.applied) * s / 1e12;
     c1 += a; c2 += b; g1.push(a); g2.push(b); k1.push(c1); k2.push(c2);
     h += `<tr><td>${q.q.replace("Q", "년 ")}분기</td><td>${q.actual_fuel ? fmt(q.actual_fuel, 2) : "–"}</td><td>${fmt(q.required_effective, 1)}</td><td>${fmt(q.rule, 1)}</td><td><b>${fmt(q.applied, 1)}</b></td><td class="${a > 0.005 ? "neg" : a < -0.005 ? "pos" : ""}">${pct(a, 2).replace("%", "")}</td><td class="${b > 0.005 ? "neg" : b < -0.005 ? "pos" : ""}">${pct(b, 2).replace("%", "")}</td><td>${fmt(c1, 1)}</td><td>${fmt(c2, 1)}</td><td>${q.gov_note ? '<span class="flag">유보·동결</span>' : ""}</td><td>${q.original_posting && q.original_posting.required !== q.required ? fmt(q.original_posting.required, 1) : ""}</td></tr>`;
     rows.push([q.q, q.required_effective, q.rule, q.applied, a.toFixed(3), b.toFixed(3), c1.toFixed(2), c2.toFixed(2), q.gov_note ? "Y" : ""]);
@@ -1799,9 +1803,9 @@ function renderFuel() {
   const recov = k1[pi] - k1.at(-1), overRule = k2[sinceIdx - 1] - k2.at(-1);
   // 용도별 영향: (기준 − 실제) × 월 판매량
   const BK = [["주택용", "res"], ["일반용", "gen"], ["교육용", "edu"], ["산업용", "ind"], ["농사용", "agr"], ["가로등", "str"], ["심야", "night"]];
-  const yrs = [...new Set(F.map(q => q.q.slice(0, 4)))];
+  const yrs = [...new Set(F.filter(inR).map(q => q.q.slice(0, 4)))];
   const cell = {}, kwhY = {};
-  for (const q of F) { const y = q.q.slice(0, 4), n = +q.q.slice(-1), d = bv(q) == null ? 0 : bv(q) - q.applied;
+  for (const q of F) { if (!inR(q)) continue; const y = q.q.slice(0, 4), n = +q.q.slice(-1), d = bv(q) == null ? 0 : bv(q) - q.applied;
     for (const [b, k] of BK) for (let m = 3 * n - 2; m <= 3 * n; m++) { const v = D.mon.sales[k] && D.mon.sales[k][`${y}-${String(m).padStart(2, "0")}`]; if (v == null) continue; const key = b + y; cell[key] = (cell[key] || 0) + d * v * 1e3; kwhY[key] = (kwhY[key] || 0) + v * 1e3; } }
   $("#fuelBenchLab").textContent = `${BN} 기준`;
   let fb = `<table class="tbl"><thead><tr><th>용도</th>${yrs.map(y => `<th>${y}</th>`).join("")}<th>누계</th><th>2023.4분기 이후</th><th>kWh당(누계)</th></tr></thead><tbody>`;
@@ -1812,7 +1816,7 @@ function renderFuel() {
   fb += `<tr class="tot"><td>합계</td>${totY.map(v => `<td>${(v >= 0 ? "+" : "−") + fmt(Math.abs(v) / 1e8, 0)}</td>`).join("")}<td>${(totAll >= 0 ? "+" : "−") + fmt(Math.abs(totAll) / 1e8, 0)}</td><td>${(totSince >= 0 ? "+" : "−") + fmt(Math.abs(totSince) / 1e8, 0)}</td><td>${(totAll >= 0 ? "+" : "−") + fmt(Math.abs(totAll / totK), 1)}원</td></tr>`;
   $("#fuelBig").innerHTML = fb + `</tbody></table><p class="mini-note">용도별 금액은 월보 용도별 판매량 기준이라(임시전력 제외, 미도래 월 제외) 위 누적 그래프(전체 판매량 기준)와 소수점 차이가 날 수 있습니다.</p>`;
   const KK = bench === "req" ? k1 : k2, pk = Math.max(...KK), pki = KK.indexOf(pk);
-  S.fuelSum = { req: k1.at(-1), rule: k2.at(-1), reqPeak: Math.max(...k1), last: labels.at(-1) };
+  S.fuelSum = { req: k1.at(-1), rule: k2.at(-1), reqPeak: Math.max(...k1), last: labels.at(-1), from: from.replace("Q", ".") };
   const kf = (lab, v, sub, lead) => `<div class="kpi${lead ? " lead" : ""}"><div class="k">${lab}</div><div class="v">${v}</div><div class="n">${sub}</div></div>`;
   $("#fuelKpis").innerHTML = kf(`${BN} 기준 누적 차이 (${labels.at(-1)})`, (KK.at(-1) >= 0 ? "+" : "−") + fmt(Math.abs(KK.at(-1)), 1) + " <small>조원</small>", KK.at(-1) >= 0 ? "한전 미회수 잔액 (고객이 덜 낸 금액)" : "고객 초과 부담 (고객이 더 낸 금액)", true) +
     kf("누적 최대", fmt(pk, 1) + " <small>조원</small>", `${labels[pki]} 시점`) +
@@ -1922,7 +1926,7 @@ function renderOverview() {
       goBtn("diag", "원가 신호 보기")) +
     card("질문 3 · 재무·계통", "한전 재무와 계통에는 어떤 영향이 있나?", `부채비율 ${fmt(ratio(fy), 0)}%<small>${fy}년 말 별도 · 2020년 ${fmt(ratio("2020"), 0)}%</small>`,
       [`<b>덜 받은 요금이 부채와 이자로</b> — 금융부채 ${fmt((fs.fin_cur + fs.fin_non) / 1e4, 1)}조원, 금융원가 연 ${fmt(fi.fin_cost / 1e4, 2)}조원(평균 금융부채의 ${fmt(fi.fin_rate, 1)}%).`,
-       S.fuelSum ? `<b>연료비 미회수 잔액 ${fmt(S.fuelSum.req, 1)}조원</b>(산식 기준, ${S.fuelSum.last}) — 최대 ${fmt(S.fuelSum.reqPeak, 1)}조원에서 회수 중입니다.` : "",
+       S.fuelSum ? `<b>연료비 미회수 잔액 ${fmt(S.fuelSum.req, 1)}조원</b>(산식 기준, ${S.fuelSum.from}~${S.fuelSum.last} 누적) — 최대 ${fmt(S.fuelSum.reqPeak, 1)}조원에서 회수 중입니다.` : "",
        `<b>계통과 요금의 어긋남</b> — 전력자급률은 ${sr.at(-1)} ${fmt(self(sr.at(-1)), 0)}%에서 ${sr[0]} ${fmt(self(sr[0]), 0)}%까지 갈리지만 요금은 전국이 같습니다. 산업용 지역별 요금제(설계안)는 최대 3.5조원(정부 추산 2.8조원)의 수입 감소를 낳습니다.`].filter(Boolean),
       goBtn("deep:s-fin", "재무·지역 분석 보기")) +
     card("질문 4 · 제안", "요금제는 어떻게 바뀌어야 하나?", `안 1 권고<small>산업용을 평균의 105%로, 2~3년 단계 적용</small>`,
@@ -1989,6 +1993,7 @@ async function boot() {
   on("#ctYear", "change", () => renderContract());
   on('input[name="eqMode"]', "change", () => renderEquity());
   on('input[name="fuelBench"]', "change", () => renderFuel());
+  on('input[name="fuelFrom"]', "change", () => renderFuel());
   on('input[name="eqView"]', "change", () => renderEquity());
   on('input[name="eqRel"]', "change", () => renderEquity());
   on("#simPreset", "change", e => { const k = e.target.value; if (!k) return; const pr = k === "0" ? {} : SIM_PRESETS[k];
