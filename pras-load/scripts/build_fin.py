@@ -97,12 +97,37 @@ cyears = sorted(y for y in con if "fin_cost" in con[y])
 for y in cyears:
     c = con[y]; c["opex"] = c["cogs"] + c["sga"]; c["net_fin"] = c["fin_cost"] - c["fin_inc"]
 
+# 별도 손익계산서(연간, 억원). 출처: 사용자 제공 분기 손익계산서 PDF의 4분기(누계) 열 — 2016·2017 = 각 4Q(원 단위, 이자비용 표기),
+# 2018 = 2019.4Q 전기 열, 2019 = 2019.4Q, 2020 = 2021.4Q 전기 열(스캔본 판독), 2021 = 2021.4Q(스캔본 판독), 2022 = 2023.4Q 전기 열,
+# 2023 = 2024.4Q 전기 열, 2024 = 2024.4Q, 2025 = 2025.4Q(스캔본 판독). 영업비용 = 매출원가 + 판매비와관리비.
+SEP_IS = {
+    "2016": dict(sales=602895.81, cogs=537077.63, sga=17002.78, fin_inc=14166.60, fin_cost=10633.12, net=42619.86, interest=8441.99),
+    "2017": dict(sales=599657.39, cogs=567286.83, sga=16835.02, fin_inc=13563.24, fin_cost=10703.39, net=15068.52, interest=7379.71),
+    "2018": dict(sales=602715.00, cogs=607737.98, sga=16909.70, fin_inc=8605.71, fin_cost=8557.40, net=-10952.13),
+    "2019": dict(sales=589331.80, cogs=599078.52, sga=18736.75, fin_inc=5648.01, fin_cost=12255.98, net=-25949.57),
+    "2020": dict(sales=579894.10, cogs=533961.06, sga=18081.59, fin_inc=6649.91, fin_cost=10010.69, net=19514.98),
+    "2021": dict(sales=596606.00, cogs=651488.88, sga=19372.88, fin_inc=8002.31, fin_cost=9946.75, net=-56077.32),
+    "2022": dict(sales=689515.46, cogs=1008833.54, sga=19767.67, fin_inc=9328.50, fin_cost=18998.86, net=-252977.12),
+    "2023": dict(sales=858255.93, cogs=903380.56, sga=19914.55, fin_inc=37331.74, fin_cost=30581.86, net=-32492.33),
+    "2024": dict(sales=916465.82, cogs=864905.74, sga=19893.50, fin_inc=15796.94, fin_cost=40774.92, net=8293.39),
+    "2025": dict(sales=955361.64, cogs=849341.67, sga=20619.97, fin_inc=26136.74, fin_cost=28694.46, net=72499.00),
+}
+for y, v in SEP_IS.items():
+    v["opex"] = round(v["cogs"] + v["sga"], 2); v["op"] = round(v["sales"] - v["opex"], 2)
+    if y in ye and str(int(y) - 1) in ye:
+        avg = (ye[y]["fin_cur"] + ye[y]["fin_non"] + ye[str(int(y) - 1)]["fin_cur"] + ye[str(int(y) - 1)]["fin_non"]) / 2
+        v["fin_rate"] = round(v["fin_cost"] / avg * 100, 2)   # 금융원가 ÷ 평균 금융부채(%)
+# 검증: 2024 손익계산서 영업이익 3,166,658백만원
+assert abs(SEP_IS["2024"]["op"] - 31666.58) < 1, SEP_IS["2024"]["op"]
+
 doc = {
     "source": "한전 별도 재무상태표(분기, DART 공시본, 사용자 제공) · 한국전력통계 34·35(연결)",
     "unit": "억원",
     "sep_years": years, "sep": {y: ye[y] for y in years}, "sep_q": dict(sorted(q.items())),
+    "sep_is": SEP_IS,
     "con_years": cyears, "con": {y: con[y] for y in cyears},
     "note": "별도: 금융부채 = 유동금융부채 + 비유동금융부채(사채·차입금·파생상품 등), 부채비율 = 부채총계 ÷ 자본총계. 2020년 말은 스캔본이라 2021.1Q 분기재무상태표의 전기말 열을 판독. "
+            "별도 손익: 금융원가 = 이자비용 + 외환·파생 손실 등(2016·2017 이자비용 비중 79·69%), fin_rate = 금융원가 ÷ 평균 금융부채. 2020·2021·2025는 스캔본 판독. "
             "연결: 영업비용 = 매출원가 + 판매비와관리비, 순금융원가 = 금융원가 − 금융수익(외환·파생 손익 포함, 해마다 변동이 큼).",
 }
 (out / "fin.json").write_text(json.dumps(doc, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
