@@ -201,8 +201,8 @@ details.adv[open]>summary{margin-bottom:6px}
             <h3 class="sub-h">하루 사용량의 시간대별 구성 — <span id="chgItem"></span></h3>
             <p class="mini-note" style="margin-top:-4px" id="chgDesc"></p>
             <div class="two-col">
-              <div><h3 class="sub-h" style="font-size:13.5px">시간대별 (새벽·오전·한낮·오후·저녁·밤)</h3><div class="lg" id="trendLegend"></div><div class="chart" id="trendChart"></div></div>
-              <div><h3 class="sub-h" style="font-size:13.5px" id="tbTitle">요금 시간대별 (경·중간·최대부하)</h3><div class="lg" id="tbLegend"></div><div class="chart" id="tbChart"></div></div>
+              <div><h3 class="sub-h" style="font-size:13.5px">시간대별 (새벽·오전·한낮·오후·저녁·밤)</h3><div class="lg" id="trendLegend"></div><div class="chart" id="trendChart"></div><p class="mini-note" id="trendDelta"></p></div>
+              <div><h3 class="sub-h" style="font-size:13.5px" id="tbTitle">요금 시간대별 (경·중간·최대부하)</h3><div class="lg" id="tbLegend"></div><div class="chart" id="tbChart"></div><p class="mini-note" id="tbDelta"></p></div>
             </div>
             <h3 class="sub-h" style="margin-top:22px">부하모양 변화율 — 전년보다 다른 시간대로 옮겨 간 사용량 비중 (평일, %)</h3>
             <p class="mini-note" style="margin-top:-4px">하루 사용량을 24개 시간 칸에 나눈 비중을 전년과 비교해, <b>다른 시간으로 옮겨 간 몫</b>을 %로 나타냅니다(사용량 크기와 무관, 표본 증가 영향 없음).
@@ -293,7 +293,7 @@ details.adv[open]>summary{margin-bottom:6px}
             <div class="tbl-scroll" id="ratioTable"></div>
             <p class="mini-note">SMP 배율은 연간 단순평균. 요금 배율은 해당 연도 말 시행 요금표의 여름철 단가(산업용(을)고압A 선택Ⅱ, 일반용(을)고압A 선택Ⅱ). 요금 배율이 훨씬 큰 것은 전력량 원가 외에 피크 설비비를 시간대 단가에 싣고 있기 때문입니다.</p>
             <div class="two-col" style="margin-top:20px">
-              <div><h3 class="sub-h">계통 상위 100시간의 시각 분포</h3><div class="lg" id="topLegend"></div><div class="chart" id="topChart"></div><p class="mini-note">시장수요 = 태양광(PPA·자가용) 차감 후 한전이 사서 공급해야 하는 수요. 총수요 = 실제 소비.</p></div>
+              <div><h3 class="sub-h">계통 상위 100시간의 시각 분포</h3><div class="lg" id="topLegend"></div><div class="chart" id="topChart"></div><p class="mini-note">한 해 8,760시간 중 수요가 가장 높았던 100시간(약 1%)이 하루 중 몇 시에 몰렸는지 센 것입니다. 이 100시간은 여름 평일 오후·저녁과 겨울 오전·저녁의 냉난방 수요 정점에서 나옵니다. 밤·새벽(21시~이튿날 8시)은 1년 중 가장 높았던 때도 100번째 시간보다 8~16% 낮아(2016~2025) 한 번도 들지 못하므로 0입니다. 시장수요 = 태양광(PPA·자가용) 차감 후 한전이 사서 공급해야 하는 수요. 총수요 = 실제 소비.</p></div>
               <div><h3 class="sub-h">계약종별 부하가중 SMP ÷ 계통가중 SMP</h3><div class="chart" id="clsSmpChart"></div><p class="mini-note">1보다 크면 SMP가 비싼 시간에 더 많이 쓰는 계약종. 2016~2025 시간별 정확 계산(육지 SMP). 피크는 2016년부터 KPX 실측.</p></div>
             </div>
           </div>
@@ -694,7 +694,7 @@ function unitPrice(C, idx, yi, ver, override) {
 // ── SVG 차트 ────────────────────────────────────────────────────────────────
 function niceMax(v) { if (!(v > 0)) return 1; const p = Math.pow(10, Math.floor(Math.log10(v))); const n = v / p; return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 2.5 ? 2.5 : n <= 5 ? 5 : 10) * p; }
 function lineChart(el, o0) {
-  el.__draw = () => lineChart(el, o0);
+  el.__draw = () => lineChart(el, o0); el.__w = el.clientWidth;
   const o = { ...o0, series: o0.series.filter(se => !isHidden(el, se)) };
   if (!o.series.length) o.series = [{ name: "", values: o0.labels.map(() => null), color: "transparent", noTip: true }];
   const W = Math.max(320, el.clientWidth || 720), H = o.height || 300, L = 56, R = 16, T = 24, B = 34;
@@ -752,6 +752,7 @@ document.addEventListener("click", e => {
 // 축 글자 폭 추정(px): 한글 11, 그 외 6.5 (12px 기준)
 function textW(t, px = 12) { let w = 0; for (const c of String(t)) w += /[ㄱ-힝]/.test(c) ? px * .92 : px * .56; return w; }
 function heatmap(el, M, o) {
+  el.__draw = () => heatmap(el, M, o); el.__w = el.clientWidth;
   const rows = M.length, cols = M[0].length, W = Math.max(320, el.clientWidth || 480), L = 34, T = 6, B = 22, cw = (W - L - 8) / cols, ch = o.ch || 16, H = T + rows * ch + B;
   const flat = M.flat().filter(v => v != null && isFinite(v));
   let lo = Math.min(...flat), hi = Math.max(...flat);
@@ -885,8 +886,12 @@ function renderChange(C, idx) {
   legend($("#trendLegend"), tser); stackChart($("#trendChart"), Y.map(String), tser, { height: 250 });
   legend($("#tbLegend"), bser); stackChart($("#tbChart"), Y.map(String), bser, { height: 250 });
   $("#tbTitle").textContent = `요금 시간대별 (경·중간·최대부하, ${S.scheme === "2016" ? "기존" : "2026 개편"} 구분)`;
-  const d = (a, k) => a[k].at(-1) - a[k][0];
-  $("#chgDesc").innerHTML = `${S.season === "all" ? "연간" : SEASONS[+S.season]} · ${S.dtype === "all" ? "전체 날짜" : DTYPES[+S.dtype]} 평균일 기준, 막대 하나가 그해 하루 사용량 100%입니다(표본 증가 영향 없음). ${Y[0]}→${Y.at(-1)}: 한낮 ${pct(d(tod, 2), 1).replace("%", "%p")}, 저녁 ${pct(d(tod, 4), 1).replace("%", "%p")}, 최대부하 시간대 ${pct(d(tb, 2), 1).replace("%", "%p")}. 범례를 누르면 해당 구간을 숨길 수 있습니다. 요금 시간대 구분은 왼쪽 '시간대 구분'(기존/2026 개편)을 따릅니다.`;
+  const yi = yIdx(S.year), bi = yIdx(S.base), d = (a, k) => a[k][yi] - a[k][bi];
+  const dl = (ser, a) => `<b>${S.base}→${S.year} 변화(%p)</b>: ` + ser.map((x, k) => { const v = d(a, k); return `${x.name.split(" ")[0]} <b style="color:${v > 0.05 ? "#be123c" : v < -0.05 ? "#1d4ed8" : "#6b7686"}">${(v >= 0.05 ? "+" : v <= -0.05 ? "−" : "") + fmt(Math.abs(v), 1)}</b>`; }).join(" · ");
+  $("#trendDelta").innerHTML = dl(tser, tod); $("#tbDelta").innerHTML = dl(bser, tb);
+  const mx = Math.max(...tod.map((_, k) => Math.abs(d(tod, k))), ...tb.map((_, k) => Math.abs(d(tb, k))));
+  $("#chgDesc").innerHTML = `${S.season === "all" ? "연간" : SEASONS[+S.season]} · ${S.dtype === "all" ? "전체 날짜" : DTYPES[+S.dtype]} 평균일 기준, 막대 하나가 그해 하루 사용량 100%입니다(표본 증가 영향 없음). 범례를 누르면 해당 구간을 숨길 수 있고, 요금 시간대 구분은 왼쪽 '시간대 구분'(기존/2026 개편)을 따릅니다.`
+    + (mx < 1 ? ` <b>${label}의 ${S.base}→${S.year} 구간별 변화가 최대 ${fmt(mx, 1)}%p로 작아 막대가 거의 같아 보입니다</b> — 계산 오류가 아니라 시간대별 사용 모양이 안정적이라는 뜻이며, 정확한 변화는 그래프 아래 숫자로 확인하세요.` : "");
   const all = [...tser, ...bser.map(b => ({ ...b, name: b.name + (S.scheme === "2016" ? "(기존)" : "(개편)") })), { name: "부하율(평균일)", values: lf }];
   CSV.change = [["year", ...all.map(s => s.name)], ...Y.map((y, i) => [y, ...all.map(s => s.values[i] == null ? "" : s.values[i].toFixed(2))])];
   // 변화율 표: 상위 항목
@@ -1246,7 +1251,7 @@ function renderSim() {
   $("#simNote").innerHTML = (cal ? `<b>실적 보정계수</b> (한전통계 ÷ 추정, 대분류): ${fx}.${ftTxt} 1에서 멀수록 요금표 가정(선택Ⅱ 대표·연중 요금 변경)·누진 분포의 오차가 큽니다.<br>` : "") + `가정 — ${CTy ? `판매량: ${P.refYear}년 계약종별 판매실적(월별)으로 계약종 × 월 확대(시간 모양은 ${P.loadYear}년 시간별 데이터). 기본요금: 계약종별 요금적용전력 실측 × 기본요금 단가, 고압 선택Ⅱ.` : `판매량: 대분류별 ${P.refYear}년 한국전력통계로 확대(계약종 내 비중·시간 모양은 ${P.loadYear}년 시간별 데이터). 기본요금: 대분류 요금적용전력을 계약종 평균일 최대부하 비율로 배분, 고압 선택Ⅱ(계약종별 실적은 ${D.ctr ? D.ctr.years.join("·") : "-"}년만).`} 주택용: ${P.resDist === "measured" ? `${(() => { const y = resBinYear(+P.refYear); return y + "년" + (y !== String(P.refYear) ? `(기준 ${P.refYear}년 분포 없음 → 가장 가까운 연도)` : ""); })()} 청구월별 사용량 구간 분포(가구 ${fmt(sum(D.rbin.groups.map(g => sum(g.hh[D.rbin.months.indexOf(resBinYear(+P.refYear) + "-01")]))) / 1e4, 0)}만, 저압 요금표: 저압·고압 종합 / 고압 요금표: 고압 단일·일반)로 누진 계산하고 월 판매량에 맞춰 확대` : `월별 호당 평균사용량에 로그정규 분포(σ=${P.sigma})를 가정한 누진 계산, 고압 비중 ${fmt(P.high * 100, 0)}%`}. 기후환경 ${fmt(verOf($("#simVer").value).climate, 1)}원·연료비조정 ${fmt(P.fuel, 1)}원/kWh 일률. 가로등(갑)·임시전력(갑/을저압)은 ${CTy ? "요금표 미산정 → 실적 수입 그대로(시나리오 불변)" : "미산정"}. 부가세·기금 제외. 복지할인: ${D.disc.years.includes(+P.refYear) ? `${P.refYear}년 실적 ${fmt(D.disc.total[D.disc.years.indexOf(+P.refYear)], 0)}억원 × ${fmt(P.disc * 100, 0)}%(사회복지시설 일반용 ${fmt(P.discGen * 100, 0)}%)` : "해당 연도 자료 없음(0)"}${(() => { const x = extraDiscOf(P.refYear); return x.동결 + x.감액 > 0 ? ` + 주택용 실적표 외 감액 ${fmt(x.동결 + x.감액, 0)}억원(취약계층 요금인상 유예 ${fmt(x.동결, 0)}${x.감액 ? ` · 200kWh 이하 감액 ${fmt(x.감액, 0)}` : ""}, ${x.src}${x.src === "발표" ? "; 200kWh 이하 감액은 자료 없음" : ""})` : ""; })()}.`;
 }
 function barChart(el, labels, series0, o) {
-  el.__draw = () => barChart(el, labels, series0, o);
+  el.__draw = () => barChart(el, labels, series0, o); el.__w = el.clientWidth;
   const series = series0.filter(se => !isHidden(el, se));
   const W = Math.max(320, el.clientWidth || 720), L = 50, R = 10, T = o.yTitle ? 24 : 12;
   const gw = (W - L - R) / labels.length, lw = Math.max(...labels.map(l => textW(l, 11)));
@@ -1268,7 +1273,7 @@ function barChart(el, labels, series0, o) {
 }
 // 100% 누적 막대: series = [{name, color, values}] (각 막대의 합 ≈ 100)
 function stackChart(el, labels, series0, o = {}) {
-  el.__draw = () => stackChart(el, labels, series0, o);
+  el.__draw = () => stackChart(el, labels, series0, o); el.__w = el.clientWidth;
   const series = series0.filter(se => !isHidden(el, se));
   const W = Math.max(320, el.clientWidth || 720), H = o.height || 250, L = 40, R = 10, T = 10, B = 26;
   const gw = (W - L - R) / labels.length, bw = Math.min(56, gw * .72), ys = v => T + (H - T - B) * (1 - v / 100);
@@ -1280,7 +1285,7 @@ function stackChart(el, labels, series0, o = {}) {
     let acc = 0; const x = L + i * gw + (gw - bw) / 2;
     series.forEach(se => { const v = se.values[i] || 0; if (v <= 0) return; const y1 = ys(acc), y0 = ys(acc + v);
       s += `<rect x="${x}" y="${y0}" width="${bw}" height="${y1 - y0}" fill="${se.color}"><title>${lab} ${se.name}: ${fmt(v, 1)}%</title></rect>`;
-      if (y1 - y0 >= 13 && bw >= 26) s += `<text x="${x + bw / 2}" y="${(y0 + y1) / 2 + 4}" text-anchor="middle" style="font-size:10px;fill:${se.dark ? "#0a2350" : "#fff"}">${fmt(v, 0)}</text>`;
+      if (y1 - y0 >= 13 && bw >= 26) s += `<text x="${x + bw / 2}" y="${(y0 + y1) / 2 + 4}" text-anchor="middle" style="font-size:10px;fill:${se.dark ? "#0a2350" : "#fff"}">${fmt(v, bw >= 36 ? 1 : 0)}</text>`;
       acc += v; });
     if (i % lstep === 0) s += `<text class="ax" x="${L + i * gw + gw / 2}" y="${H - 8}" text-anchor="middle">${lab}</text>`;
   });
@@ -1753,12 +1758,15 @@ const VIEW_RENDER = {
   deep: () => showSub(S.sub || "s-res"),
   data: () => renderCoverage()
 };
+function redrawVisible() {
+  document.querySelectorAll("#app > .view:not([hidden]) .chart").forEach(c => { if (c.__draw && c.offsetParent !== null && c.clientWidth && Math.abs((c.__w || 0) - c.clientWidth) > 2) c.__draw(); });
+}
 function showView(v, force) {
   if (!document.querySelector(`.view[data-view="${v}"]`)) v = "overview";
   document.querySelectorAll("#app > .view").forEach(e => e.hidden = e.dataset.view !== v);
   document.querySelectorAll("#navList a").forEach(a => a.classList.toggle("active", a.dataset.view === v));
   const changed = S.view !== v; S.view = v;
-  (VIEW_RENDER[v] || (() => {}))();
+  (VIEW_RENDER[v] || (() => {}))(); redrawVisible();
   if (changed && !force) window.scrollTo({ top: 0 });
 }
 const SUB_RENDER = { "s-res": () => { renderDiag(); }, "s-fuel": () => renderFuel(), "s-region": () => { renderRegion(); }, "s-fin": () => renderFin() };
@@ -1766,7 +1774,7 @@ function showSub(id) {
   S.sub = id;
   document.querySelectorAll('.view[data-view="deep"] > .sec').forEach(e => e.hidden = e.id !== id);
   document.querySelectorAll(".subtab").forEach(b => b.classList.toggle("active", b.dataset.sub === id));
-  (SUB_RENDER[id] || (() => {}))();
+  (SUB_RENDER[id] || (() => {}))(); redrawVisible();
 }
 
 // 현행 요금표 기준 대분류 요약(개요·진단 공용)
