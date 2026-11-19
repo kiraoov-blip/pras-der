@@ -312,7 +312,7 @@ footer{background:#061a3d;color:#b9c6dc}
 .tbl td.pos{color:var(--up)} .tbl td.neg{color:var(--down)}
 .tbl td.na{color:#a0a8b5}
 .tbl-scroll{max-height:560px;overflow:auto;border:1px solid #eef1f5;border-radius:10px}
-.flag{display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border-radius:99px;background:#fff1f2;color:#be123c;margin-left:6px}
+.flag{display:inline-block;width:auto;height:auto;box-shadow:none;vertical-align:baseline;font-size:11px;font-weight:700;padding:1px 7px;border-radius:99px;background:#fff1f2;color:#be123c;margin-left:6px}
 .flag.ok{background:#ecfdf5;color:#047857}
 .finding{border-left:3px solid var(--red);background:#fbfcfe;padding:10px 14px;border-radius:0 10px 10px 0;margin:0 0 10px;font-size:13.5px;line-height:1.6}
 .finding b{color:#0a2350}
@@ -326,19 +326,39 @@ footer{background:#061a3d;color:#b9c6dc}
 @media (max-width:980px){.two-col{grid-template-columns:1fr}}
 .kv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:13px}
 .kv b{color:#0a2350}
+#app>.view>.sec,#app>.view>.subtabs{margin-bottom:18px}
+.ov-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+@media (max-width:980px){.ov-grid{grid-template-columns:1fr}}
+.ov-card{border:1px solid #e3e9f2;border-radius:14px;padding:16px 18px;background:#fff;display:flex;flex-direction:column;gap:8px;min-width:0}
+.ov-card .q{font-size:12px;font-weight:800;color:var(--red);letter-spacing:.02em}
+.ov-card h3{margin:0;font-size:16.5px;color:#0a2350;line-height:1.4}
+.ov-card .big{font-size:26px;font-weight:800;color:#003b8e;line-height:1.2}
+.ov-card .big small{font-size:13px;font-weight:600;color:#4b5563;margin-left:4px}
+.ov-card ul{margin:0;padding-left:18px;font-size:13.5px;line-height:1.6;color:#253247}
+.ov-card ul b{color:#0a2350}
+.ov-card .go{margin-top:auto;align-self:flex-start;font-size:12.5px;font-weight:700;color:#003b8e;background:#eaf1fb;border:1px solid #c5d8f0;border-radius:99px;padding:5px 12px;cursor:pointer}
+.ov-card .go:hover{background:#dce8f8}
+.ov-card .tbl{font-size:12px}
+.ov-tbl td:first-child{white-space:normal;min-width:150px}
+.ov-tbl th,.ov-tbl td{padding:6px 6px}
+.subtabs{display:flex;flex-wrap:wrap;gap:8px}
+.subtab{font:inherit;font-size:13.5px;font-weight:700;color:#334155;background:#fff;border:1px solid #d6dde7;border-radius:99px;padding:7px 14px;cursor:pointer}
+.subtab.active{color:#fff;background:#003b8e;border-color:#003b8e}
+details.adv{margin-top:16px;border:1px solid #e3e9f2;border-radius:12px;padding:10px 14px;background:#fbfcfe}
+details.adv>summary{cursor:pointer;font-weight:800;color:#0a2350;font-size:14px}
+details.adv[open]>summary{margin-bottom:6px}
 </style>
 
 <nav class="site-nav" aria-label="시뮬레이터">
   <div class="site-nav-inner">
     <a href="#top" class="site-brand">PRAS-LOAD<span>SIMULATOR</span></a>
     <ul id="navList">
-      <li><a href="#s-input" class="active">분석조건</a></li>
-      <li><a href="#s-pattern">부하패턴</a></li>
-      <li><a href="#s-change">패턴 변화</a></li>
-      <li><a href="#s-diag">요금 진단</a></li>
-      <li><a href="#s-cost">원가 신호</a></li>
-      <li><a href="#s-sim">요금 시뮬레이터</a></li>
-      <li><a href="#s-data">데이터·방법</a></li>
+      <li><a href="#overview" data-view="overview" class="active">개요</a></li>
+      <li><a href="#usage" data-view="usage">사용량·패턴</a></li>
+      <li><a href="#diag" data-view="diag">요금제 진단</a></li>
+      <li><a href="#sim" data-view="sim">개선안 시뮬레이터</a></li>
+      <li><a href="#deep" data-view="deep">심화 분석</a></li>
+      <li><a href="#data" data-view="data">데이터·방법</a></li>
     </ul>
     <a class="site-home-btn" href="/" aria-label="처음 화면으로">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.6 11.4 12 4.4l8.4 7"/><path d="M5.7 10.2v8.6a.8.8 0 0 0 .8.8h3.6v-5.2h3.8v5.2h3.6a.8.8 0 0 0 .8-.8v-8.6"/></svg>
@@ -350,18 +370,32 @@ footer{background:#061a3d;color:#b9c6dc}
 <main id="top" style="flex:1 0 auto;display:flex;flex-direction:column">
   <header class="hero">
     <div class="hero-inner">
-      <h1>전력소비패턴 · 요금 진단 시뮬레이터</h1>
-      <p>계약종·업종·지역별 시간별 사용량(2016~2025, 약 2,960만 행)으로 소비패턴을 분해하고, 2021~2026년 전기요금표 14개 판을 적용해 요금체계의 정합성과 고객·한전 간 재무적 형평성을 시뮬레이션합니다.</p>
+      <h1>전력 사용 패턴 · 요금제 진단 시뮬레이터</h1>
+      <p>용도·지역·업종별 시간별 사용량(2016~2025)으로 사용 패턴을 분석해 ① 현행 요금제가 원가를 공정하게 나누는지, ② 요금 개편이 바뀐 사용 패턴을 반영하는지, ③ 한전 재무와 계통에 어떤 영향이 있는지 진단하고, ④ 앞으로의 요금제 개편 방향을 제안합니다.</p>
     </div>
   </header>
 
   <div class="page-shell workspace">
     <div id="boot" class="loading">데이터를 불러오는 중…</div>
-    <div class="dashboard-layout" id="app" hidden>
+    <div id="app" hidden>
+      <div class="view" data-view="overview">
+        <section class="sec" id="s-overview">
+          <div class="sec-h">
+            <div><p class="eyebrow">개요 · Overview</p><h2>이 시뮬레이터가 답하는 네 가지 질문</h2><p class="desc">2016~2025년 시간별 사용량, 요금표, 원가·재무 자료로 현행 요금제를 진단하고 개편 방향을 제안합니다. 각 카드의 숫자는 2025년 판매량·원가, 현행(2026.4.16) 요금표, 기본 판단 기준으로 계산했습니다.</p></div>
+            
+          </div>
+          <div class="sec-b">
+            <div class="ov-grid" id="ovGrid"></div>
+            <p class="mini-note" id="ovNote"></p>
+          </div>
+        </section>
+      </div>
+      <div class="view" data-view="usage" hidden>
+      <div class="dashboard-layout">
       <section class="control-rail" aria-label="분석 조건">
         <section class="sec" id="s-input">
           <div class="sec-h">
-            <div><p class="eyebrow">01 · Input</p><h2>분석 조건</h2></div>
+            <div><p class="eyebrow">사용량 · Input</p><h2>분석 조건</h2></div>
             <button class="text-button" id="reset" type="button">기본값으로 초기화</button>
           </div>
           <div class="grid-in top">
@@ -393,13 +427,11 @@ footer{background:#061a3d;color:#b9c6dc}
           </div>
         </section>
       </section>
-
       <div class="results-pane">
         <section class="kpis" id="kpis" aria-label="핵심 지표" aria-live="polite"></section>
-
         <section class="sec" id="s-pattern">
           <div class="sec-h">
-            <div><p class="eyebrow">02 · Load Pattern</p><h2 id="patTitle">부하패턴</h2><p class="desc" id="patDesc"></p></div>
+            <div><p class="eyebrow">사용량 · Load pattern</p><h2 id="patTitle">부하패턴</h2><p class="desc" id="patDesc"></p></div>
             <div class="tools"><button class="btn" type="button" data-csv="pattern">데이터 저장 <small>CSV</small></button></div>
           </div>
           <div class="sec-b">
@@ -412,10 +444,9 @@ footer{background:#061a3d;color:#b9c6dc}
             </div>
           </div>
         </section>
-
         <section class="sec" id="s-change">
           <div class="sec-h">
-            <div><p class="eyebrow">03 · Pattern Change</p><h2>소비패턴 변화 감지</h2><p class="desc">표본(스마트미터) 증가 효과를 걷어내기 위해 크기가 아닌 <b>모양</b>(정규화 곡선)과 비중 지표로 변화를 봅니다.</p></div>
+            <div><p class="eyebrow">사용량 · Pattern change</p><h2>소비패턴 변화 감지</h2><p class="desc">표본(스마트미터) 증가 효과를 걷어내기 위해 크기가 아닌 <b>모양</b>(정규화 곡선)과 비중 지표로 변화를 봅니다.</p></div>
             <div class="tools"><button class="btn" type="button" data-csv="change">데이터 저장 <small>CSV</small></button></div>
           </div>
           <div class="sec-b">
@@ -439,45 +470,14 @@ footer{background:#061a3d;color:#b9c6dc}
             <p class="mini-note">본부 관할과 시도 경계가 어긋나(인천본부 ⊃ 부천·김포·시흥, 대구본부 ⊃ 포항·경주 등, 부산울산본부 ⊃ 김해·양산) 경계가 일치하는 10개 권역으로 비교합니다. 개성(황북)은 경기북부본부 관할. 100%를 넘는 칸(주로 산업용·교육용)은 대형 고객의 관리 본부와 공급 지점 시도가 달라 생기는 집계 차이로, 전국 합계와 시뮬레이터(대분류 × 월 확대)에는 영향이 없습니다.</p>
           </div>
         </section>
-
-        <section class="sec" id="s-diag">
+        <section class="sec" id="s-sales">
           <div class="sec-h">
-            <div><p class="eyebrow">04 · Tariff Diagnosis</p><h2>요금체계 진단</h2><p class="desc" id="diagDesc"></p></div>
-            <div class="tools"><button class="btn" type="button" data-csv="diag">단가 <small>CSV</small></button><button class="btn" type="button" data-csv="monthly">월별 <small>CSV</small></button><button class="btn" type="button" data-csv="fin">재무 <small>CSV</small></button><button class="btn" type="button" data-csv="region">시도별 <small>CSV</small></button><button class="btn" type="button" data-csv="contract">계약종 실적 <small>CSV</small></button><button class="btn" type="button" data-csv="resbins">주택용 구간 <small>CSV</small></button><button class="btn" type="button" data-csv="welfare">복지할인 구간 <small>CSV</small></button></div>
+            <div><p class="eyebrow">사용량 · Sales</p><h2>용도·지역·업종별 판매실적</h2><p class="desc">계약종·계약전력 규모·본부·시도 단위의 연간 판매량과 단가. 시간 모양은 위 부하패턴, 크기는 여기서 봅니다.</p></div>
+            <div class="tools"><button class="btn" type="button" data-csv="contract">계약종 실적 <small>CSV</small></button><button class="btn" type="button" data-csv="region">시도별 <small>CSV</small></button></div>
           </div>
           <div class="sec-b">
-            <div id="findings"></div>
-            <div class="grid-in wide" style="margin:6px 0 12px">
-              <div class="field"><label for="dLoad">적용 부하 연도</label><select id="dLoad"></select><span class="hint">같은 부하에 서로 다른 요금표를 적용</span></div>
-            </div>
-            <div class="tbl-scroll" id="diagTable"></div>
-            <p class="mini-note">전력량요금 기준 평균단가(원/kWh, 기본요금·기후환경·연료비조정 제외). 고압은 선택Ⅱ 대표. 2026.4 개편은 산업용(을) 4.16, 그 외 6.1 시행이며 표는 6.1 이후 상태. 산업용(을) 봄·가을 주말 11~14시 50% 할인 반영.</p>
-            <h3 class="sub-h" style="margin-top:22px">원가 회수 추이 — 판매단가 ÷ 총괄원가 단가 (한국전력통계)</h3>
-            <div class="lg" id="recLegend"></div>
-            <div class="chart" id="recChart"></div>
-            <h3 class="sub-h" style="margin-top:22px">복지할인 실적 (2021~2025, 억원)</h3>
-            <div class="tbl-scroll" id="discTable"></div>
-            <p class="mini-note">할인 한도는 2016.12 개정 이후 고정. 주택용 수입 대비 비중 = (총할인 − 사회복지시설 − 기초 심야) ÷ 월보 주택용 판매수입. 사회복지시설은 일반·주택·심야 합산 표기.</p>
-            <h3 class="sub-h" style="margin-top:22px">주택용 사용량 구간별 분포와 누진 구간 (<span id="rbYear"></span>, 월별 청구)</h3>
-            <div class="grid-in wide" style="margin:6px 0 10px">
-              <div class="field"><label for="rbYearSel">연도</label><select id="rbYearSel"></select></div>
-              <div class="field"><label for="rbSeason">기간</label><select id="rbSeason"><option value="all">연간</option><option value="non">하계 외 (1~6·10~12월)</option><option value="sum">하계 청구 (7~9월)</option></select><span class="hint">누진 구간: 하계 외 200/400kWh, 하계 300/450kWh</span></div>
-            </div>
-            <div class="lg" id="rbLegend"></div>
-            <div class="chart" id="rbChart"></div>
-            <div class="tbl-scroll" id="rbTable"></div>
-            <div class="tbl-scroll" id="rbTier" style="margin-top:10px"></div>
-            <p class="mini-note" id="rbNote"></p>
-            <h3 class="sub-h" style="margin-top:22px">복지할인 가구의 사용량 구간별 분포 (<span id="wbYear"></span>, 월별 청구)</h3>
-            <div class="grid-in wide" style="margin:6px 0 10px">
-              <div class="field"><label for="wbYearSel">연도</label><select id="wbYearSel"></select></div>
-              <div class="field"><label for="wbSeason">기간</label><select id="wbSeason"><option value="all">연간</option><option value="non">하계 외 (1~6·9~12월)</option><option value="sum">하계 (7·8월)</option></select><span class="hint">하계는 누진 구간 300/450kWh·할인 한도 상향</span></div>
-            </div>
-            <div class="lg" id="wbLegend"></div>
-            <div class="chart" id="wbChart"></div>
-            <div class="tbl-scroll" id="wbTable"></div>
-            <p class="mini-note" id="wbNote"></p>
-            <h3 class="sub-h" style="margin-top:22px">계약종별 판매실적 (<span id="ctRange"></span>, 계약전력구간별 판매실적)</h3>
+            <div id="salesFindings"></div>
+            <h3 class="sub-h">계약종별 판매실적 (<span id="ctRange"></span>, 계약전력구간별 판매실적)</h3>
             <div class="grid-in wide" style="margin:6px 0 10px">
               <div class="field"><label for="ctYear">연도</label><select id="ctYear"></select></div>
               <div class="field"><label for="ctTariff">규모·본부별로 볼 계약종</label><select id="ctTariff"></select></div>
@@ -497,29 +497,39 @@ footer{background:#061a3d;color:#b9c6dc}
             <div class="chart" id="rgChart"></div>
             <div class="tbl-scroll" id="rgTable"></div>
             <p class="mini-note" id="rgNote"></p>
-            <h3 class="sub-h" style="margin-top:22px">산업용 지역별 요금제 시나리오 (지역별 조정요금, 원/kWh 인하)</h3>
-            <div class="grid-in wide" style="margin:6px 0 10px">
-              <div class="field"><label for="rsS">수도권 남부</label><input id="rsS" type="number" step="0.5" min="0" value="1"><span class="hint">설계안 0~1원</span></div>
-              <div class="field"><label for="rsN">수도권 북부</label><input id="rsN" type="number" step="0.5" min="0" value="10"><span class="hint">최대 10원</span></div>
-              <div class="field"><label for="rsC">중부권</label><input id="rsC" type="number" step="0.5" min="0" value="15"><span class="hint">최대 15원</span></div>
-              <div class="field"><label for="rsP">남부권</label><input id="rsP" type="number" step="0.5" min="0" value="18"><span class="hint">최대 18원 · 제주 제외</span></div>
-            </div>
-            <div class="kpis" id="rsKpis"></div>
-            <div class="tbl-scroll" id="rsTable"></div>
-            <div class="tbl-scroll" id="rsTop" style="margin-top:10px"></div>
-            <p class="mini-note" id="rsNote"></p>
-            <h3 class="sub-h" style="margin-top:22px">월별 판매단가 vs 전력구입 정산단가 (전력통계월보, 2016.1~)</h3>
-            <div class="lg" id="monLegend"></div>
-            <div class="chart" id="monChart"></div>
-            <p class="mini-note">판매단가 = 계약종별 판매수입 ÷ 판매량(부가세·기금 제외). 정산단가 = 한전이 전력시장에서 사는 평균 단가(SMP·CP·기타 포함). 판매단가가 정산단가 아래로 내려가면 송배전·판매비는커녕 구입비도 회수하지 못하는 상태입니다.</p>
-            <p class="mini-note">총괄원가 단가 = 영업비용 ÷ 판매량. 계약종별 원가배분 전의 평균 기준이며, SMP·계통부하 연계 시 시간대별 원가로 대체됩니다.</p>
           </div>
         </section>
-
+      </div>
+      </div>
+      </div>
+      <div class="view" data-view="diag" hidden>
+        <section class="sec" id="s-diag">
+          <div class="sec-h">
+            <div><p class="eyebrow">진단 · Diagnosis</p><h2>현행 요금제 진단</h2><p class="desc">현행 요금이 ① 계약종별 원가를 공정하게 나누는지, ② 바뀐 사용 패턴과 원가 신호(SMP·피크)를 반영하는지 봅니다.</p></div>
+            <div class="tools"><button class="btn" type="button" data-csv="diag">단가 <small>CSV</small></button></div>
+          </div>
+          <div class="sec-b">
+            <div id="findings"></div>
+            <h3 class="sub-h">① 원가 회수율 — 현행 요금표, 전체 평균 = 100</h3>
+            <div class="lg" id="dxLegend"></div>
+            <div class="chart" id="dxChart"></div>
+            <p class="mini-note" id="dxNote"></p>
+            <h3 class="sub-h" style="margin-top:22px">① 원가 회수 추이 — 판매단가 ÷ 총괄원가 단가 (한국전력통계)</h3>
+            <div class="lg" id="recLegend"></div>
+            <div class="chart" id="recChart"></div>
+            <h3 class="sub-h" style="margin-top:22px">② 요금표가 바뀌면 같은 사용량의 단가는? — 판본별 평균단가</h3>
+            <p class="mini-note" id="diagDesc" style="margin-top:-4px"></p>
+            <div class="grid-in wide" style="margin:6px 0 12px">
+              <div class="field"><label for="dLoad">적용 부하 연도</label><select id="dLoad"></select><span class="hint">같은 부하에 서로 다른 요금표를 적용</span></div>
+            </div>
+            <div class="tbl-scroll" id="diagTable"></div>
+            <p class="mini-note">전력량요금 기준 평균단가(원/kWh, 기본요금·기후환경·연료비조정 제외). 고압은 선택Ⅱ 대표. 2026.4 개편은 산업용(을) 4.16, 그 외 6.1 시행이며 표는 6.1 이후 상태. 산업용(을) 봄·가을 주말 11~14시 50% 할인 반영.</p>
+          </div>
+        </section>
         <section class="sec" id="s-cost">
           <div class="sec-h">
-            <div><p class="eyebrow">05 · Cost Signal</p><h2>원가 신호 — SMP·계통부하</h2><p class="desc">시간별 SMP(육지·제주, 2016~2026.11)와 계통부하·태양광(2016~2026.10)으로 요금의 시간대 차등이 원가 차이를 반영하는지 봅니다.</p></div>
-            <div class="tools"><button class="btn" type="button" data-csv="cost">배율 <small>CSV</small></button><button class="btn" type="button" data-csv="fuel">연료비 <small>CSV</small></button></div>
+            <div><p class="eyebrow">진단 · Cost signal</p><h2>② 원가 신호와 요금 신호</h2><p class="desc">시간별 SMP와 계통부하(KPX)로 비싼 시간이 언제인지, 요금의 시간대 구분이 그 시간을 짚는지 봅니다.</p></div>
+            <div class="tools"><button class="btn" type="button" data-csv="cost">배율 <small>CSV</small></button></div>
           </div>
           <div class="sec-b">
             <div id="costFindings"></div>
@@ -540,7 +550,129 @@ footer{background:#061a3d;color:#b9c6dc}
               <div><h3 class="sub-h">계통 상위 100시간의 시각 분포</h3><div class="lg" id="topLegend"></div><div class="chart" id="topChart"></div><p class="mini-note">시장수요 = 태양광(PPA·자가용) 차감 후 한전이 사서 공급해야 하는 수요. 총수요 = 실제 소비.</p></div>
               <div><h3 class="sub-h">계약종별 부하가중 SMP ÷ 계통가중 SMP</h3><div class="chart" id="clsSmpChart"></div><p class="mini-note">1보다 크면 SMP가 비싼 시간에 더 많이 쓰는 계약종. 2016~2025 시간별 정확 계산(육지 SMP). 피크는 2016년부터 KPX 실측.</p></div>
             </div>
-            <h3 class="sub-h" style="margin-top:26px">연료비 연동의 형평성 — 산식 vs 규칙 vs 실제 적용 (2021~2026)</h3>
+          </div>
+        </section>
+      </div>
+      <div class="view" data-view="sim" hidden>
+        <section class="sec" id="s-sim">
+          <div class="sec-h">
+            <div><p class="eyebrow">제안 · Simulator</p><h2>요금 개선안 시뮬레이터</h2><p class="desc">개선안을 불러오거나 대분류별 단가를 조정해 계약종별 요금 변화, 원가 회수율, 한전 수입·재무 영향을 봅니다.</p></div>
+            <div class="tools"><button class="btn" type="button" data-csv="sim">데이터 저장 <small>CSV</small></button></div>
+          </div>
+          <div class="sec-b">
+            <div class="grid-in wide" style="margin-bottom:12px">
+              <div class="field"><label for="simPreset">개선안 불러오기</label><select id="simPreset"><option value="">직접 입력</option><option value="S1">안 1 · 산업용 부담 완화 (수입 중립)</option><option value="S2">안 2 · 정책 외 계약종 회수율 균등화 (수입 중립)</option><option value="S3">안 3 · 지역별 요금제만 시행 (산업용 −2.8조)</option><option value="0">초기화 (조정 없음)</option></select><span class="hint" id="simPresetHint">2025년 판매량·원가, 2026.4.16 요금표 기준으로 계산한 조정값</span></div>
+              <div class="field"><label for="simVer">시나리오 요금표</label><select id="simVer"></select></div>
+              <div class="field"><label for="simBase">비교 요금표</label><select id="simBase"></select></div>
+              <div class="field"><label for="simRef">판매량·원가 기준 연도</label><select id="simRef"></select><span class="hint">한국전력통계</span></div>
+            </div>
+            <h3 class="sub-h">대분류별 조정 (전력량요금 ±원/kWh, 시간대·기본요금 ±%)</h3>
+            <div class="adj-grid" id="adjGrid"></div>
+            <div class="kpis" id="simKpis" style="margin-top:16px"></div>
+            <div class="lg" id="simLegend"></div>
+            <div class="chart" id="simChart"></div>
+            
+            <h3 class="sub-h" style="margin-top:24px">형평성 진단 — 원가 회수율 목표 대비</h3>
+            <div class="grid-in wide" style="margin:6px 0 10px">
+              <div class="field"><span class="lab">목표 기준</span>
+                <div class="seg" role="radiogroup" aria-label="형평성 목표 기준"><label><input type="radio" name="eqMode" value="policy" checked><span>정책 분리 · 기본</span></label><label><input type="radio" name="eqMode" value="band"><span>범위만</span></label><label><input type="radio" name="eqMode" value="full"><span>모두 100</span></label></div>
+                <span class="hint">정책 분리 = 농사용·심야·복지할인은 정책 보조로 따로 집계하고 나머지를 허용 범위로 판정</span></div>
+              <div class="field"><span class="lab">회수율 기준</span>
+                <div class="seg" role="radiogroup" aria-label="회수율 기준"><label><input type="radio" name="eqRel" value="rel" checked><span>전체 평균 대비 · 기본</span></label><label><input type="radio" name="eqRel" value="abs"><span>원가 대비</span></label></div>
+                <span class="hint" id="eqRelHint">전체 평균 대비 = 계약종 회수율 ÷ 한전 전체 회수율. 한전 전체가 원가를 넘게 걷을 때 누가 평균보다 더·덜 내는지</span></div>
+              <div class="field"><label for="eqLo">허용 범위 하한 (%)</label><input id="eqLo" type="number" step="1" value="90"></div>
+              <div class="field"><label for="eqHi">허용 범위 상한 (%)</label><input id="eqHi" type="number" step="1" value="110"></div>
+              <div class="field"><span class="lab">보기</span>
+                <div class="seg" role="radiogroup" aria-label="형평성 보기 단위"><label><input type="radio" name="eqView" value="big" checked><span>대분류</span></label><label><input type="radio" name="eqView" value="t"><span>계약종</span></label></div></div>
+            </div>
+            <div class="kpis" id="eqKpis"></div>
+            <div class="tbl-scroll" id="eqTable"></div>
+            <p class="mini-note" id="eqNote"></p>
+            <details class="adv"><summary>계약종별 상세 표</summary>
+              <div class="tbl-scroll" id="simTable" style="margin-top:10px"></div>
+            </details>
+            <details class="adv"><summary>고급 설정 — 요금 계산·원가 배분 가정</summary>
+              <div class="grid-in wide" style="margin:10px 0 12px">
+              <div class="field"><span class="lab">시나리오 시간대</span>
+                <div class="seg" role="radiogroup"><label><input type="radio" name="simScheme" value="auto" checked><span>요금표 기준</span></label><label><input type="radio" name="simScheme" value="2016"><span>기존</span></label><label><input type="radio" name="simScheme" value="2026"><span>개편</span></label></div></div>
+              <div class="field"><label for="simLoad">부하 모양 연도</label><select id="simLoad"></select></div>
+              <div class="field"><label for="simFuelMode">연료비조정단가 기준</label>
+                <select id="simFuelMode"><option value="applied">기준 연도 실제 적용</option><option value="rule">기준 연도 규칙(상하한 적용)</option><option value="required">기준 연도 산식(상하한 없음)</option><option value="manual">직접 입력</option></select>
+                <div class="row" style="margin-top:6px"><input id="simFuel" type="number" step="0.1" value="5" style="flex:1" aria-label="연료비조정단가"><span style="align-self:center;font-size:12px;color:#6b7686">원/kWh</span></div></div>
+              <div class="field"><label for="simCost">총괄원가 단가 (원/kWh)</label><input id="simCost" type="number" step="0.1"><span class="hint" id="simCostHint"></span></div>
+              <div class="field"><label for="simResDist">주택용 누진 계산</label><select id="simResDist"><option value="measured">실측 사용량 구간 분포 (2024~2025 청구)</option><option value="lognormal">로그정규 분포 가정</option></select><span class="hint" id="simResDistHint">가구별 구간 분포 × 저·고압 요금표</span></div>
+              <div class="field"><label for="simResHigh">주택용 고압 비중 (%)</label><input id="simResHigh" type="number" step="1" value="40"><span class="hint">누진 계산용 가정</span></div>
+              <div class="field"><label for="simResSig">주택 호당 사용량 분산 σ</label><input id="simResSig" type="number" step="0.05" value="0.6"><span class="hint">로그정규 분포 가정</span></div>
+              <div class="field"><label for="simDisc">복지할인 규모 (%)</label><input id="simDisc" type="number" step="10" value="100"><span class="hint">기준 연도 실적 = 100. 2021~2025 자료</span></div>
+              <div class="field"><label for="simDiscGen">사회복지시설 할인 중 일반용 비중 (%)</label><input id="simDiscGen" type="number" step="10" value="50"><span class="hint">원자료가 일반·주택·심야 합산</span></div>
+              <div class="field"><span class="lab">실적 보정</span>
+                <div class="seg" role="radiogroup"><label><input type="radio" name="simCal" value="on" checked><span>켜기</span></label><label><input type="radio" name="simCal" value="off"><span>끄기</span></label></div>
+                <span class="hint">기준 연도 시행 요금표 추정치 = 한전통계 대분류별 판매수입</span></div>
+              </div>
+            <h3 class="sub-h">원가 배분 모형</h3>
+            <div class="grid-in wide" style="margin-bottom:12px">
+              <div class="field"><label for="cSmpYear">SMP 기준 연도</label><select id="cSmpYear"></select><span class="hint">전력구입비를 시간별 SMP로 가중 배분</span></div>
+              <div class="field"><label for="cCP">구입비 중 용량성 비중 (%)</label><input id="cCP" type="number" step="1" value="10"><span class="hint">용량요금(CP) 등, 피크 기여로 배분</span></div>
+              <div class="field"><label for="cN">피크 기준 시간</label><select id="cN"><option value="100m" selected>시장수요(태양광 차감) 상위 100시간 · 기본</option><option value="300m">시장수요(태양광 차감) 상위 300시간</option><option value="100">총수요 상위 100시간</option><option value="300">총수요 상위 300시간</option></select><span class="hint">부하 모양 연도 기준, 2016년부터 KPX 실측. 태양광이 빠진 저녁 피크가 설비 투자를 부르므로 시장수요가 기본</span></div>
+            </div>
+            <p class="mini-note" id="costModelNote" style="margin:-4px 0 12px"></p>
+            <h3 class="sub-h">송배전·판매 원가 (송배전 이용요금 총괄원가)</h3>
+            <div class="grid-in wide" style="margin-bottom:12px">
+              <div class="field"><label for="cBasis">원가 기준</label><select id="cBasis"><option value="opex">영업비용</option><option value="opex_fin" selected>영업비용 + 금융원가 (별도, 이자 등) · 기본</option><option value="roi">영업비용 + 송배전 적정투자보수</option></select><span class="hint">금융원가 = 한전 별도 손익계산서(이자비용 + 외환·파생 손실). 넣으면 한전 전체 회수율이 100%에 가까워져 원가 대비 기준이 의미를 가짐</span></div>
+              <div class="field"><label for="cTxPeak">송전비 중 피크 배분 (%)</label><input id="cTxPeak" type="number" step="5" value="50"><span class="hint">나머지는 kWh 비례, 모든 계약종 부담</span></div>
+              <div class="field"><label for="cRetail">판매·기타 비용 배분</label><select id="cRetail"><option value="cust_lamp" selected>고객 수 (가로등은 kWh) · 기본</option><option value="cust">고객 수 (전 계약종)</option><option value="kwh">kWh</option></select><span class="hint">영업비용 − 구입비 − 송배전 적정원가. 가로등(갑)은 등 하나가 고객 1호라 고객 수 기준이면 과대</span></div>
+              <div class="field"><span class="hint" style="margin-top:22px">배전비는 배전이용요금 단가(저압·고압 기본 원/kW·전력량 원/kWh)로 배분하고, 154kV 이상(고압B·C)은 배전망 미이용으로 제외합니다.</span></div>
+            </div>
+            </details>
+            <p class="mini-note" id="simNote"></p>
+          </div>
+        </section>
+      </div>
+      <div class="view" data-view="deep" hidden>
+        <div class="subtabs" role="tablist" aria-label="심화 분석">
+          <button type="button" class="subtab active" data-sub="s-res">주택용 누진·복지할인</button>
+          <button type="button" class="subtab" data-sub="s-fuel">연료비 연동</button>
+          <button type="button" class="subtab" data-sub="s-region">지역별 요금제</button>
+          <button type="button" class="subtab" data-sub="s-fin">한전 재무</button>
+        </div>
+        <section class="sec" id="s-res">
+          <div class="sec-h">
+            <div><p class="eyebrow">심화 · Residential</p><h2>주택용 누진제와 복지할인</h2><p class="desc">누진 단계별 가구·사용량 분포, 복지할인의 구조와 실질 가치 변화.</p></div>
+            <div class="tools"><button class="btn" type="button" data-csv="resbins">주택용 구간 <small>CSV</small></button><button class="btn" type="button" data-csv="welfare">복지할인 구간 <small>CSV</small></button></div>
+          </div>
+          <div class="sec-b">
+            <div id="resFindings"></div>
+            <h3 class="sub-h">주택용 사용량 구간별 분포와 누진 구간 (<span id="rbYear"></span>, 월별 청구)</h3>
+            <div class="grid-in wide" style="margin:6px 0 10px">
+              <div class="field"><label for="rbYearSel">연도</label><select id="rbYearSel"></select></div>
+              <div class="field"><label for="rbSeason">기간</label><select id="rbSeason"><option value="all">연간</option><option value="non">하계 외 (1~6·10~12월)</option><option value="sum">하계 청구 (7~9월)</option></select><span class="hint">누진 구간: 하계 외 200/400kWh, 하계 300/450kWh</span></div>
+            </div>
+            <div class="lg" id="rbLegend"></div>
+            <div class="chart" id="rbChart"></div>
+            <div class="tbl-scroll" id="rbTable"></div>
+            <div class="tbl-scroll" id="rbTier" style="margin-top:10px"></div>
+            <p class="mini-note" id="rbNote"></p>
+            <h3 class="sub-h" style="margin-top:22px">복지할인 가구의 사용량 구간별 분포 (<span id="wbYear"></span>, 월별 청구)</h3>
+            <div class="grid-in wide" style="margin:6px 0 10px">
+              <div class="field"><label for="wbYearSel">연도</label><select id="wbYearSel"></select></div>
+              <div class="field"><label for="wbSeason">기간</label><select id="wbSeason"><option value="all">연간</option><option value="non">하계 외 (1~6·9~12월)</option><option value="sum">하계 (7·8월)</option></select><span class="hint">하계는 누진 구간 300/450kWh·할인 한도 상향</span></div>
+            </div>
+            <div class="lg" id="wbLegend"></div>
+            <div class="chart" id="wbChart"></div>
+            <div class="tbl-scroll" id="wbTable"></div>
+            <p class="mini-note" id="wbNote"></p>
+            <h3 class="sub-h" style="margin-top:22px">복지할인 실적 (2021~2025, 억원)</h3>
+            <div class="tbl-scroll" id="discTable"></div>
+            <p class="mini-note">할인 한도는 2016.12 개정 이후 고정. 주택용 수입 대비 비중 = (총할인 − 사회복지시설 − 기초 심야) ÷ 월보 주택용 판매수입. 사회복지시설은 일반·주택·심야 합산 표기.</p>
+          </div>
+        </section>
+        <section class="sec" id="s-fuel">
+          <div class="sec-h">
+            <div><p class="eyebrow">심화 · Fuel cost</p><h2>연료비 연동</h2><p class="desc">연료비조정단가가 산식·약관 규칙대로 적용됐는지, 그 차이가 누구에게 얼마나 돌아갔는지.</p></div>
+            <div class="tools"><button class="btn" type="button" data-csv="fuel">연료비 <small>CSV</small></button><button class="btn" type="button" data-csv="monthly">월별 <small>CSV</small></button></div>
+          </div>
+          <div class="sec-b">
+            <h3 class="sub-h">연료비 연동의 형평성 — 산식 vs 규칙 vs 실제 적용 (2021~2026)</h3>
             <div class="grid-in wide" style="margin:6px 0 10px">
               <div class="field"><span class="lab">판단 기준</span>
                 <div class="seg" role="radiogroup" aria-label="연료비 연동 판단 기준"><label><input type="radio" name="fuelBench" value="req" checked><span>산식 기준 · 기본</span></label><label><input type="radio" name="fuelBench" value="rule"><span>규칙 기준 (±5원 상한)</span></label></div>
@@ -555,7 +687,40 @@ footer{background:#061a3d;color:#b9c6dc}
             <h3 class="sub-h" style="margin-top:18px">용도별 영향 — <span id="fuelBenchLab"></span> 대비 실제 적용의 차이 (억원, +는 고객이 덜 낸 금액 = 한전 미회수, −는 더 낸 금액)</h3>
             <div class="tbl-scroll" id="fuelBig"></div>
             <div class="tbl-scroll" id="fuelTable" style="margin-top:10px"></div>
-            <h3 class="sub-h" style="margin-top:26px">한전 재무 상태 — 별도 재무상태표 (<span id="finRange"></span>)</h3>
+            <h3 class="sub-h" style="margin-top:22px">월별 판매단가 vs 전력구입 정산단가 (전력통계월보, 2016.1~)</h3>
+            <div class="lg" id="monLegend"></div>
+            <div class="chart" id="monChart"></div>
+            <p class="mini-note">판매단가 = 계약종별 판매수입 ÷ 판매량(부가세·기금 제외). 정산단가 = 한전이 전력시장에서 사는 평균 단가(SMP·CP·기타 포함). 판매단가가 정산단가 아래로 내려가면 송배전·판매비는커녕 구입비도 회수하지 못하는 상태입니다.</p>
+            <p class="mini-note">총괄원가 단가 = 영업비용 ÷ 판매량. 계약종별 원가배분 전의 평균 기준이며, SMP·계통부하 연계 시 시간대별 원가로 대체됩니다.</p>
+          </div>
+        </section>
+        <section class="sec" id="s-region">
+          <div class="sec-h">
+            <div><p class="eyebrow">심화 · Regional tariff</p><h2>지역별 요금제</h2><p class="desc">산업용 지역별 조정요금(설계안 2026.8)의 권역별 효과. 시도별 판매실적·전력자급률은 '사용량·패턴' 탭에 있습니다.</p></div>
+            
+          </div>
+          <div class="sec-b">
+            <div id="regFindings"></div>
+            <h3 class="sub-h">산업용 지역별 요금제 시나리오 (지역별 조정요금, 원/kWh 인하)</h3>
+            <div class="grid-in wide" style="margin:6px 0 10px">
+              <div class="field"><label for="rsS">수도권 남부</label><input id="rsS" type="number" step="0.5" min="0" value="1"><span class="hint">설계안 0~1원</span></div>
+              <div class="field"><label for="rsN">수도권 북부</label><input id="rsN" type="number" step="0.5" min="0" value="10"><span class="hint">최대 10원</span></div>
+              <div class="field"><label for="rsC">중부권</label><input id="rsC" type="number" step="0.5" min="0" value="15"><span class="hint">최대 15원</span></div>
+              <div class="field"><label for="rsP">남부권</label><input id="rsP" type="number" step="0.5" min="0" value="18"><span class="hint">최대 18원 · 제주 제외</span></div>
+            </div>
+            <div class="kpis" id="rsKpis"></div>
+            <div class="tbl-scroll" id="rsTable"></div>
+            <div class="tbl-scroll" id="rsTop" style="margin-top:10px"></div>
+            <p class="mini-note" id="rsNote"></p>
+          </div>
+        </section>
+        <section class="sec" id="s-fin">
+          <div class="sec-h">
+            <div><p class="eyebrow">심화 · Finance</p><h2>한전 재무</h2><p class="desc">별도 재무상태표·손익계산서로 본 부채와 이자 부담, 재무 회복 정도.</p></div>
+            <div class="tools"><button class="btn" type="button" data-csv="fin">재무 <small>CSV</small></button></div>
+          </div>
+          <div class="sec-b">
+            <h3 class="sub-h">한전 재무 상태 — 별도 재무상태표 (<span id="finRange"></span>)</h3>
             <div id="finFindings"></div>
             <div class="two-col">
               <div><div class="lg" id="finLegend"></div><div class="chart" id="finChart"></div></div>
@@ -565,77 +730,10 @@ footer{background:#061a3d;color:#b9c6dc}
             <p class="mini-note" id="finNote"></p>
           </div>
         </section>
-
-        <section class="sec" id="s-sim">
-          <div class="sec-h">
-            <div><p class="eyebrow">06 · Tariff Simulator</p><h2>요금 시뮬레이터</h2><p class="desc">요금표·시간대·조정값을 바꾸어 계약종별 수입, 평균단가, 원가 회수율을 비교합니다. 사용량 크기는 한국전력통계 판매량, 시간 모양은 시간별 데이터에서 가져옵니다.</p></div>
-            <div class="tools"><button class="btn" type="button" data-csv="sim">데이터 저장 <small>CSV</small></button></div>
-          </div>
-          <div class="sec-b">
-            <div class="grid-in wide" style="margin-bottom:12px">
-              <div class="field"><label for="simVer">시나리오 요금표</label><select id="simVer"></select></div>
-              <div class="field"><label for="simBase">비교 요금표</label><select id="simBase"></select></div>
-              <div class="field"><span class="lab">시나리오 시간대</span>
-                <div class="seg" role="radiogroup"><label><input type="radio" name="simScheme" value="auto" checked><span>요금표 기준</span></label><label><input type="radio" name="simScheme" value="2016"><span>기존</span></label><label><input type="radio" name="simScheme" value="2026"><span>개편</span></label></div></div>
-              <div class="field"><label for="simLoad">부하 모양 연도</label><select id="simLoad"></select></div>
-              <div class="field"><label for="simRef">판매량·원가 기준 연도</label><select id="simRef"></select><span class="hint">한국전력통계</span></div>
-              <div class="field"><label for="simFuelMode">연료비조정단가 기준</label>
-                <select id="simFuelMode"><option value="applied">기준 연도 실제 적용</option><option value="rule">기준 연도 규칙(상하한 적용)</option><option value="required">기준 연도 산식(상하한 없음)</option><option value="manual">직접 입력</option></select>
-                <div class="row" style="margin-top:6px"><input id="simFuel" type="number" step="0.1" value="5" style="flex:1" aria-label="연료비조정단가"><span style="align-self:center;font-size:12px;color:#6b7686">원/kWh</span></div></div>
-              <div class="field"><label for="simCost">총괄원가 단가 (원/kWh)</label><input id="simCost" type="number" step="0.1"><span class="hint" id="simCostHint"></span></div>
-              <div class="field"><label for="simResDist">주택용 누진 계산</label><select id="simResDist"><option value="measured">실측 사용량 구간 분포 (2024~2025 청구)</option><option value="lognormal">로그정규 분포 가정</option></select><span class="hint" id="simResDistHint">가구별 구간 분포 × 저·고압 요금표</span></div>
-              <div class="field"><label for="simResHigh">주택용 고압 비중 (%)</label><input id="simResHigh" type="number" step="1" value="40"><span class="hint">누진 계산용 가정</span></div>
-              <div class="field"><label for="simResSig">주택 호당 사용량 분산 σ</label><input id="simResSig" type="number" step="0.05" value="0.6"><span class="hint">로그정규 분포 가정</span></div>
-              <div class="field"><label for="simDisc">복지할인 규모 (%)</label><input id="simDisc" type="number" step="10" value="100"><span class="hint">기준 연도 실적 = 100. 2021~2025 자료</span></div>
-              <div class="field"><label for="simDiscGen">사회복지시설 할인 중 일반용 비중 (%)</label><input id="simDiscGen" type="number" step="10" value="50"><span class="hint">원자료가 일반·주택·심야 합산</span></div>
-              <div class="field"><span class="lab">실적 보정</span>
-                <div class="seg" role="radiogroup"><label><input type="radio" name="simCal" value="on" checked><span>켜기</span></label><label><input type="radio" name="simCal" value="off"><span>끄기</span></label></div>
-                <span class="hint">기준 연도 시행 요금표 추정치 = 한전통계 대분류별 판매수입</span></div>
-            </div>
-            <h3 class="sub-h">원가 배분 모형</h3>
-            <div class="grid-in wide" style="margin-bottom:12px">
-              <div class="field"><label for="cSmpYear">SMP 기준 연도</label><select id="cSmpYear"></select><span class="hint">전력구입비를 시간별 SMP로 가중 배분</span></div>
-              <div class="field"><label for="cCP">구입비 중 용량성 비중 (%)</label><input id="cCP" type="number" step="1" value="10"><span class="hint">용량요금(CP) 등, 피크 기여로 배분</span></div>
-              <div class="field"><label for="cN">피크 기준 시간</label><select id="cN"><option value="100m" selected>시장수요(태양광 차감) 상위 100시간 · 기본</option><option value="300m">시장수요(태양광 차감) 상위 300시간</option><option value="100">총수요 상위 100시간</option><option value="300">총수요 상위 300시간</option></select><span class="hint">부하 모양 연도 기준, 2016년부터 KPX 실측. 태양광이 빠진 저녁 피크가 설비 투자를 부르므로 시장수요가 기본</span></div>
-            </div>
-            <p class="mini-note" id="costModelNote" style="margin:-4px 0 12px"></p>
-            <h3 class="sub-h">송배전·판매 원가 (송배전 이용요금 총괄원가)</h3>
-            <div class="grid-in wide" style="margin-bottom:12px">
-              <div class="field"><label for="cBasis">원가 기준</label><select id="cBasis"><option value="opex">영업비용</option><option value="opex_fin">영업비용 + 금융원가 (별도, 이자 등)</option><option value="roi">영업비용 + 송배전 적정투자보수</option></select><span class="hint">금융원가 = 한전 별도 손익계산서(이자비용 + 외환·파생 손실). 넣으면 한전 전체 회수율이 100%에 가까워져 원가 대비 기준이 의미를 가짐</span></div>
-              <div class="field"><label for="cTxPeak">송전비 중 피크 배분 (%)</label><input id="cTxPeak" type="number" step="5" value="50"><span class="hint">나머지는 kWh 비례, 모든 계약종 부담</span></div>
-              <div class="field"><label for="cRetail">판매·기타 비용 배분</label><select id="cRetail"><option value="cust_lamp" selected>고객 수 (가로등은 kWh) · 기본</option><option value="cust">고객 수 (전 계약종)</option><option value="kwh">kWh</option></select><span class="hint">영업비용 − 구입비 − 송배전 적정원가. 가로등(갑)은 등 하나가 고객 1호라 고객 수 기준이면 과대</span></div>
-              <div class="field"><span class="hint" style="margin-top:22px">배전비는 배전이용요금 단가(저압·고압 기본 원/kW·전력량 원/kWh)로 배분하고, 154kV 이상(고압B·C)은 배전망 미이용으로 제외합니다.</span></div>
-            </div>
-            <h3 class="sub-h">대분류별 조정</h3>
-            <div class="grid-in wide" style="margin:6px 0 10px">
-              <div class="field"><label for="simPreset">개선안 불러오기</label><select id="simPreset"><option value="">직접 입력</option><option value="S1">안 1 · 산업용 부담 완화 (수입 중립)</option><option value="S2">안 2 · 정책 외 계약종 회수율 균등화 (수입 중립)</option><option value="S3">안 3 · 지역별 요금제만 시행 (산업용 −2.8조)</option><option value="0">초기화 (조정 없음)</option></select><span class="hint" id="simPresetHint">2025년 판매량·원가, 2026.4.16 요금표 기준으로 계산한 조정값</span></div>
-            </div>
-            <div class="adj-grid" id="adjGrid"></div>
-            <div class="kpis" id="simKpis" style="margin-top:16px"></div>
-            <div class="lg" id="simLegend"></div>
-            <div class="chart" id="simChart"></div>
-            <div class="tbl-scroll" id="simTable" style="margin-top:14px"></div>
-            <h3 class="sub-h" style="margin-top:24px">형평성 진단 — 원가 회수율 목표 대비</h3>
-            <div class="grid-in wide" style="margin:6px 0 10px">
-              <div class="field"><span class="lab">목표 기준</span>
-                <div class="seg" role="radiogroup" aria-label="형평성 목표 기준"><label><input type="radio" name="eqMode" value="policy" checked><span>정책 보조 분리 + 허용 범위 · 기본</span></label><label><input type="radio" name="eqMode" value="band"><span>허용 범위만</span></label><label><input type="radio" name="eqMode" value="full"><span>전 계약종 100%</span></label></div></div>
-              <div class="field"><span class="lab">회수율 기준</span>
-                <div class="seg" role="radiogroup" aria-label="회수율 기준"><label><input type="radio" name="eqRel" value="abs" checked><span>원가 대비 · 기본</span></label><label><input type="radio" name="eqRel" value="rel"><span>전체 평균 대비</span></label></div>
-                <span class="hint" id="eqRelHint">전체 평균 대비 = 계약종 회수율 ÷ 한전 전체 회수율. 한전 전체가 원가를 넘게 걷을 때 누가 평균보다 더·덜 내는지</span></div>
-              <div class="field"><label for="eqLo">허용 범위 하한 (%)</label><input id="eqLo" type="number" step="1" value="90"></div>
-              <div class="field"><label for="eqHi">허용 범위 상한 (%)</label><input id="eqHi" type="number" step="1" value="110"></div>
-              <div class="field"><span class="lab">보기</span>
-                <div class="seg" role="radiogroup" aria-label="형평성 보기 단위"><label><input type="radio" name="eqView" value="big" checked><span>대분류</span></label><label><input type="radio" name="eqView" value="t"><span>계약종</span></label></div></div>
-            </div>
-            <div class="kpis" id="eqKpis"></div>
-            <div class="tbl-scroll" id="eqTable"></div>
-            <p class="mini-note" id="eqNote"></p>
-            <p class="mini-note" id="simNote"></p>
-          </div>
-        </section>
-
+      </div>
+      <div class="view" data-view="data" hidden>
         <section class="sec" id="s-data">
-          <div class="sec-h"><div><p class="eyebrow">07 · Data &amp; Method</p><h2>데이터·방법</h2></div></div>
+          <div class="sec-h"><div><p class="eyebrow">데이터 · Method</p><h2>데이터·방법</h2></div></div>
           <div class="sec-b">
             <div class="two-col">
               <div><h3 class="sub-h">데이터 품질과 보정</h3><div class="tbl-scroll" id="qTable"></div></div>
@@ -1044,8 +1142,9 @@ function renderDiag() {
   CSV.diag = rows;
   $("#diagDesc").textContent = `${$("#dLoad").value}년 시간별 부하를 고정하고 요금표만 바꿔 계약종별 평균단가를 비교합니다. 주택용은 누진 구조라 호당 사용량 분포가 필요해 시뮬레이터에서 다룹니다.`;
   const under = renderMonthly();
-  const discF = [].concat(renderDiscount(), renderContract(), renderRegion());
-  renderFindings(out, yi, under, discF);
+  const fm = a => [].concat(a).filter(Boolean).map(x => `<p class="finding">${x}</p>`).join("");
+  $("#resFindings").innerHTML = fm(renderDiscount()); $("#salesFindings").innerHTML = fm(renderContract()); $("#regFindings").innerHTML = fm(renderRegion());
+  renderFindings(out, yi, under, null);
   // 원가 회수 추이
   const R = D.ref, map = { res: "주택용", gen: "일반용", edu: "교육용", ind: "산업용", agr: "농사용", str: "가로등", night: "심야" };
   const cost = R.years.map((y, i) => R.fin.cost[i] * 1e3 / R.sold[i]);
@@ -1635,7 +1734,7 @@ function renderEquity() {
   $("#eqKpis").innerHTML = k("원가 초과 수입 (교차보조 재원)", jo(over) + " <small>조원</small>", `목표 상한을 넘는 수입`, true) +
     k("원가 미달액", jo(under) + " <small>조원</small>", `목표 하한까지 올리는 데 필요한 금액`) +
     (mode === "policy" ? k("정책 보조", jo(policy + welfare) + " <small>조원</small>", `${EQ_POLICY.join("·")} 원가 미달 ${jo(policy)}조 + 복지할인 ${jo(welfare)}조`) : k("복지할인", jo(welfare) + " <small>조원</small>", "수입에서 차감된 금액(회수율에 포함)")) +
-    k("조정 후 수입 변화", (over - under >= 0 ? "−" : "+") + jo(Math.abs(over - under)) + " <small>조원</small>", over >= under ? "초과분을 돌려주고 미달분을 올리면 한전 수입 감소" : "미달분 인상이 초과분 인하보다 큼");
+    k("조정 후 수입 변화", (Math.abs(over - under) < 5e9 ? "" : over - under >= 0 ? "−" : "+") + jo(Math.abs(over - under)) + " <small>조원</small>", over >= under ? "초과분을 돌려주고 미달분을 올리면 한전 수입 감소" : "미달분 인상이 초과분 인하보다 큼");
   const FN = D.fin && D.fin.sep_is[String(L.P.refYear)], fdec = FN && L.P.basis !== "opex_fin" ? ` (원가에 한전 금융원가 ${fmt(FN.fin_cost / 1e4, 1)}조원을 넣으면 약 ${fmt(TR / (TC * (1 + FN.fin_cost / FN.opex)) * 100, 1)}%; 원가 기준에서 '영업비용 + 금융원가'를 고르면 반영)` : "";
   $("#eqNote").innerHTML = `${L.P.refYear}년 기준 연도·시나리오 요금표 결과. 한전 전체 회수율 ${fmt(TR / TC * 100, 1)}%${fdec}${rel ? " — 목표 범위에 이 평균을 곱해 판정(전체 평균 대비 기준)" : TR / TC > 1.02 ? " — 한전 전체가 원가(영업비용)보다 많이 걷는 해에는 '전체 평균 대비' 기준이 계약종 간 형평을 더 잘 보여 줍니다" : ""}. 원가는 위 원가 배분 설정(피크 ${L.P.N.endsWith("m") ? "시장수요" : "총수요"} 상위 ${parseInt(L.P.N)}시간, 판매·기타 ${L.P.retail === "kwh" ? "kWh" : L.P.retail === "cust_lamp" ? "고객 수(가로등은 kWh)" : "고객 수"})을 따릅니다. ` +
     (mode === "policy" ? `<b>정책 보조 분리</b>: 농사용·심야전력은 정책 목적의 요금이라 형평성 판정에서 빼고 원가 미달액을 '정책 보조'로 따로 표시합니다. 복지할인(주택용 할인·요금인상 유예 포함)도 정책 보조로 합산합니다. 나머지 계약종은 회수율 ${fmt(lo * 100, 0)}~${fmt(hi * 100, 0)}%를 목표로 봅니다.` : mode === "band" ? `<b>허용 범위만</b>: 모든 계약종을 회수율 ${fmt(lo * 100, 0)}~${fmt(hi * 100, 0)}%로 판정합니다.` : `<b>전 계약종 100%</b>: 교차보조를 모두 없애는 기준입니다.`) +
@@ -1713,6 +1812,7 @@ function renderFuel() {
   fb += `<tr class="tot"><td>합계</td>${totY.map(v => `<td>${(v >= 0 ? "+" : "−") + fmt(Math.abs(v) / 1e8, 0)}</td>`).join("")}<td>${(totAll >= 0 ? "+" : "−") + fmt(Math.abs(totAll) / 1e8, 0)}</td><td>${(totSince >= 0 ? "+" : "−") + fmt(Math.abs(totSince) / 1e8, 0)}</td><td>${(totAll >= 0 ? "+" : "−") + fmt(Math.abs(totAll / totK), 1)}원</td></tr>`;
   $("#fuelBig").innerHTML = fb + `</tbody></table><p class="mini-note">용도별 금액은 월보 용도별 판매량 기준이라(임시전력 제외, 미도래 월 제외) 위 누적 그래프(전체 판매량 기준)와 소수점 차이가 날 수 있습니다.</p>`;
   const KK = bench === "req" ? k1 : k2, pk = Math.max(...KK), pki = KK.indexOf(pk);
+  S.fuelSum = { req: k1.at(-1), rule: k2.at(-1), reqPeak: Math.max(...k1), last: labels.at(-1) };
   const kf = (lab, v, sub, lead) => `<div class="kpi${lead ? " lead" : ""}"><div class="k">${lab}</div><div class="v">${v}</div><div class="n">${sub}</div></div>`;
   $("#fuelKpis").innerHTML = kf(`${BN} 기준 누적 차이 (${labels.at(-1)})`, (KK.at(-1) >= 0 ? "+" : "−") + fmt(Math.abs(KK.at(-1)), 1) + " <small>조원</small>", KK.at(-1) >= 0 ? "한전 미회수 잔액 (고객이 덜 낸 금액)" : "고객 초과 부담 (고객이 더 낸 금액)", true) +
     kf("누적 최대", fmt(pk, 1) + " <small>조원</small>", `${labels[pki]} 시점`) +
@@ -1746,6 +1846,90 @@ function renderFin() {
   const lossSum = ["2021", "2022", "2023"].reduce((a, y) => a + (I_[y] ? I_[y].net : 0), 0) / 1e4, gain = ["2024", "2025"].reduce((a, y) => a + (I_[y] ? I_[y].net : 0), 0) / 1e4;
   $("#finFindings").innerHTML = [`<b>연료비 미반영이 부채로 옮겨 갔다</b> — 별도 금융부채는 2020년 말 ${fmt(debt("2020"), 1)}조원에서 ${pk}년 말 ${fmt(debt(pk), 1)}조원으로, 부채비율은 ${fmt(ratio("2020"), 0)}%에서 ${fmt(ratio(pk), 0)}%로 뛰었습니다. 같은 기간 별도 순손실은 ${fmt(-lossSum, 1)}조원(2021~2023)으로, 위 연료비 연동의 산식 대비 미반영액(최대 34.5조원)과 규모가 맞습니다.`,
     `<b>회복은 절반쯤</b> — 2024~2025년 순이익 ${fmt(gain, 1)}조원으로 ${yl}년 말 부채비율은 ${fmt(ratio(yl), 0)}%, 이익잉여금 ${fmt(S_[yl].re / 1e4, 1)}조원입니다. 2020년 말 수준(부채비율 ${fmt(ratio("2020"), 0)}%, 이익잉여금 ${fmt(S_["2020"].re / 1e4, 1)}조원)과는 아직 거리가 멉니다. 금융원가는 평균 금융부채의 ${fmt(I_[yl].fin_rate, 1)}%(${yl}년 ${fmt(I_[yl].fin_cost / 1e4, 2)}조원)로, 요금이 덜 걷힌 비용이 해마다 이자로 되돌아옵니다. 시뮬레이터의 한전 전체 회수율이 100%를 넘는 몫(${yl}년 별도 순이익 ${fmt(I_[yl].net / 1e4, 1)}조원)이 이 회복 재원입니다.`].map(x => `<p class="finding">${x}</p>`).join("");
+}
+
+// ── 보기 전환 ───────────────────────────────────────────────────────────────
+const VIEW_RENDER = {
+  overview: () => renderOverview(),
+  usage: () => { renderAll(); renderCoverage(); renderContract(); renderRegion(); },
+  diag: () => { renderDiag(); renderCost(); renderDiagRecovery(); },
+  sim: () => renderSim(),
+  deep: () => showSub(S.sub || "s-res"),
+  data: () => {}
+};
+function showView(v, force) {
+  if (!document.querySelector(`.view[data-view="${v}"]`)) v = "overview";
+  document.querySelectorAll("#app > .view").forEach(e => e.hidden = e.dataset.view !== v);
+  document.querySelectorAll("#navList a").forEach(a => a.classList.toggle("active", a.dataset.view === v));
+  const changed = S.view !== v; S.view = v;
+  (VIEW_RENDER[v] || (() => {}))();
+  if (changed && !force) window.scrollTo({ top: 0 });
+}
+const SUB_RENDER = { "s-res": () => { renderDiag(); }, "s-fuel": () => renderFuel(), "s-region": () => { renderRegion(); }, "s-fin": () => renderFin() };
+function showSub(id) {
+  S.sub = id;
+  document.querySelectorAll('.view[data-view="deep"] > .sec').forEach(e => e.hidden = e.id !== id);
+  document.querySelectorAll(".subtab").forEach(b => b.classList.toggle("active", b.dataset.sub === id));
+  (SUB_RENDER[id] || (() => {}))();
+}
+
+// 현행 요금표 기준 대분류 요약(개요·진단 공용)
+function baseSummary() {
+  const L = S.ovBase; if (!L) return null;
+  const by = {}; let TR = 0, TC = 0, disc = 0;
+  for (const r of L.scn) { if (r.total == null || !r.cost) continue; const g = by[r.big] = by[r.big] || { rev: 0, cost: 0, kwh: 0 }; g.rev += r.total; g.cost += r.cost; g.kwh += r.salesKWh; TR += r.total; TC += r.cost; disc += r.discount || 0; }
+  const avg = TR / TC; for (const g of Object.values(by)) { g.rr = g.rev / g.cost; g.rel = g.rr / avg * 100; }
+  return { by, avg, TR, TC, disc, P: L.P };
+}
+function renderDiagRecovery() {
+  const B = baseSummary(); if (!B) return;
+  const order = Object.entries(B.by).sort((a, b) => b[1].rel - a[1].rel);
+  const ser = [{ name: "전체 평균 대비 회수율 (평균 = 100)", color: "#003b8e", values: order.map(([, g]) => g.rel) }];
+  legend($("#dxLegend"), ser); barChart($("#dxChart"), order.map(([b]) => b), ser, { ref: 100 });
+  $("#dxNote").innerHTML = `원가 대비 회수율: ${order.map(([b, g]) => `${b} ${fmt(g.rr * 100, 1)}%`).join(" · ")}. 한전 전체 ${fmt(B.avg * 100, 1)}% (${B.P.refYear}년 판매량, 원가 = ${B.P.basis === "opex_fin" ? "영업비용 + 금융원가" : "영업비용"}, 피크 ${B.P.N.endsWith("m") ? "시장수요" : "총수요"} 상위 ${parseInt(B.P.N)}시간). 농사용·심야는 정책 요금. 개선안별 변화는 '개선안 시뮬레이터' 탭에서 봅니다.`;
+}
+function renderOverview() {
+  const B = baseSummary(); if (!B) return;
+  const g = b => B.by[b] || { rel: 0, rr: 0, rev: 0, cost: 0 }, jo = v => fmt(v / 1e12, 1);
+  const pol = ["농사용", "심야"], policy = pol.reduce((a, b) => a + Math.max(0, g(b).cost - g(b).rev), 0) + B.disc;
+  const indX = g("산업용").rev - g("산업용").cost * B.avg;
+  const lowest = Object.entries(B.by).filter(([b]) => !pol.includes(b)).sort((a, b) => a[1].rel - b[1].rel).slice(0, 2);
+  // 피크 이동: 시장수요 상위 100시간의 중앙 시각
+  const medH = y => { const m = (D.cost.pv[y] || {}).top100_market_hours || {}; const hs = Object.entries(m).map(([h, n]) => [+h, n]).sort((a, b) => a[0] - b[0]); let c = 0, t = hs.reduce((a, x) => a + x[1], 0); for (const [h, n] of hs) { c += n; if (c >= t / 2) return h; } return null; };
+  const pvYs = Object.keys(D.cost.pv).sort(), y0 = pvYs[0], y1 = pvYs.filter(y => y <= "2025").at(-1);
+  const hh = h => h == null ? "-" : h < 12 ? `오전 ${h}시` : h === 12 ? "낮 12시" : `오후 ${h - 12}시`;
+  const bs = (sch, y) => ((D.cost.band_smp.inland[sch] || {})[y] || {}).simple;
+  const o26 = bs("2016", "2026"), n26 = bs("2026", "2026");
+  const F = D.fin, fy = F.sep_years.filter(y => y <= "2025").at(-1), fs = F.sep[fy], fi = F.sep_is[fy], ratio = y => F.sep[y].liab / F.sep[y].equity * 100;
+  const G = D.region, gy = G.gen_years.at(-1), gj = G.years.indexOf(gy);
+  const self = s => sum(Object.values(G.gen[gy][s].gen_MWh)) * 1e3 / sum(G.bigs.map(b => G.sido_data[s][b].kwh[gj])) * 100;
+  const sr = [...G.sido].sort((a, b) => self(b) - self(a));
+  const resEv = D.ana.evening_share && D.ana.evening_share["주택용전력"] && D.ana.evening_share["주택용전력"].map(r => sum(r) / r.length);
+  const card = (q, title, big, items, go, extra = "") => `<div class="ov-card"><div class="q">${q}</div><h3>${title}</h3><div class="big">${big}</div><ul>${items.map(x => `<li>${x}</li>`).join("")}</ul>${extra}${go}</div>`;
+  const goBtn = (to, t) => `<button type="button" class="go" data-goto="${to}">${t} →</button>`;
+  const P1 = [["안 1", "산업용 부담 완화 (수입 중립)", "113 → 105", "86 → 94", "+9.6%", "변화 없음", "S1"], ["안 2", "정책 외 회수율 균등화 (수입 중립)", "113 → 103", "86 → 103", "+19.1%", "변화 없음", "S2"], ["안 3", "지역별 요금제만 (산업용 −2.8조)", "113 → 110", "86 → 89", "0%", "−2.8조원", "S3"]];
+  const ptab = `<div style="overflow-x:auto"><table class="tbl ov-tbl"><thead><tr><th>개선안</th><th>산업용</th><th>주택용</th><th>주택 단가</th><th>한전 수입</th><th></th></tr></thead><tbody>${P1.map(r => `<tr><td><b>${r[0]}</b> ${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td><td>${r[4]}</td><td>${r[5]}</td><td><button type="button" class="go" style="padding:2px 9px" data-load-preset="${r[6]}">열기</button></td></tr>`).join("")}</tbody></table></div>`;
+  $("#ovGrid").innerHTML =
+    card("질문 1 · 공정성", "현행 요금제는 원가를 공정하게 나누고 있나?", `산업용 ${fmt(g("산업용").rel, 0)} · 주택용 ${fmt(g("주택용").rel, 0)}<small>원가 회수율, 전체 평균 = 100</small>`,
+      [`<b>교차보조의 축은 산업용</b> — 평균보다 연 ${jo(indX)}조원을 더 냅니다. ${lowest.map(([b, x]) => `${b}(${fmt(x.rel, 0)})`).join("·")}는 평균보다 적게 냅니다.`,
+       `<b>정책 보조 ${jo(policy)}조원</b> — 농사용·심야의 원가 미달과 복지할인. 지금은 요금 안에 섞여 규모가 드러나지 않습니다.`,
+       `<b>한전 전체 회수율 ${fmt(B.avg * 100, 1)}%</b>(영업비용 + 금융원가 대비) — 100%를 넘는 몫은 부채를 줄이는 재무 회복분입니다.`],
+      goBtn("diag", "요금제 진단 보기")) +
+    card("질문 2 · 요금 신호", "요금 개편은 바뀐 사용 패턴을 반영하나?", `피크 ${hh(medH(y0))} → ${hh(medH(y1))}<small>시장수요 상위 100시간의 중앙 시각, ${y0}→${y1}</small>`,
+      [`<b>비싼 시간이 저녁으로</b> — 태양광이 낮 수요를 덜어 내면서 발전기를 돌려야 하는 피크가 늦어졌습니다.`,
+       o26 && n26 ? `<b>2026.4 시간대 개편은 방향이 맞음</b> — 2026년 SMP로 보면 기존 구분의 최대·중간부하 평균은 ${fmt(o26[2], 1)}원과 ${fmt(o26[1], 1)}원으로 거의 같지만, 개편 구분에서는 ${fmt(n26[2], 1)}원과 ${fmt(n26[1], 1)}원으로 다시 갈립니다.` : "",
+       `<b>신호의 크기는 과함</b> — SMP의 최대÷경부하 배율은 1.1~1.3배인데 요금은 2.2~2.4배입니다. 주택용·교육용(갑)은 시간대 요금이 없어 저녁 피크 신호를 받지 않습니다${resEv ? `(주택용 평일 18~21시 사용 비중 ${fmt(resEv[0], 1)}% → ${fmt(resEv.at(-1), 1)}%)` : ""}.`].filter(Boolean),
+      goBtn("diag", "원가 신호 보기")) +
+    card("질문 3 · 재무·계통", "한전 재무와 계통에는 어떤 영향이 있나?", `부채비율 ${fmt(ratio(fy), 0)}%<small>${fy}년 말 별도 · 2020년 ${fmt(ratio("2020"), 0)}%</small>`,
+      [`<b>덜 받은 요금이 부채와 이자로</b> — 금융부채 ${fmt((fs.fin_cur + fs.fin_non) / 1e4, 1)}조원, 금융원가 연 ${fmt(fi.fin_cost / 1e4, 2)}조원(평균 금융부채의 ${fmt(fi.fin_rate, 1)}%).`,
+       S.fuelSum ? `<b>연료비 미회수 잔액 ${fmt(S.fuelSum.req, 1)}조원</b>(산식 기준, ${S.fuelSum.last}) — 최대 ${fmt(S.fuelSum.reqPeak, 1)}조원에서 회수 중입니다.` : "",
+       `<b>계통과 요금의 어긋남</b> — 전력자급률은 ${sr.at(-1)} ${fmt(self(sr.at(-1)), 0)}%에서 ${sr[0]} ${fmt(self(sr[0]), 0)}%까지 갈리지만 요금은 전국이 같습니다. 산업용 지역별 요금제(설계안)는 최대 3.5조원(정부 추산 2.8조원)의 수입 감소를 낳습니다.`].filter(Boolean),
+      goBtn("deep:s-fin", "재무·지역 분석 보기")) +
+    card("질문 4 · 제안", "요금제는 어떻게 바뀌어야 하나?", `안 1 권고<small>산업용을 평균의 105%로, 2~3년 단계 적용</small>`,
+      [`<b>수입은 유지하고 부담을 고르게</b> — 산업용 −12.6원, 주택·일반·교육용 +14.9원/kWh(주택 300kWh 가구 월 약 +4,500원).`,
+       `<b>함께 할 일</b> — 지역별 요금제와 연계해 인하 폭을 나누고, 주택용 인상은 복지할인 한도 조정과 묶으며, 정책 보조 금액을 따로 공개합니다.`],
+      goBtn("sim", "개선안 시뮬레이터 열기"), ptab);
+  $("#ovNote").innerHTML = `개선안 표의 산업용·주택용은 원가 회수율(전체 평균 = 100), 주택 단가는 주택용 평균 판매단가 변화이며, 2025년 판매량·원가와 현행 요금표로 계산한 고정값이며, '열기'를 누르면 시뮬레이터에서 같은 조건으로 다시 계산됩니다. 질문 1의 수치는 시뮬레이터 기본 설정(원가 = 영업비용 + 금융원가, 피크 = 시장수요 상위 100시간, 판매·기타 = 고객 수)을 따릅니다.`;
 }
 
 // ── 데이터·방법 ─────────────────────────────────────────────────────────────
@@ -1786,7 +1970,7 @@ async function boot() {
   const setFuel = () => { const m = $("#simFuelMode").value; $("#simFuel").disabled = m !== "manual"; if (m !== "manual") { const key = m === "required" ? "required_effective" : m; const v = fuelAvg($("#simRef").value, key); $("#simFuel").value = v == null ? 0 : v.toFixed(2); } };
   setFuel();
   const vers = D.tar.versions.map(v => [v.effective, v.effective.replace(/-/g, ".") + (v.tou_scheme === "2026" ? " (개편)" : "")]);
-  opts($("#simVer"), vers, "2026-04-16"); opts($("#simBase"), vers, "2025-04-01");
+  opts($("#simVer"), vers, "2026-04-16"); opts($("#simBase"), vers, "2026-04-16");
   const setCost = () => { const y = $("#simRef").value, ri = D.ref.years.indexOf(+y); const c = D.ref.fin.cost[ri] * 1e3 / D.ref.sold[ri]; $("#simCost").value = c.toFixed(1); $("#simCostHint").textContent = `${y}년 영업비용÷판매량 · 구입단가 ${fmt(D.ref.pur_price[ri], 1)}원`;
     let cp = 0, st = 0; for (let m = 1; m <= 12; m++) { const k = `${y}-${String(m).padStart(2, "0")}`, a = D.mon.price.cp[k], b = D.mon.price.settle[k]; if (a != null && b != null) { cp += a; st += b; } }
     if (st > 0) { $("#cCP").value = (cp / st * 100).toFixed(1); $("#cCP").nextElementSibling.textContent = `${y}년 실측: 정산단가 중 CP ${fmt(cp / st * 100, 1)}% (월보)`; } };
@@ -1794,6 +1978,7 @@ async function boot() {
   adjInputs();
   $("#boot").hidden = true; $("#app").hidden = false;
   await fillItems(); await renderAll(); renderCoverage(); renderDiag(); renderCost(); renderFuel(); renderFin(); renderSim(); renderData();
+  S.ovBase = S.lastSim;   // 개요·진단의 '현행' 기준: 현행 요금표(2026.4.16), 조정 없음, 기본 판단 기준
   const on = (sel_, ev, fn) => document.querySelectorAll(sel_).forEach(e => e.addEventListener(ev, fn));
   on("#dim", "change", async e => { S.dim = e.target.value; await fillItems(); renderAll(); });
   on("#item", "change", e => { S.item = e.target.value; renderAll(); });
@@ -1825,11 +2010,14 @@ async function boot() {
   on("#simFuelMode", "change", () => { setFuel(); renderSim(); });
   on("#s-sim input, #s-sim select", "change", renderSim);
   on("#reset", "click", async () => { Object.assign(S, DEF); $("#dim").value = S.dim; $("#year").value = S.year; $("#base").value = S.base; $("#season").value = S.season; $("#dtype").value = S.dtype; document.querySelector('input[name="scheme"][value="2016"]').checked = true; document.querySelector('input[name="norm"][value="mw"]').checked = true; await fillItems(); renderAll(); });
-  let rt; window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { renderAll(); renderCoverage(); renderDiag(); renderCost(); renderFuel(); renderSim(); }, 200); });
-  // 네비게이션 활성 표시
-  const links = [...document.querySelectorAll("#navList a")];
-  const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) links.forEach(a => a.classList.toggle("active", a.getAttribute("href") === "#" + e.target.id)); }), { rootMargin: "-40% 0px -55% 0px" });
-  links.forEach(a => { const t = document.querySelector(a.getAttribute("href")); if (t) io.observe(t); });
+  let rt; window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => showView(S.view || "overview", true), 200); });
+  // 탭(보기) 전환
+  document.querySelectorAll("#navList a").forEach(a => a.addEventListener("click", e => { e.preventDefault(); history.replaceState(null, "", "#" + a.dataset.view); showView(a.dataset.view); }));
+  document.querySelectorAll(".subtab").forEach(b => b.addEventListener("click", () => showSub(b.dataset.sub)));
+  document.addEventListener("click", e => { const g = e.target.closest("[data-goto]"); if (g) { const [v, sub] = g.dataset.goto.split(":"); history.replaceState(null, "", "#" + v); showView(v); if (sub) showSub(sub); }
+    const pr = e.target.closest("[data-load-preset]"); if (pr) { history.replaceState(null, "", "#sim"); showView("sim"); $("#simPreset").value = pr.dataset.loadPreset; $("#simPreset").dispatchEvent(new Event("change")); } });
+  const h0 = (location.hash || "").slice(1), legacy = { "s-input": "usage", "s-pattern": "usage", "s-change": "usage", "s-diag": "diag", "s-cost": "diag", "s-sim": "sim", "s-data": "data" };
+  showView(legacy[h0] || h0 || "overview");
 }
 boot().catch(e => { $("#boot").textContent = "데이터를 불러오지 못했습니다: " + e.message; console.error(e); });
 </script>
