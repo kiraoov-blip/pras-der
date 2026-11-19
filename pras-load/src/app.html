@@ -444,15 +444,15 @@ details.adv[open]>summary{margin-bottom:6px}
           <div class="sec-b">
             <h3 class="sub-h">받아야 했던 요금과 실제 요금의 차이, 그리고 그 원인 (2021~2026)</h3>
             <div class="fuel-key">
-              <div><span class="dot" style="background:#0f172a"></span><b>받아야 했던 단가</b><br>연료비 변동을 그대로 반영한 값<br><span class="hint">(실적연료비 − 기준연료비) × 환산계수</span></div>
-              <div class="op">−</div>
               <div><span class="dot" style="background:#e60012"></span><b>실제 단가</b><br>고지서에 붙은 연료비조정단가</div>
+              <div class="op">−</div>
+              <div><span class="dot" style="background:#0f172a"></span><b>받아야 했던 단가</b><br>연료비 변동을 그대로 반영한 값<br><span class="hint">(실적연료비 − 기준연료비) × 환산계수</span></div>
               <div class="op">=</div>
-              <div class="sum"><b>차이</b><br><span class="neg">+ 한전이 덜 받음</span> / <span class="pos">− 고객이 더 냄</span><br>이 차이를 두 원인으로 나눕니다 ↓</div>
+              <div class="sum"><b>차이</b><br><span class="pos">− 한전이 못 받음</span> / <span class="neg">+ 한전이 더 받음</span><br><span class="hint">한전 입장: −는 고객이 덜 낸 돈, +는 고객이 더 낸 돈</span><br>이 차이를 두 원인으로 나눕니다 ↓</div>
             </div>
             <div class="fuel-key two">
-              <div><span class="tag" style="background:#c2410c">①</span><b>상·하한 때문</b> — 약관의 소비자 보호 장치(±5원 상·하한, 2022.2분기까지 분기 조정폭 ±3원)가 막은 몫. 급등기엔 인상을, 하락기엔 인하를 막습니다. 제도가 <b>의도한</b> 차이입니다.<br><span class="hint">받아야 했던 단가 − 약관대로라면 적용됐을 단가</span></div>
-              <div><span class="tag" style="background:#7c3aed">②</span><b>정부 결정 때문</b> — 약관대로라면 바뀌었어야 할 단가를 정부가 유보·동결해 생긴 몫. 제도 <b>밖에서</b> 생긴 차이입니다.<br><span class="hint">약관대로라면 적용됐을 단가 − 실제 단가</span></div>
+              <div><span class="tag" style="background:#c2410c">①</span><b>상·하한 때문</b> — 약관의 소비자 보호 장치(±5원 상·하한, 2022.2분기까지 분기 조정폭 ±3원)가 막은 몫. 급등기엔 인상을, 하락기엔 인하를 막습니다. 제도가 <b>의도한</b> 차이입니다.<br><span class="hint">약관대로라면 적용됐을 단가 − 받아야 했던 단가</span></div>
+              <div><span class="tag" style="background:#7c3aed">②</span><b>정부 결정 때문</b> — 약관대로라면 바뀌었어야 할 단가를 정부가 유보·동결해 생긴 몫. 제도 <b>밖에서</b> 생긴 차이입니다.<br><span class="hint">실제 단가 − 약관대로라면 적용됐을 단가</span></div>
             </div>
             <div class="grid-in wide" style="margin:10px 0 10px">
               <div class="field"><span class="lab">누적 시작</span>
@@ -464,9 +464,9 @@ details.adv[open]>summary{margin-bottom:6px}
             <div id="fuelFindings"></div>
             <div class="two-col">
               <div><h3 class="sub-h" style="font-size:13.5px">분기별 단가 (원/kWh)</h3><div class="lg" id="fuelLegend"></div><div class="chart" id="fuelChart"></div><p class="mini-note">검은선과 빨간선 사이가 차이, 파란 점선은 약관대로라면 적용됐을 단가입니다. 검은선과 파란 점선 사이 = ① 상·하한 몫, 파란 점선과 빨간선 사이 = ② 정부 결정 몫.</p></div>
-              <div><h3 class="sub-h" style="font-size:13.5px">누적 차이와 원인 (조원)</h3><div class="lg" id="fuelCumLegend"></div><div class="chart" id="fuelCumChart"></div><p class="mini-note">(단가 차이) × 분기 판매량을 누적. +는 한전이 덜 받은 돈(고객 부담 경감), −는 고객이 더 낸 돈(과거 미회수분 회수). 분기 판매량은 전력통계월보 실적(2026.4분기는 전년 동분기).</p></div>
+              <div><h3 class="sub-h" style="font-size:13.5px">누적 차이와 원인 (조원)</h3><div class="lg" id="fuelCumLegend"></div><div class="chart" id="fuelCumChart"></div><p class="mini-note">(단가 차이) × 분기 판매량을 누적. −는 한전이 못 받은 돈(고객 부담 경감), +는 한전이 더 받은 돈(고객이 더 냄, 과거 미회수분 회수). 분기 판매량은 전력통계월보 실적(2026.4분기는 전년 동분기).</p></div>
             </div>
-            <h3 class="sub-h" style="margin-top:18px">용도별 영향 — 받아야 했던 요금 대비 실제 요금의 차이 (억원, +는 고객이 덜 낸 금액 = 한전 미회수, −는 더 낸 금액)</h3>
+            <h3 class="sub-h" style="margin-top:18px">용도별 영향 — 받아야 했던 요금 대비 실제 요금의 차이 (억원, −는 한전이 못 받은 금액 = 고객이 덜 낸 금액, +는 한전이 더 받은 금액)</h3>
             <div class="tbl-scroll" id="fuelBig"></div>
             <details class="adv"><summary>분기별 상세 표</summary><div class="tbl-scroll" id="fuelTable" style="margin-top:10px"></div></details>
             <h3 class="sub-h" style="margin-top:22px">월별 판매단가 vs 전력구입 정산단가 (전력통계월보, 2016.1~)</h3>
@@ -1698,18 +1698,19 @@ function renderFuel() {
   lineChart($("#fuelChart"), { labels, series: ser, yTitle: "원/kWh", height: 270, zero: false, ref: 0, maxTicks: 8, tipFmt: v => fmt(v, 1) + "원" });
   const salesQ = q => { const y = +q.q.slice(0, 4), n = +q.q.slice(-1); let s = 0, ok = 0; for (let m = 3 * n - 2; m <= 3 * n; m++) { const v = D.mon.sales.total[`${y}-${String(m).padStart(2, "0")}`]; if (v != null) { s += v; ok++; } }
     if (ok === 3) return s * 1e3; const p = D.mon.sales.total; let s2 = 0; for (let m = 3 * n - 2; m <= 3 * n; m++) s2 += p[`${y - 1}-${String(m).padStart(2, "0")}`] || 0; return s2 * 1e3; };   // 미도래 분기 = 전년 동분기
-  // 분기별: ① 상한 몫 = (받아야 했던 − 약관대로) × 판매량, ② 정부 결정 몫 = (약관대로 − 실제) × 판매량. 합 = 받아야 했던 − 실제
-  const Q = F.map(q => { const s = salesQ(q), on = inR(q), cap = on && q.required_effective != null ? (q.required_effective - q.rule) * s / 1e12 : 0, gov = on ? (q.rule - q.applied) * s / 1e12 : 0; return { q, cap, gov, tot: cap + gov }; });
+  // 한전 입장 부호(연료비 연동제 시뮬레이터와 같음): − = 못 받음, + = 더 받음.
+  // ① 상·하한 몫 = (약관대로 − 받아야 했던) × 판매량, ② 정부 결정 몫 = (실제 − 약관대로) × 판매량. 합 = 실제 − 받아야 했던
+  const Q = F.map(q => { const s = salesQ(q), on = inR(q), cap = on && q.required_effective != null ? (q.rule - q.required_effective) * s / 1e12 : 0, gov = on ? (q.applied - q.rule) * s / 1e12 : 0; return { q, cap, gov, tot: cap + gov }; });
   let a = 0, b = 0; const kT = [], kC = [], kG = [];
   for (const r of Q) { a += r.cap; b += r.gov; kC.push(a); kG.push(b); kT.push(a + b); }
   const sg = v => (v >= 0.05 ? "+" : v <= -0.05 ? "−" : "") + fmt(Math.abs(v), 1), cl = v => v > 0.05 ? "neg" : v < -0.05 ? "pos" : "";
-  const cser = [{ name: "합계 = 받아야 했던 − 실제", values: kT, color: "#0f172a", width: 2.8 }, { name: "① 상·하한 때문", values: kC, color: "#c2410c", width: 2 }, { name: "② 정부 결정 때문", values: kG, color: "#7c3aed", width: 2 }];
+  const cser = [{ name: "합계 = 실제 − 받아야 했던", values: kT, color: "#0f172a", width: 2.8 }, { name: "① 상·하한 때문", values: kC, color: "#c2410c", width: 2 }, { name: "② 정부 결정 때문", values: kG, color: "#7c3aed", width: 2 }];
   legend($("#fuelCumLegend"), cser);
   lineChart($("#fuelCumChart"), { labels, series: cser, yTitle: "조원", height: 270, zero: false, ref: 0, maxTicks: 8, tipFmt: v => sg(v) + "조원" });
   // 기간별 요약
   const per = [["급등기", `${from.replace("Q", ".")}~2023.3분기`, r => r.q.q <= "2023Q3"], ["회수기", "2023.4분기 이후", r => r.q.q >= "2023Q4"], ["전체", `${from.replace("Q", ".")}~${labels.at(-1)}`, () => true]];
   const P = per.map(([n, d, f]) => { const rs = Q.filter(f); return { n, d, cap: sum(rs.map(r => r.cap)), gov: sum(rs.map(r => r.gov)) }; });
-  const read = p => { const t = p.cap + p.gov; return t > 0.05 ? `한전이 ${fmt(t, 1)}조원 덜 받음` : t < -0.05 ? `고객이 ${fmt(-t, 1)}조원 더 냄` : "차이 없음"; };
+  const read = p => { const t = p.cap + p.gov; return t < -0.05 ? `한전이 ${fmt(-t, 1)}조원 못 받음` : t > 0.05 ? `한전이 ${fmt(t, 1)}조원 더 받음(고객이 더 냄)` : "차이 없음"; };
   $("#fuelPeriod").innerHTML = `<table class="tbl"><thead><tr><th>기간</th><th>① 상·하한 때문 (조원)</th><th>② 정부 결정 때문 (조원)</th><th>합계 (조원)</th><th>읽는 법</th></tr></thead><tbody>${P.map((p, k) => `<tr${k === 2 ? ' class="tot"' : ""}><td><b>${p.n}</b> <span class="hint">${p.d}</span></td><td class="${cl(p.cap)}">${sg(p.cap)}</td><td class="${cl(p.gov)}">${sg(p.gov)}</td><td class="${cl(p.cap + p.gov)}"><b>${sg(p.cap + p.gov)}</b></td><td style="text-align:left">${read(p)}</td></tr>`).join("")}</tbody></table>`;
   // 분기별 상세 표
   let h = `<table class="tbl"><thead><tr><th>분기</th><th>실적연료비 (원/kg)</th><th>받아야 했던 단가</th><th>약관대로라면</th><th>실제 단가</th><th>① 상·하한 때문 (조원)</th><th>② 정부 결정 때문 (조원)</th><th>합계 (조원)</th><th>누적 (조원)</th><th>정부 결정</th><th>원 게시 필요단가</th></tr></thead><tbody>`;
@@ -1723,7 +1724,7 @@ function renderFuel() {
   const BK = [["주택용", "res"], ["일반용", "gen"], ["교육용", "edu"], ["산업용", "ind"], ["농사용", "agr"], ["가로등", "str"], ["심야", "night"]];
   const yrs = [...new Set(F.filter(inR).map(q => q.q.slice(0, 4)))];
   const acc = {};
-  for (const q of F) { if (!inR(q)) continue; const y = q.q.slice(0, 4), n = +q.q.slice(-1), dc = q.required_effective == null ? 0 : q.required_effective - q.rule, dg = q.rule - q.applied;
+  for (const q of F) { if (!inR(q)) continue; const y = q.q.slice(0, 4), n = +q.q.slice(-1), dc = q.required_effective == null ? 0 : q.rule - q.required_effective, dg = q.applied - q.rule;
     for (const [bn, k] of BK) for (let m = 3 * n - 2; m <= 3 * n; m++) { const v = D.mon.sales[k] && D.mon.sales[k][`${y}-${String(m).padStart(2, "0")}`]; if (v == null) continue;
       const o = acc[bn] = acc[bn] || { y: {}, cap: 0, gov: 0, since: 0, kwh: 0 }; o.y[y] = (o.y[y] || 0) + (dc + dg) * v * 1e3; o.cap += dc * v * 1e3; o.gov += dg * v * 1e3; o.kwh += v * 1e3; if (q.q >= "2023Q4") o.since += (dc + dg) * v * 1e3; } }
   const e8 = v => (v >= 5e7 ? "+" : v <= -5e7 ? "−" : "") + fmt(Math.abs(v) / 1e8, 0), c8 = v => v > 0 ? "neg" : v < 0 ? "pos" : "";
@@ -1735,18 +1736,18 @@ function renderFuel() {
   const TT = sum(Object.values(T.y));
   fb += `<tr class="tot"><td>합계</td>${yrs.map(y => `<td>${e8(T.y[y] || 0)}</td>`).join("")}<td>${e8(TT)}</td><td>${e8(T.cap)}</td><td>${e8(T.gov)}</td><td>${e8(T.since)}</td><td>${(TT >= 0 ? "+" : "−") + fmt(Math.abs(TT / T.kwh), 1)}원</td></tr>`;
   $("#fuelBig").innerHTML = fb + `</tbody></table><p class="mini-note">용도별 금액은 월보 용도별 판매량 기준이라(임시전력 제외, 미도래 월 제외) 위 누적 그래프(전체 판매량 기준)와 소수점 차이가 날 수 있습니다.</p>`;
-  const pk = Math.max(...kT), pki = kT.indexOf(pk), big = BK.map(([bn]) => [bn, acc[bn] ? acc[bn].since : 0]).sort((x, y) => Math.abs(y[1]) - Math.abs(x[1]))[0];
-  S.fuelSum = { req: kT.at(-1), rule: kG.at(-1), reqPeak: pk, last: labels.at(-1), from: from.replace("Q", ".") };
+  const pk = Math.min(...kT), pki = kT.indexOf(pk), big = BK.map(([bn]) => [bn, acc[bn] ? acc[bn].since : 0]).sort((x, y) => Math.abs(y[1]) - Math.abs(x[1]))[0];
+  S.fuelSum = { req: -kT.at(-1), rule: kG.at(-1), reqPeak: -pk, last: labels.at(-1), from: from.replace("Q", ".") };
   const kf = (lab, v, sub, lead) => `<div class="kpi${lead ? " lead" : ""}"><div class="k">${lab}</div><div class="v">${v}</div><div class="n">${sub}</div></div>`;
-  $("#fuelKpis").innerHTML = kf(`남은 차이 (${labels.at(-1)} 누적)`, sg(kT.at(-1)) + " <small>조원</small>", kT.at(-1) >= 0 ? `한전이 아직 덜 받은 돈 · 최대 ${fmt(pk, 1)}조원(${labels[pki]})에서 줄어드는 중` : "고객이 더 낸 돈", true) +
+  $("#fuelKpis").innerHTML = kf(`남은 차이 (${labels.at(-1)} 누적)`, sg(kT.at(-1)) + " <small>조원</small>", kT.at(-1) <= 0 ? `한전이 아직 못 받은 돈 · 최대 −${fmt(-pk, 1)}조원(${labels[pki]})에서 줄어드는 중` : "한전이 더 받은 돈(고객이 더 냄)", true) +
     kf("① 상·하한 때문", sg(kC.at(-1)) + " <small>조원</small>", "약관의 ±5원 장치가 막은 몫 — 제도가 의도한 차이") +
-    kf("② 정부 결정 때문", sg(kG.at(-1)) + " <small>조원</small>", kG.at(-1) < 0 ? "유보·동결로 고객이 약관보다 더 낸 몫" : "유보·동결로 한전이 약관보다 덜 받은 몫") +
-    kf("가장 큰 영향 용도", `${big[0]} <small>${sg(big[1] / 1e12)}조원</small>`, "2023.4분기 이후 고객이 더 낸 몫, 판매량 비례");
+    kf("② 정부 결정 때문", sg(kG.at(-1)) + " <small>조원</small>", kG.at(-1) > 0 ? "유보·동결로 한전이 약관보다 더 받은 몫(고객이 더 냄)" : "유보·동결로 한전이 약관보다 못 받은 몫") +
+    kf("가장 큰 영향 용도", `${big[0]} <small>${sg(big[1] / 1e12)}조원</small>`, "2023.4분기 이후 한전이 더 받은 몫, 판매량 비례");
   const p0 = P[0], p1 = P[1];
   $("#fuelFindings").innerHTML = [
-    `<b>급등기의 한전 손실은 대부분 약관 상한에서 나왔다</b> — 받아야 했던 단가는 최대 ${fmt(Math.max(...req.filter(v => v != null)), 1)}원까지 올랐지만 약관 상한은 5원이었습니다. 이 기간 차이 ${sg(p0.cap + p0.gov)}조원 중 ${sg(p0.cap)}조원이 ① 상·하한 때문, ${sg(p0.gov)}조원이 ② 정부 결정(2021~2022년 초 유보) 때문입니다.`,
-    `<b>회수기의 고객 부담은 대부분 정부 결정에서 나왔다</b> — 2023.4분기 이후 받아야 했던 단가와 약관대로라면 적용됐을 단가는 모두 인하를 가리켰지만 +5원이 유지됐습니다. 고객은 ${fmt(-(p1.cap + p1.gov), 1)}조원을 더 냈고, 그중 ${fmt(-p1.gov, 1)}조원이 ② 정부 결정 때문입니다(① 상한 몫 ${sg(p1.cap)}조원은 인하 폭이 −5원 하한에 걸린 분기).`,
-    `<b>결과적으로 연동제는 '원가 반영 장치'보다 '시기 간 완충 장치'로 쓰였다</b> — 급등기에 덜 받은 돈을 회수기에 더 받아 메우는 구조입니다. 남은 차이 ${sg(kT.at(-1))}조원을 연료비조정요금에 계속 섞기보다 별도 정산 항목과 종료 시점을 정하면 연동제가 약관대로 돌아갈 수 있습니다. 연료비조정요금은 kWh당 같은 금액이라 단가가 낮은 용도(농사용·심야)일수록 요금 대비 비중이 큽니다.`
+    `<b>급등기의 한전 손실은 대부분 약관 상한에서 나왔다</b> — 받아야 했던 단가는 최대 ${fmt(Math.max(...req.filter(v => v != null)), 1)}원까지 올랐지만 약관 상한은 5원이었습니다. 이 기간 한전이 못 받은 ${fmt(-(p0.cap + p0.gov), 1)}조원 중 ${fmt(-p0.cap, 1)}조원이 ① 상·하한 때문, ${fmt(-p0.gov, 1)}조원이 ② 정부 결정(2021~2022년 초 유보) 때문입니다.`,
+    `<b>회수기에 한전이 더 받은 돈은 대부분 정부 결정에서 나왔다</b> — 2023.4분기 이후 받아야 했던 단가와 약관대로라면 적용됐을 단가는 모두 인하를 가리켰지만 +5원이 유지됐습니다. 한전은 ${fmt(p1.cap + p1.gov, 1)}조원을 더 받았고(고객이 더 냄), 그중 ${fmt(p1.gov, 1)}조원이 ② 정부 결정 때문입니다(① 상·하한 몫 ${sg(p1.cap)}조원은 인하 폭이 −5원 하한에 걸린 분기).`,
+    `<b>결과적으로 연동제는 '원가 반영 장치'보다 '시기 간 완충 장치'로 쓰였다</b> — 급등기에 못 받은 돈을 회수기에 더 받아 메우는 구조입니다. 남은 차이 ${sg(kT.at(-1))}조원(한전이 아직 못 받은 돈)을 연료비조정요금에 계속 섞기보다 별도 정산 항목과 종료 시점을 정하면 연동제가 약관대로 돌아갈 수 있습니다. 연료비조정요금은 kWh당 같은 금액이라 단가가 낮은 용도(농사용·심야)일수록 요금 대비 비중이 큽니다.`
   ].map(x => `<p class="finding">${x}</p>`).join("");
 }
 
