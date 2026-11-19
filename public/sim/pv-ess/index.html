@@ -453,8 +453,8 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     <div class="control-section control-ess"><div class="section-title">3. ESS</div>
       <div class="section-fields ess-fields">
         <div class="field"><label>ESS 보유비율(%)</label><input id="essAdoptionPct" type="number" value="100" min="0" max="100" step="5"></div>
-        <div class="field"><label>정격용량(kWh)</label><input id="essCapacityKWh" type="number" value="8" min="0" step="0.5"></div>
-        <div class="field"><label>충·방전 출력(kW)</label><input id="essPowerKW" type="number" value="3" min="0" step="0.5"></div>
+        <div class="field"><label>정격용량(kWh)</label><input id="essCapacityKWh" type="number" value="8" min="0" max="1000" step="0.5"></div>
+        <div class="field"><label>충·방전 출력(kW)</label><input id="essPowerKW" type="number" value="3" min="0" max="1000" step="0.5"></div>
         <div class="field"><label>왕복효율(%)</label><input id="roundTripEfficiencyPct" type="number" value="90" min="50" max="100" step="1"></div>
         <div class="field"><label>최소 SOC(%)</label><input id="minSocPct" type="number" value="10" min="0" max="100" step="5"></div>
         <div class="field"><label>최대 SOC(%)</label><input id="maxSocPct" type="number" value="90" min="0" max="100" step="5"></div>
@@ -464,7 +464,8 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
         <div class="toggle"><span>계통전력 충전 허용</span><label class="switch"><input id="allowGridCharge" type="checkbox" checked><span class="slider"></span></label></div>
         <div class="toggle"><span>신규요금 ESS 역송 허용</span><label class="switch"><input id="allowBatteryExport" type="checkbox" checked><span class="slider"></span></label></div>
       </div>
-      <div class="hint">일별 종말 SOC를 초기 SOC와 동일하게 강제하여 대표일 반복에 따른 에너지 생성·소진 왜곡을 방지함.</div>
+      <div class="hint">일별 종말 SOC를 초기 SOC와 동일하게 강제하여 대표일 반복에 따른 에너지 생성·소진 왜곡을 방지함. 정격용량·출력은 1,000까지 입력할 수 있음.</div>
+      <div class="warning" id="essWarn" role="alert" hidden></div>
     </div>
   </div>
 </aside>
@@ -657,8 +658,9 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     const etaC=Math.sqrt(rte), etaD=Math.sqrt(rte);
     const allowGridCharge=!!p.allowGridCharge;
     const allowBatteryExport=!!p.allowBatteryExport;
-    const requestedStep=Math.max(0.05,+p.socStepKWh||0.2);
     const span=maxSoc-minSoc;
+    // 기본 간격 0.2kWh. 용량·출력이 모두 아주 커서 계산량이 3천만 회를 넘을 때만 간격을 넓힌다(가정용 범위에서는 그대로)
+    const requestedStep=Math.max(0.05,+p.socStepKWh||0.2,Math.sqrt(48*span*Math.max(power,0.1)/3e7));
     const steps=Math.max(1,Math.round(span/requestedStep));
     const step=span/steps;
     const states=Array.from({length:steps+1},(_,i)=>minSoc+i*step);
@@ -678,7 +680,9 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
       for(let si=0;si<states.length;si++){
         if(dp[si]>=INF/2) continue;
         const soc=states[si];
-        for(let ni=0;ni<states.length;ni++){
+        // 한 시간에 출력 한계를 넘는 상태로는 갈 수 없으므로 그 범위만 본다(결과는 전체 탐색과 같고 계산은 훨씬 빠름)
+        const niLo=Math.max(0,si-Math.floor(power/etaD/step+1e-9)-1), niHi=Math.min(states.length-1,si+Math.floor(power*etaC/step+1e-9)+1);
+        for(let ni=niLo;ni<=niHi;ni++){
           const nsoc=states[ni], delta=nsoc-soc;
           let gridNet=net0;
           if(delta>EPS){
@@ -862,10 +866,13 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     const rgb=t<=0.5?mixRgb(grey,yellow,t*2):mixRgb(yellow,red,(t-0.5)*2);
     return `rgb(${rgb.join(',')})`;
   }
+  // ESS 정격용량·출력 상한(1,000). 넘으면 상한으로 계산하고 ESS 칸 아래에 알린다
+  const ESS_MAX=1000;
+  function essLimit(v){return Number.isFinite(v)?Math.min(Math.max(v,0),ESS_MAX):0}
   function cfg(){return {
     loadYear:$('loadYear').value,smpYear:$('smpYear').value,customerCount:parseInputNumber($('customerCount').value),participationPct:+$('participationPct').value,loadScalePct:+$('loadScalePct').value,
-    pvCapacityKW:+$('pvCapacityKW').value,pvUtilizationPct:+$('pvUtilizationPct').value,essAdoptionPct:+$('essAdoptionPct').value,essCapacityKWh:+$('essCapacityKWh').value,
-    essPowerKW:+$('essPowerKW').value,minSocPct:+$('minSocPct').value,maxSocPct:+$('maxSocPct').value,initialSocPct:+$('initialSocPct').value,
+    pvCapacityKW:+$('pvCapacityKW').value,pvUtilizationPct:+$('pvUtilizationPct').value,essAdoptionPct:+$('essAdoptionPct').value,essCapacityKWh:essLimit(+$('essCapacityKWh').value),
+    essPowerKW:essLimit(+$('essPowerKW').value),minSocPct:+$('minSocPct').value,maxSocPct:+$('maxSocPct').value,initialSocPct:+$('initialSocPct').value,
     roundTripEfficiencyPct:+$('roundTripEfficiencyPct').value,socStepKWh:0.2,allowGridCharge:$('allowGridCharge').checked,
     allowBatteryExport:$('allowBatteryExport').checked,tariffs
   }}
@@ -1333,7 +1340,15 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
 
   function run(){
     updatePvCalculated();
-    const c=cfg();if(c.minSocPct>c.maxSocPct){alert('최소 SOC는 최대 SOC보다 작아야 합니다.');return}
+    const c=cfg();
+    // 입력 오류는 알림창 대신 ESS 칸 아래에 표시한다(값을 고치는 동안 알림창이 반복해서 뜨지 않도록)
+    const essWarn=$('essWarn');
+    const over=(+$('essCapacityKWh').value>ESS_MAX)||(+$('essPowerKW').value>ESS_MAX);
+    const socBad=c.minSocPct>c.maxSocPct;
+    const msg=socBad?'최소 SOC는 최대 SOC보다 작아야 합니다. 값을 고치면 바로 다시 계산합니다.'
+      :over?`정격용량과 출력은 ${ESS_MAX.toLocaleString('ko-KR')}까지 계산합니다. 넘는 값은 ${ESS_MAX.toLocaleString('ko-KR')}으로 계산했습니다.`:'';
+    if(essWarn){essWarn.textContent=msg;essWarn.hidden=!msg}
+    if(socBad) return;
     const r=E.simulate(c,D);window.lastResult=r;
     const kn=$('kpiNet');kn.textContent=signedMoney(r.total.changeNetRevenue);setSign(kn,r.total.changeNetRevenue);$('kpiNetSub').textContent=`기준 ${money(r.total.baseNetRevenue)} → 신규 ${money(r.total.newNetRevenue)}`;
     const ks=$('kpiSales');ks.textContent=signedMoney(r.total.changeSalesRevenue);setSign(ks,r.total.changeSalesRevenue);$('kpiSalesSub').textContent=`기준 ${money(r.total.baseSalesRevenue)} → 신규 ${money(r.total.newSalesRevenue)}`;

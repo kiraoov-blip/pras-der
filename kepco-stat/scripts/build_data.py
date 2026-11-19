@@ -686,6 +686,41 @@ i25 = YEARS.index(2025)
 names28 = [k for k in MFG_ROWS if k not in USE_ROWS][:25]
 bad = [f'{a}/{b}' for a, b in zip(MF11, names28) if MFG_ROWS[b] is None or abs((TABLES['mfg11'][a][i25] or 0) - MFG_ROWS[b]) > 2]
 check('mfg11: 2025년 업종별 값 = 28번 표 합계 열(업종 이름 순서 확인)', not bad and len(names28) == 25, f'{names28} | 불일치 {bad}')
+# ───────────────────────── 제조업 업종 → 한국은행 13개 업종 ─────────────────────────
+# 전력원단위 시뮬레이터(elec-intensity)와 KEPCO Statistics의 업종별 판매량에서 쓰는 구분.
+# 1995–2017년은 mfg(18개 업종), 2018년부터는 mfg11(25개 업종)을 합산한다.
+# 석유정제·화학제품은 mfg에서 한 칸('석유·화학')이라 2017년까지는 합산 업종(석유정제·화학)으로만 있다.
+MFGK_OLD = {'음식료': ['식료품'], '섬유': ['섬유·의복'], '출판목재인쇄': ['목재·나무', '펄프·종이', '출판·인쇄'],
+            '석유정제·화학': ['석유·화학'], '비금속': ['요업'], '1차금속': ['1차금속'], '금속가공': ['조립금속'],
+            '컴퓨터전자': ['사무기기', '영상·음향', '의료·광학'], '전기장비': ['전기기기'], '기계장비': ['기타기계'],
+            '운송장비': ['자동차', '기타운송'], '기타제조': ['가구및기타', '재생재료']}
+MFGK_NEW = {'음식료': ['식료품', '음료', '담배'], '섬유': ['섬유제품', '의복·모피', '가죽·가방'],
+            '출판목재인쇄': ['목재·나무', '펄프·종이', '인쇄·매체'], '석유정제': ['연탄·석유'],
+            '화학제품': ['화학', '의료·의약', '플라스틱'], '석유정제·화학': ['연탄·석유', '화학', '의료·의약', '플라스틱'],
+            '비금속': ['비금속'], '1차금속': ['1차금속'], '금속가공': ['금속가공'], '컴퓨터전자': ['전자·통신', '의료·광학'],
+            '전기장비': ['전기장비'], '기계장비': ['기타기계'], '운송장비': ['자동차', '기타운송'],
+            '기타제조': ['가구', '기타제품', '산업기계']}
+MFGK_KEYS = ['음식료', '섬유', '출판목재인쇄', '석유정제', '화학제품', '석유정제·화학', '비금속', '1차금속', '금속가공',
+             '컴퓨터전자', '전기장비', '기계장비', '운송장비', '기타제조']
+
+def build_mfgk(tables, edition, years):
+    out = {k: [None] * len(years) for k in MFGK_KEYS + ['합계']}
+    ed = [None] * len(years)
+    for i, y in enumerate(years):
+        src, mp = ('mfg11', MFGK_NEW) if y >= 2018 else ('mfg', MFGK_OLD)
+        t = tables[src]
+        if y < 1995 or t['합계'][i] is None:
+            continue
+        for k, cols in mp.items():
+            vals = [t[c][i] for c in cols]
+            out[k][i] = None if all(v is None for v in vals) else sum(v or 0 for v in vals)
+        parts = [k for k in mp if k != '석유정제·화학'] if y >= 2018 else list(mp)
+        out['합계'][i] = sum(out[k][i] or 0 for k in parts)
+        ed[i] = edition[src][i]
+    return out, ed
+
+TABLES['mfgk'], EDITION['mfgk'] = build_mfgk(TABLES, EDITION, YEARS)
+
 AUDIT['coverage'] = {n: f'{min(y for i, y in enumerate(YEARS) if EDITION[n][i] and y > 1961)}–{max(y for i, y in enumerate(YEARS) if EDITION[n][i])}'
                      + (lambda miss: f' (빈 연도 {miss})' if miss else '')([y for i, y in enumerate(YEARS) if not EDITION[n][i]
                         and min(yy for j, yy in enumerate(YEARS) if EDITION[n][j] and yy > 1961) < y]) for n in TABLES}
