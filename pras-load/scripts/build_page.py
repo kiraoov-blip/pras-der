@@ -13,8 +13,9 @@ ROOT = Path(__file__).resolve().parent.parent
 ember = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT.parent / "ember-sim" / "index.html"
 src = ember.read_text(encoding="utf-8")
 css = re.search(r"<body>\s*<style>(.*?)</style>", src, re.S).group(1)
-for a, b in [("#9f1239", "#003b8e"), ("#881337", "#002a66"), ("#f8eef1", "#eaf1fb"), ("#fbf3f5", "#f2f6fc"), ("#c98a9b", "#8fb0de"),
-             ("#e3b9c4", "#bcd2ef"), ("#e8c4cd", "#c5d8f0"), ("#f3dfe5", "#dbe7f7"), ("#d9a9b6", "#a9c3e6"), ("rgba(159,18,57", "rgba(0,59,142")]:
+# EMBER의 와인 포인트를 이 시뮬레이터의 녹색 팔레트(#2D7E2E 기준)로 바꾼다
+for a, b in [("#9f1239", "#2d7e2e"), ("#881337", "#1e5d20"), ("#f8eef1", "#eef6e6"), ("#fbf3f5", "#f5faf0"), ("#c98a9b", "#89c17e"),
+             ("#e3b9c4", "#c5e1b5"), ("#e8c4cd", "#cfe6c0"), ("#f3dfe5", "#e3f0d8"), ("#d9a9b6", "#a9d39a"), ("rgba(159,18,57", "rgba(45,126,46")]:
     css = css.replace(a, b)
 
 DATA = ["meta", "tariffs", "analysis", "cube_tariff", "cube_industry", "cube_region", "cube_cross", "daily_tariff", "kepco_ref", "audit", "cost", "fuel", "monthly", "region_map", "discount", "network", "welfare_bins", "res_bins", "contract", "region", "fin"]
