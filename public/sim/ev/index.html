@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>PRAS - EV</title>
   <link rel="stylesheet" href="styles.css?v=20261105-unify1" />
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js" defer></script>
+  <!-- Chart.js 4.4.8을 저장소에 내장(vendor/): 외부 서버가 막힌 사내망에서도 그래프가 그려지도록 -->
+  <script src="vendor/chart.umd.min.js" defer></script>
   <script src="data/ev_usage_2025.js" defer></script>
   <script src="data/smp_jeju_2025.js" defer></script>
   <script src="app.js" defer></script>

@@ -1169,7 +1169,7 @@ function renderBill(){
     rows:rows.map((r,k)=>[ko(r.iso),r.iso===AVG?'':r.iso,r.p?rnd(r.p.u):'',use,per===12?'연간':'월',r.amt!=null?Math.round(r.amt*100)/100:'',r.p?(NCM()?r.p.cur:S.unit==='KRW'?'KRW':'USD'):'',k&&r.amt!=null&&base?+((r.amt-base)/base*100).toFixed(1):'',cmpv(sec,r.iso,r.p)!=null?+cmpv(sec,r.iso,r.p).toFixed(2):'',r.p&&!r.p.avg?PS(r.p.yr):''])};
   $('#billDesc').textContent=`${SECN[sec]} · ${use.toLocaleString('ko-KR')} kWh/월 · ${per===12?'연간 (×12)':'월'} · ${PL(S.year)} 단가 · ${S.unit==='KRW'?'원화':NCM()?'각국 통화 (막대 없이 금액만, 오른쪽은 '+cmpName()+')':'USD'} 기준 · 그룹: ${groupLabel()}`;
   $('#bill').innerHTML=rows.map((r,k)=>{const agg=isAgg(r.iso);const col=colorOf(r.iso);
-    const d=r.amt!=null&&base!=null&&k>0?(r.amt-base)/base*100:null;
+    const d=r.amt!=null&&base&&k>0?(r.amt-base)/base*100:null;   // 사용량 0이면 기준 요금도 0 → 비율 대신 빈칸
     const fillStyle=`background:${agg?tok('--bar'):col}`;
     return `<div class="brow"><span class="nm" style="${agg&&r.iso!==AVG?'font-weight:400;color:var(--ink-2)':''}">${nm(r.iso)}</span>
       <span class="track">${r.amt!=null&&!NCM()?`<span class="fill" style="width:${r.amt/mx*100}%;${fillStyle}"></span>`:r.amt!=null?'':naPill(sec)}</span>

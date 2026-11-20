@@ -1,0 +1,233 @@
+<style>
+#kpisMain .kpi .n .ex{white-space:normal;color:#5b6270;font-weight:600}
+.kpi .k small{font-weight:600;color:#8a909a}
+.data-src{display:flex;gap:10px;align-items:baseline;margin:0 0 12px;padding:9px 12px;border-radius:10px;background:#f6f6f7;color:#555962;font-size:12.5px;line-height:1.5}
+#tbl th:nth-child(2),#tbl td:nth-child(2),#tbl th:last-child,#tbl td:last-child{text-align:right}
+#tbl td:nth-child(2){white-space:nowrap;color:inherit;font-size:inherit;line-height:inherit}
+.data-src b{flex:none;font-size:11.5px;font-weight:800;color:#2b2f35;background:#fdf4d8;border:1px solid #f0db96;border-radius:6px;padding:1px 7px}
+</style>
+
+<nav class="site-nav" aria-label="시뮬레이터">
+  <div class="site-nav-inner">
+    <a href="#top" class="site-brand">Electricity Intensity<span>SIMULATOR</span></a>
+    <ul id="navList">
+      <li><a href="#s-input" class="active">분석조건</a></li>
+      <li><a href="#s-inten">국내 원단위</a></li>
+      <li><a href="#s-hh">가정 부문</a></li>
+      <li><a href="#s-intl">해외 비교</a></li>
+      <li><a href="#s-data">데이터</a></li>
+    </ul>
+    <a class="site-home-btn" href="/" aria-label="처음 화면으로">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.6 11.4 12 4.4l8.4 7"/><path d="M5.7 10.2v8.6a.8.8 0 0 0 .8.8h3.6v-5.2h3.8v5.2h3.6a.8.8 0 0 0 .8-.8v-8.6"/></svg>
+      <span>처음으로</span>
+    </a>
+  </div>
+</nav>
+
+<main id="top" style="flex:1 0 auto;display:flex;flex-direction:column">
+  <header class="hero">
+    <div class="hero-inner">
+      <h1>Electricity Intensity Simulator</h1>
+      <p>판매전력량 ÷ 실질 부가가치로 본 업종·요금종·용도별 전력원단위와 해외 비교</p>
+    </div>
+  </header>
+
+  <div class="page-shell workspace">
+    <div class="dashboard-layout">
+      <section class="control-rail" aria-label="분석 조건">
+        <section class="sec" id="s-input">
+          <div class="sec-h">
+            <div><p class="eyebrow">01 · Input</p><h2>분석 조건</h2></div>
+            <button class="text-button" id="reset" type="button">기본값으로 초기화</button>
+          </div>
+          <div class="grid-in top">
+            <div class="field"><label for="year">분석 연도</label><select id="year"></select><span class="hint">핵심 지표·순위·비교표의 기준</span></div>
+            <div class="field"><label for="base">비교 연도</label><select id="base"></select><span class="hint">변화율·연평균 변화율의 기준</span></div>
+            <div class="field"><label for="tPreset">추이 기간</label>
+              <select id="tPreset"><option value="1995">1995년부터 (국내 전체)</option><option value="2000">2000년부터 (해외 비교 전체)</option><option value="2010">2010년부터</option><option value="custom">직접 선택</option></select>
+              <div class="row" style="margin-top:6px"><select id="tFrom" style="flex:1" aria-label="시작 연도"></select><span>–</span><select id="tTo" style="flex:1" aria-label="종료 연도"></select></div></div>
+            <div class="field"><label for="iUnit">국내 원단위 단위</label>
+              <select id="iUnit"><option value="krw">kWh/백만원</option><option value="usd">kWh/USD (2020년 불변 달러)</option></select>
+              <span class="hint" id="iUnitHint"></span></div>
+            <div class="field"><span class="lab">세로축</span>
+              <div class="seg" role="radiogroup" aria-label="세로축">
+                <label><input type="radio" name="yax" value="zero" checked><span>0부터</span></label>
+                <label><input type="radio" name="yax" value="auto"><span>자동</span></label>
+              </div></div>
+          </div>
+        </section>
+      </section>
+
+      <div class="results-pane">
+        <div class="kpi-bar"><div class="tools" data-noexport><button class="btn" type="button" data-png="kpiWrap">핵심 지표 저장 <small>PNG</small></button></div></div>
+        <div id="kpiWrap">
+          <section class="kpis" id="kpisMain" aria-label="핵심 지표" aria-live="polite"></section>
+        </div>
+
+        <section class="sec" id="s-inten">
+          <div class="sec-h">
+            <div><p class="eyebrow">02 · Domestic Intensity</p><h2 id="intTitle">국내 전력원단위</h2><p class="desc" id="intDesc"></p></div>
+            <div class="tools" data-noexport><button class="btn" type="button" data-png="s-inten">그림 저장 <small>PNG</small></button><button class="btn" type="button" data-csv="inten">데이터 저장 <small>CSV</small></button></div>
+          </div>
+          <div class="sec-b">
+            <div class="grid-in wide" style="margin-bottom:16px" data-noexport>
+              <div class="field"><label for="iCls">분류</label>
+                <select id="iCls"><option value="mfg">제조업 업종별</option><option value="cls">요금종별</option><option value="use">용도별</option></select>
+                <span class="hint" id="iClsHint"></span></div>
+              <div class="field"><label for="iMode">값 기준</label>
+                <select id="iMode"><option value="value">전력원단위</option><option value="idx">지수 (시작 연도 = 100)</option></select></div>
+              <div class="field"><span class="lab">세로축 직접 입력 <small id="iAxUnit" style="font-weight:600;color:#828893"></small></span>
+                <div class="row" style="gap:6px">
+                  <input type="number" id="iAxMin" step="any" placeholder="최소" aria-label="세로축 최소" style="flex:1;min-width:0">
+                  <input type="number" id="iAxMax" step="any" placeholder="최대" aria-label="세로축 최대" style="flex:1;min-width:0">
+                  <input type="number" id="iAxStep" step="any" min="0" placeholder="간격" aria-label="세로축 눈금 간격" style="flex:1;min-width:0">
+                  <button class="text-button" id="iAxReset" type="button" style="white-space:nowrap">자동</button>
+                </div><span class="hint">비워 두면 자동으로 맞춥니다</span></div>
+            </div>
+            <div class="chips" id="iChips" style="margin-bottom:12px" data-noexport></div>
+            <div class="legend" id="iLegend"></div>
+            <div class="chart" id="iChart"></div>
+            <p class="note" id="iNote"></p>
+            <p class="note" data-noexport>범례를 누르면 해당 항목이 그래프에서 사라지고, 다시 누르면 나타납니다.</p>
+            <div class="divider"></div>
+            <div class="two">
+              <div>
+                <p class="sub-h" id="iRankTitle"></p>
+                <div class="rank" id="iRank"></div>
+                <p class="note" id="iRankNote"></p>
+              </div>
+              <div>
+                <p class="sub-h" id="iTblTitle"></p>
+                <div class="tbl-wrap"><table class="scn mini" id="iTbl"><thead></thead><tbody></tbody></table></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="sec" id="s-hh">
+          <div class="sec-h">
+            <div><p class="eyebrow">03 · Households</p><h2>가정 부문 호당 사용량</h2><p class="desc" id="hhDesc"></p></div>
+            <div class="tools" data-noexport><button class="btn" type="button" data-png="s-hh">그림 저장 <small>PNG</small></button><button class="btn" type="button" data-csv="hh">데이터 저장 <small>CSV</small></button></div>
+          </div>
+          <div class="sec-b">
+            <div class="grid-in wide" style="margin-bottom:16px" data-noexport>
+              <div class="field" style="max-width:360px"><label for="hMode">값 기준</label>
+                <select id="hMode"><option value="value">호당 사용량 (kWh/호)</option><option value="idx">지수 (시작 연도 = 100)</option></select></div>
+            </div>
+            <div class="two">
+              <div>
+                <div class="legend" id="hLegend"></div>
+                <div class="chart" id="hChart"></div>
+                <p class="note" id="hNote"></p>
+              </div>
+              <div>
+                <p class="sub-h" id="hTblTitle"></p>
+                <div class="tbl-wrap"><table class="scn mini" id="hTbl"><thead></thead><tbody></tbody></table></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="sec" id="s-intl">
+          <div class="sec-h">
+            <div><p class="eyebrow">04 · Global</p><h2>해외 전력원단위 비교</h2><p class="desc" id="wDesc"></p></div>
+            <div class="tools" data-noexport><button class="btn" type="button" data-png="s-intl">그림 저장 <small>PNG</small></button><button class="btn" type="button" data-csv="intl">데이터 저장 <small>CSV</small></button></div>
+          </div>
+          <div class="sec-b">
+            <div class="wpanel" data-noexport>
+              <div class="wcol">
+                <div class="wh"><b>비교 그룹</b><span>누르면 순위가 그 그룹 기준</span></div>
+                <div class="wgroups" id="wGroups"></div>
+                <p class="hint" id="wGroupHint"></p>
+                <label class="chk"><input type="checkbox" id="wKor" checked> 그룹에 없어도 한국 함께 표시</label>
+                <label class="chk"><input type="checkbox" id="wAvg" checked> 그룹 평균(단순평균) 표시</label>
+              </div>
+              <div class="wcol">
+                <div class="wh"><b>비교 국가</b><span id="wPickCount"></span></div>
+                <div class="wpicks" id="wPicks"></div>
+                <select id="wAdd" aria-label="비교 국가 추가"></select>
+                <div class="wpresets"><button type="button" class="btn sm" data-wpreset="g7">G7</button><button type="button" class="btn sm" data-wpreset="asia">아시아 주요국</button><button type="button" class="btn sm" data-wpreset="eur">유럽 주요국</button><button type="button" class="btn sm" data-wpreset="def">기본</button><button type="button" class="btn sm" data-wpreset="none">모두 해제</button></div>
+                <p class="hint">추이 그래프에 색으로 강조됩니다. 최대 10개이며 순위 막대를 눌러도 추가·해제됩니다.</p>
+              </div>
+              <div class="wcol">
+                <div class="wh"><b>권역 기준선</b><span>점선 표시 · 회원국 합계 기준</span></div>
+                <div class="wrefs" id="wRefs"></div>
+              </div>
+            </div>
+            <div class="grid-in wide" style="margin:18px 0 14px" data-noexport>
+              <div class="field"><label for="wBase">GDP 기준</label>
+                <select id="wBase"><option value="ppp">구매력평가(PPP) · 2021년 국제달러</option><option value="usd">시장환율 · 2015년 불변 달러</option></select>
+                <span class="hint">나라 간 비교에는 물가 차이를 없앤 PPP를 주로 씁니다</span></div>
+              <div class="field"><label for="wMode">값 기준</label>
+                <select id="wMode"><option value="value">전력원단위 (kWh/$)</option><option value="idx">지수 (시작 연도 = 100)</option></select>
+                <label class="chk" style="margin-top:8px"><input type="checkbox" id="wGrey"> 그룹 소속 국가를 회색선으로</label></div>
+              <div class="field"><span class="lab">세로축 직접 입력 <small id="wAxUnit" style="font-weight:600;color:#828893"></small></span>
+                <div class="row" style="gap:6px">
+                  <input type="number" id="wAxMin" step="any" placeholder="최소" aria-label="세로축 최소" style="flex:1;min-width:0">
+                  <input type="number" id="wAxMax" step="any" placeholder="최대" aria-label="세로축 최대" style="flex:1;min-width:0">
+                  <input type="number" id="wAxStep" step="any" min="0" placeholder="간격" aria-label="세로축 눈금 간격" style="flex:1;min-width:0">
+                  <button class="text-button" id="wAxReset" type="button" style="white-space:nowrap">자동</button>
+                </div><span class="hint">비워 두면 자동으로 맞춥니다</span></div>
+            </div>
+            <div class="legend" id="wLegend"></div>
+            <div class="chart" id="wChart"></div>
+            <p class="note" id="wNote"></p>
+            <div class="divider"></div>
+            <div class="wrank-h">
+              <div><p class="sub-h" id="wRankTitle" style="margin:0"></p><p class="hint" id="wRankSub" style="margin:4px 0 0"></p></div>
+              <div class="row" style="gap:12px;align-items:center" data-noexport>
+                <select id="wYear" aria-label="순위 연도" style="width:auto"></select>
+                <div class="seg" role="radiogroup" aria-label="정렬"><label><input type="radio" name="wSort" value="desc" checked><span>높은 순</span></label><label><input type="radio" name="wSort" value="asc"><span>낮은 순</span></label></div>
+                <label class="chk" style="margin:0"><input type="checkbox" id="wRefRows" checked> 기준선 행 표시</label>
+              </div>
+            </div>
+            <div class="wrank" id="wRank"></div>
+            <p class="note" id="wRankNote"></p>
+            <div class="divider"></div>
+            <p class="sub-h" id="wTblTitle"></p>
+            <div class="tbl-wrap"><table class="scn mini" id="wTbl"><thead></thead><tbody></tbody></table></div>
+          </div>
+        </section>
+
+        <section class="sec" id="s-data">
+          <div class="sec-h">
+            <div><p class="eyebrow">05 · Data</p><h2>연도별 데이터 표</h2><p class="desc" id="dataDesc"></p></div>
+            <div class="tools" data-noexport>
+              <select id="dTable" style="width:230px;height:36px" aria-label="표 선택"></select>
+              <button class="btn" type="button" id="copyTsv">표 복사</button>
+              <button class="btn primary" type="button" data-xlsx="table">엑셀 저장 <small>XLSX</small></button>
+              <button class="btn" type="button" data-csv="table">CSV</button>
+            </div>
+          </div>
+          <div class="sec-b">
+            <p class="data-src" id="dataSrc"></p>
+            <div class="tbl-wrap"><div class="tbl-scroll"><table id="tbl"><thead></thead><tbody></tbody></table></div></div>
+            <textarea class="copy" id="copyBox" hidden readonly aria-label="복사용 표 데이터"></textarea>
+          </div>
+        </section>
+
+        <section class="assumption-strip" aria-label="적용 기준">
+          <strong>적용 기준</strong>
+          <ul>
+            <li><b>전력원단위</b> = 판매전력량 ÷ 실질 부가가치입니다. 같은 부가가치를 만드는 데 전기를 얼마나 쓰는지를 나타내며, 값이 작을수록 전기를 덜 씁니다. 한국전력통계는 원단위를 직접 싣지 않아, 판매전력량(한국전력통계)과 부가가치(한국은행)를 짝지어 계산했습니다.</li>
+            <li><b>판매전력량</b>: 한국전력공사 「한국전력통계」 2006년판(2005년 실적), 제81호(2011년 실적), 제95호(2025년 실적)의 계약종별·용도별·제조업종별 판매전력량(MWh). 같은 연도가 여러 판에 있으면 가장 최근 판의 값을 씁니다.</li>
+            <li><b>실질 부가가치</b>: 한국은행 ECOS 「2.1.2.1.4 경제활동별 GDP 및 GNI(원계열, 실질, 연간)」, 2020년 기준 연쇄가격, 십억원(1995–2025년, 2025년은 잠정치). 연쇄가격은 업종을 더하거나 빼면 2020년에만 정확히 맞아, 제조업 전체는 업종 합이 아닌 제조업 행으로 나눴고, 서비스업에서 교육·공공행정을 뺀 값은 2020년에서 멀수록 근사입니다.</li>
+            <li><b>제조업 업종별</b>: 판매량의 업종을 한국은행 13개 업종 구분(음식료, 섬유, 출판목재인쇄, 석유정제, 화학제품, 비금속, 1차금속, 금속가공, 컴퓨터전자, 전기장비, 기계장비, 운송장비, 기타제조)에 맞춰 묶었습니다. 석유정제·화학제품은 판매량이 2017년까지 한 칸이라 2018년부터만 나뉩니다.</li>
+            <li><b>요금종별</b>은 요금종을 가장 가까운 업종 부가가치에 짝지은 근사값입니다: 산업용 ÷ 광공업, 일반용 ÷ 서비스업(교육 제외), 교육용 ÷ 교육서비스, 일반용+교육용 ÷ 서비스업, 농사용 ÷ 농림어업. 건설업과 전기·가스·수도업은 어느 요금종에도 짝짓지 않았습니다. <b>용도별</b>(제조업 ÷ 제조업, 광업 ÷ 광업, 서비스업 ÷ 서비스업(공공행정 제외), 공공용 ÷ 공공행정·국방·사회보장, 농림어업 ÷ 농림어업)이 업종과 더 잘 맞습니다. 전체는 총 판매전력량 ÷ 국내총생산(GDP)입니다.</li>
+            <li><b>kWh/USD</b>는 2020년 불변 원화 부가가치를 2020년 연평균 환율(1,180.1원/달러, 한국은행) 하나로 바꾼 값이라, 원화 기준과 추이·변화율이 같고 수준만 달라집니다.</li>
+            <li><b>가정 부문</b>은 부가가치가 없어 호당 사용량(kWh/호) = 주택용(요금종) 또는 가정용(용도별) 판매전력량 ÷ 주택용 고객호수로 봅니다. 1997년까지 주택용에는 심야전력이 포함되어 있습니다.</li>
+            <li><b>해외 비교</b>는 209개 국가의 Ember 「Yearly electricity data」 연간 전력수요(발전량 + 순수입, TWh)를 세계은행 WDI 실질 GDP(PPP 2021년 국제달러 또는 2015년 불변 달러)로 나눈 값입니다(2000–2025년). 권역(OECD·EU·G7·G20·ASEAN·대륙별)은 회원국 합계 기준이며, 회원국 GDP의 90% 이상이 자료를 갖춘 해만 계산합니다. 한국도 같은 정의(Ember 수요)를 써서 한전 판매량 기준 국내 원단위와는 직접 비교하지 않습니다. 국기는 flag-icons(MIT)를 썼습니다.</li>
+          </ul>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <div class="footer-inner">
+      <span>Electricity Intensity Simulator</span>
+      <p>한국전력통계·한국은행·Ember·세계은행 기반 전력원단위 분석 · 국내 1995–2025 · 해외 2000–2025</p>
+    </div>
+  </footer>
+</main>
+<div class="tip" id="tip" hidden></div>

@@ -15,7 +15,9 @@ on:
 jobs:
   golden:
     name: 골든 테스트
-    runs-on: ubuntu-latest
+    # ubuntu-latest가 26.04로 바뀌면서 Playwright 1.56이 Chromium을 설치하지 못해(지원 안 함) 24.04로 고정한다.
+    # Playwright를 올릴 때 26.04 지원이 확인되면 다시 ubuntu-latest로 되돌려도 된다.
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
 
     steps:

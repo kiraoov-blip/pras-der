@@ -471,8 +471,8 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
         <div class="grid-in top" style="margin-bottom:20px">
           <div class="field">
             <label for="smp">계통한계가격 (SMP) <span class="unit">원/kWh</span></label>
-            <input type="number" id="smp" value="81.9" min="0" step="0.1">
-            <span class="hint">에경연(2024) 표 5-1 풍력 전제값 · 이후 인플레이션만큼 상승</span>
+            <input type="number" id="smp" value="96.3" min="0" step="0.1">
+            <span class="hint">에경연(2024) 표 5-1 전제값 · 육상 96.3, 해상 81.9 · 이후 인플레이션만큼 상승</span>
           </div>
           <div class="field">
             <label for="recPrice">공급인증서 가격 (REC) <span class="unit">원/kWh</span></label>
@@ -607,16 +607,16 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
 ══════════════════════════════════════════════════════════════ */
 /* 에경연(2024) 표 5-1·3-14·3-19·3-20 풍력 표준설비 전제조건 (금액 단위: 백만원) */
 const PRESETS = {
-  on20:  { type:'onshore',  label:'육상풍력 20MW', ref:178.7,
+  on20:  { type:'onshore',  label:'육상풍력 20MW', ref:178.7, smp:96.3,
            capacity:20,  totalInvest:58560,  omRatio:1.77, omSafety:126.777, omInsure:199.315, omMaint:713.302,
            annualLand:104.78, landBuy:2095.6, capFactor:23, recWeight:1.2 },
-  on40:  { type:'onshore',  label:'육상풍력 40MW', ref:177,
+  on40:  { type:'onshore',  label:'육상풍력 40MW', ref:177.4, smp:96.3,
            capacity:40,  totalInvest:116400, omRatio:1.75, omSafety:227.592, omInsure:379.648, omMaint:1426.603,
            annualLand:209.56, landBuy:4191.2, capFactor:23, recWeight:1.2 },
-  offLo: { type:'offshore', label:'해상풍력 100MW · 설비비 하한', ref:271,
+  offLo: { type:'offshore', label:'해상풍력 100MW · 설비비 하한', ref:271, smp:81.9,
            capacity:100, totalInvest:550000, omRatio:2.27, omSafety:0, omInsure:0, omMaint:12506.916,
            annualLand:549, landBuy:0, capFactor:29.4, recWeight:2.5 },
-  offHi: { type:'offshore', label:'해상풍력 100MW · 설비비 상한', ref:300,
+  offHi: { type:'offshore', label:'해상풍력 100MW · 설비비 상한', ref:300, smp:81.9,
            capacity:100, totalInvest:646800, omRatio:1.93, omSafety:0, omInsure:0, omMaint:12506.916,
            annualLand:549, landBuy:0, capFactor:29.4, recWeight:2.5 },
 };
@@ -659,7 +659,7 @@ function corpTax(base, p) {
 
 const NUM_IDS = {capacity:20,totalInvest:58560,omSafety:0,omInsure:0,omMaint:0,omRatio:1.77,
   annualLand:0,landBuy:0,landYield:5,capFactor:23,degradation:0.3,lifetime:20,discountRate:4.5,inflation:1.85,
-  interestRate:5,debtFraction:80,debtTerm:15,taxRate:11,smp:81.9,recPrice:75,recWeight:1.2,decommPerKW:0,selfUse:0};
+  interestRate:5,debtFraction:80,debtTerm:15,taxRate:11,smp:96.3,recPrice:75,recWeight:1.2,decommPerKW:0,selfUse:0};
 
 function annualOMFrom(get) {
   return omMode === 'item'
@@ -1208,7 +1208,8 @@ function applyPreset(key) {
     const el = document.getElementById(id); if (!el || typeof v === 'object') continue;
     el.value = COMMA_FIELDS.includes(id) ? Number(v).toLocaleString('ko-KR', {maximumFractionDigits:3}) : v;
   }
-  document.getElementById('presetHint').textContent = `보고서 LCOE ${pr.ref}원/kWh (2024년 기준${pr.type === 'offshore' ? ', 해상은 4차년도 추정 반영' : ''})`;
+  // 보고서는 부채 기간 등 일부 전제를 밝히지 않아, 기본값(부채 15년)으로는 보고서보다 2~4% 낮게 계산된다(10년이면 1% 안팎)
+  document.getElementById('presetHint').textContent = `보고서 LCOE ${pr.ref}원/kWh (2024년 기준${pr.type === 'offshore' ? ', 해상은 4차년도 추정 반영' : ''}) · 보고서가 밝히지 않은 부채 기간 등의 차이로 2~4% 낮게 나올 수 있음`;
   setOMMode('ratio'); setLandMode('lease'); setTaxMode();
 }
 function setWindType(type, keepPreset) {
