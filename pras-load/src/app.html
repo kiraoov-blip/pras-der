@@ -81,15 +81,20 @@ footer{background:#123214;color:#cfdfc6}
 .ov-card{border:1px solid #e3e9f2;border-radius:14px;padding:16px 18px;background:#fff;display:flex;flex-direction:column;gap:8px;min-width:0}
 .ov-card .q{font-size:12px;font-weight:800;color:#2d7e2e;letter-spacing:.02em}
 .ov-card h3{margin:0;font-size:16.5px;color:#173f19;line-height:1.4}
-.ov-card .big{font-size:26px;font-weight:800;color:#1e40af;line-height:1.2}
+.ov-card .big{font-size:26px;font-weight:800;color:#1f2937;line-height:1.2}
 .ov-card .big small{font-size:13px;font-weight:600;color:#4b5563;margin-left:4px}
 .ov-card ul{margin:0;padding-left:18px;font-size:13.5px;line-height:1.6;color:#253247}
 .ov-card ul b{color:#173f19}
 .ov-card .go{margin-top:auto;align-self:flex-start;font-size:12.5px;font-weight:700;color:#1e5d20;background:#eef6e6;border:1px solid #cfe6c0;border-radius:99px;padding:5px 12px;cursor:pointer}
 .ov-card .go:hover{background:#e2f0d6}
 .ov-card .tbl{font-size:12px}
-.ov-tbl td:first-child{white-space:normal;min-width:150px}
-.ov-tbl th,.ov-tbl td{padding:6px 6px}
+.ov-tbl{width:100%;min-width:0}
+.ov-tbl th,.ov-tbl td{padding:6px 4px}
+.ov-tbl th{white-space:normal;line-height:1.3;vertical-align:bottom}
+.ov-tbl td:first-child{white-space:normal;min-width:0;line-height:1.35}
+.ov-tbl td:first-child small{display:block;font-size:11px;color:#6b7686}
+.ov-tbl td:last-child{padding-right:0}
+@media(max-width:600px){.ov-tbl{font-size:11.5px}.ov-tbl th,.ov-tbl td{padding:5px 3px;white-space:normal;word-break:keep-all}.ov-tbl td:first-child{min-width:34px}.ov-tbl td:first-child small{display:none}.ov-tbl .go{padding:2px 7px!important;white-space:nowrap}}
 .subtabs{display:flex;flex-wrap:wrap;gap:8px}
 .subtab{font:inherit;font-size:13.5px;font-weight:700;color:#334155;background:#fff;border:1px solid #d6dde7;border-radius:99px;padding:7px 14px;cursor:pointer}
 .subtab.active{color:#fff;background:#2d7e2e;border-color:#2d7e2e}
@@ -1853,7 +1858,7 @@ function renderOverview() {
   const card = (q, title, big, items, go, extra = "") => `<div class="ov-card"><div class="q">${q}</div><h3>${title}</h3><div class="big">${big}</div><ul>${items.map(x => `<li>${x}</li>`).join("")}</ul>${extra}${go}</div>`;
   const goBtn = (to, t) => `<button type="button" class="go" data-goto="${to}">${t} →</button>`;
   const P1 = [["1안", "산업용 부담 완화 (수입 중립)", "114 → 105", "83 → 92", "+11.0%", "변화 없음", "S1"], ["2안", "정책 외 회수율 균등화 (수입 중립)", "114 → 103", "83 → 103", "+23.4%", "변화 없음", "S2"], ["3안", "지역별 요금제만 (설계안 11개 지역)", "114 → 111", "83 → 86", "0%", "−2.8조원", "S3"]];
-  const ptab = `<div style="overflow-x:auto"><table class="tbl ov-tbl"><thead><tr><th>개선안</th><th>산업용</th><th>주택용</th><th>주택 단가</th><th>한전 수입</th><th></th></tr></thead><tbody>${P1.map(r => `<tr><td><b>${r[0]}</b> ${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td><td>${r[4]}</td><td>${r[5]}</td><td><button type="button" class="go" style="padding:2px 9px" data-load-preset="${r[6]}">열기</button></td></tr>`).join("")}</tbody></table></div>`;
+  const ptab = `<div style="overflow-x:auto"><table class="tbl ov-tbl"><thead><tr><th>개선안</th><th>산업용<br>회수율</th><th>주택용<br>회수율</th><th>주택<br>단가</th><th>한전<br>수입</th><th></th></tr></thead><tbody>${P1.map(r => `<tr><td><b>${r[0]}</b><small>${r[1]}</small></td><td>${r[2]}</td><td>${r[3]}</td><td>${r[4]}</td><td>${r[5]}</td><td><button type="button" class="go" style="padding:2px 9px" data-load-preset="${r[6]}">열기</button></td></tr>`).join("")}</tbody></table></div>`;
   $("#ovGrid").innerHTML =
     card("질문 1 · 공정성", "현행 요금제는 원가를 공정하게 나누고 있나?", `산업용 ${fmt(g("산업용").rel, 0)} · 주택용 ${fmt(g("주택용").rel, 0)}<small>원가 회수율, 전체 평균 = 100</small>`,
       [`<b>교차보조의 축은 산업용</b> — 평균보다 연 ${jo(indX)}조원을 더 냅니다. ${lowest.map(([b, x]) => `${b}(${fmt(x.rel, 0)})`).join("·")}은 평균보다 적게 냅니다.`,
