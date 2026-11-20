@@ -19,7 +19,7 @@
 /*__BASECSS__*/
 </style>
 <style>
-:root{--navy:#173f19;--blue:#2d7e2e;--blue-soft:#eef6e6;--red:#e60012;--accent:#2d7e2e;--accent-soft:#eef6e6;--up:#c2410c;--down:#0f766e;
+:root{--navy:#173f19;--blue:#2d7e2e;--blue-soft:#eef6e6;--red:#b42318;--accent:#2d7e2e;--accent-soft:#eef6e6;--up:#b42318;--down:#0f766e;
   --b-off:#e8f1fb;--b-mid:#fff4d6;--b-peak:#fde2e2;
   /* 테마: 잎·줄기 녹색 팔레트(#1E5D20·#2D7E2E·#3A8A3F·#65B269·#89C17E·#A8D47A·#C6E07B). 글자·버튼은 흰 바탕 대비 4.5:1 이상인 #2D7E2E 이상 진한 색만 쓴다 */
   --th-1:#2d7e2e;--th-2:#1e5d20;--th-3:#123214;--th-soft:#eef6e6;--th-line:#cfe6c0;--th-hover:#e2f0d6;--th-pt:#c6e07b}
@@ -61,7 +61,7 @@ footer{background:#123214;color:#cfdfc6}
 .tbl td.pos{color:var(--up)} .tbl td.neg{color:var(--down)}
 .tbl td.na{color:#a0a8b5}
 .tbl-scroll{max-height:560px;overflow:auto;border:1px solid #eef1f5;border-radius:10px}
-.flag{display:inline-block;width:auto;height:auto;box-shadow:none;vertical-align:baseline;font-size:11px;font-weight:700;padding:1px 7px;border-radius:99px;background:#fff1f2;color:#be123c;margin-left:6px}
+.flag{display:inline-block;width:auto;height:auto;box-shadow:none;vertical-align:baseline;font-size:11px;font-weight:700;padding:1px 7px;border-radius:99px;background:#fff1f2;color:#b42318;margin-left:6px}
 .flag.ok{background:#ecfdf5;color:#047857}
 .finding{border-left:3px solid var(--red);background:#fbfcfe;padding:10px 14px;border-radius:0 10px 10px 0;margin:0 0 10px;font-size:13.5px;line-height:1.6}
 .finding b{color:#173f19}
@@ -81,7 +81,7 @@ footer{background:#123214;color:#cfdfc6}
 .ov-card{border:1px solid #e3e9f2;border-radius:14px;padding:16px 18px;background:#fff;display:flex;flex-direction:column;gap:8px;min-width:0}
 .ov-card .q{font-size:12px;font-weight:800;color:#2d7e2e;letter-spacing:.02em}
 .ov-card h3{margin:0;font-size:16.5px;color:#173f19;line-height:1.4}
-.ov-card .big{font-size:26px;font-weight:800;color:#1f2937;line-height:1.2}
+.ov-card .big{font-size:26px;font-weight:800;color:#e8590c;line-height:1.2}
 .ov-card .big small{font-size:13px;font-weight:600;color:#4b5563;margin-left:4px}
 .ov-card ul{margin:0;padding-left:18px;font-size:13.5px;line-height:1.6;color:#253247}
 .ov-card ul b{color:#173f19}
@@ -205,7 +205,7 @@ details.adv[open]>summary{margin-bottom:6px}
             <div class="two-col" style="margin-top:18px">
               <div><h3 class="sub-h" id="hmTitle">월 × 시간 평균부하</h3><div class="chart hm" id="hmChart"></div></div>
               <div><h3 class="sub-h" id="hdTitle">부하모양 변화 (분석 − 비교, 정규화)</h3><div class="chart hm" id="hdChart"></div>
-                <div class="hm-key"><span style="background:rgba(0,59,142,.75)"></span>하루 중 비중 감소<span style="background:#f3f4f6;margin-left:10px"></span>변화 없음<span style="background:rgba(230,0,18,.75);margin-left:10px"></span>하루 중 비중 증가</div></div>
+                <div class="hm-key"><span style="background:rgba(0,59,142,.75)"></span>하루 중 비중 감소<span style="background:#f3f4f6;margin-left:10px"></span>변화 없음<span style="background:rgba(180,35,24,.75);margin-left:10px"></span>하루 중 비중 증가</div></div>
             </div>
             <p class="mini-note" id="hdNote"></p>
           </div>
@@ -453,7 +453,7 @@ details.adv[open]>summary{margin-bottom:6px}
           <div class="sec-b">
             <h3 class="sub-h">받아야 했던 요금과 실제 요금의 차이, 그리고 그 원인 (2021~2026)</h3>
             <div class="fuel-key">
-              <div><span class="dot" style="background:#e60012"></span><b>실제 단가</b><br>고지서에 붙은 연료비조정단가</div>
+              <div><span class="dot" style="background:#b42318"></span><b>실제 단가</b><br>고지서에 붙은 연료비조정단가</div>
               <div class="op">−</div>
               <div><span class="dot" style="background:#0f172a"></span><b>받아야 했던 단가</b><br>연료비 변동을 그대로 반영한 값<br><span class="hint">(실적연료비 − 기준연료비) × 환산계수</span></div>
               <div class="op">=</div>
@@ -569,7 +569,7 @@ const BAND_NAMES = ["경부하", "중간부하", "최대부하"], BAND_COLORS = 
 // 순차 색(히트맵): 팔레트의 연두→진녹 단계를 이어 붙인다
 const SEQ = ["#f1f8ea", "#c6e07b", "#89c17e", "#3a8a3f", "#1e5d20"].map(h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)));
 function seqCol(t) { t = Math.max(0, Math.min(1, t)) * (SEQ.length - 1); const i = Math.min(SEQ.length - 2, Math.floor(t)), f = t - i, a = SEQ[i], b = SEQ[i + 1]; return `rgb(${a.map((v, k) => Math.round(v + (b[k] - v) * f)).join(",")})`; }
-const PAL = ["#2d7e2e", "#e60012", "#1d4ed8", "#c2410c", "#7c3aed", "#0891b2", "#a16207", "#be185d", "#4b5563", "#78350f"];
+const PAL = ["#2d7e2e", "#b42318", "#1d4ed8", "#c2410c", "#7c3aed", "#0891b2", "#a16207", "#be185d", "#4b5563", "#78350f"];
 const fmt = (v, d = 1) => v == null || !isFinite(v) ? "–" : v.toLocaleString("ko-KR", { minimumFractionDigits: d, maximumFractionDigits: d });
 const pct = (v, d = 1) => v == null || !isFinite(v) ? "–" : (v > 0 ? "+" : "") + fmt(v, d) + "%";
 const sum = a => a.reduce((x, y) => x + y, 0);
@@ -739,7 +739,7 @@ function lineChart(el, o0) {
     o.bands.forEach((b, i) => { const x0 = Math.max(L, xs(i) - bw / 2), x1 = Math.min(W - R, xs(i) + bw / 2); s += `<rect x="${x0}" y="${T}" width="${x1 - x0}" height="${H - T - B}" fill="${BAND_COLORS[b]}"/>`; });
   }
   if (o.ref != null && o.ref > lo && o.ref < hi) s += `<line x1="${L}" x2="${W - R}" y1="${ys(o.ref)}" y2="${ys(o.ref)}" stroke="#111827" stroke-dasharray="4 3" opacity=".6"/>`;
-  if (o.marks) for (const i of o.marks) s += `<line x1="${xs(i)}" x2="${xs(i)}" y1="${H - B}" y2="${H - B - 8}" stroke="#e60012" stroke-width="1.4"/>`;
+  if (o.marks) for (const i of o.marks) s += `<line x1="${xs(i)}" x2="${xs(i)}" y1="${H - B}" y2="${H - B - 8}" stroke="#b42318" stroke-width="1.4"/>`;
   s += `<g class="grid">`; for (let k = 0; k <= 4; k++) { const v = lo + (hi - lo) * k / 4, y = ys(v); s += `<line x1="${L}" x2="${W - R}" y1="${y}" y2="${y}"/><text class="ax" x="${L - 6}" y="${y + 4}" text-anchor="end">${o.yFmt ? o.yFmt(v) : (Math.abs(v) < 1e-9 ? "0" : fmt(v, Math.abs(hi - lo) < 10 ? 2 : Math.abs(hi - lo) < 100 ? 1 : 0))}</text>`; } s += `</g>`;
   const lw = Math.max(...o.labels.map(l => textW(l, 11))) + 10, fit = Math.max(2, Math.floor((W - L - R) / lw));
   const step = Math.ceil(n / Math.min(o.maxTicks || 12, fit));
@@ -789,7 +789,7 @@ function heatmap(el, M, o) {
   if (o.diverge) { const a = Math.max(Math.abs(lo), Math.abs(hi)) || 1; lo = -a; hi = a; }
   const col = v => {
     if (v == null || !isFinite(v)) return "#f3f4f6";
-    if (o.diverge) { const t = v / hi; return t >= 0 ? `rgba(230,0,18,${Math.min(1, t) * .85})` : `rgba(0,59,142,${Math.min(1, -t) * .85})`; }
+    if (o.diverge) { const t = v / hi; return t >= 0 ? `rgba(180,35,24,${Math.min(1, t) * .85})` : `rgba(0,59,142,${Math.min(1, -t) * .85})`; }
     const t = (v - lo) / (hi - lo || 1); return seqCol(t);
   };
   let s = `<svg viewBox="0 0 ${W} ${H}">`;
@@ -866,7 +866,7 @@ function renderPattern(C, idx) {
   const series = D.meta.years.map((y, i) => {
     let v = avgDay(C, idx, i, S.season, S.dtype); if (norm) v = normalize(v);
     const main = i === yi, base = i === bi;
-    return { name: y + "년", values: v, color: main ? "#e60012" : base ? "#2d7e2e" : "#cbd5e1", width: main || base ? 2.6 : 1.3, noLegend: !(main || base), order: main ? 2 : base ? 1 : 0 };
+    return { name: y + "년", values: v, color: main ? "#b42318" : base ? "#2d7e2e" : "#cbd5e1", width: main || base ? 2.6 : 1.3, noLegend: !(main || base), order: main ? 2 : base ? 1 : 0 };
   }).sort((a, b) => a.order - b.order);
   const repM = S.season === "all" ? 6 : monthsOf(S.season)[0], repD = S.dtype === "all" ? 0 : +S.dtype;
   const bands = bandRow(S.scheme, repM, repD);
@@ -915,12 +915,12 @@ function renderChange(C, idx) {
     sh.forEach((v, k) => tb[k].push(v)); lf.push(t / 24 / Math.max(...p) * 100);
   });
   const tser = TOD.map(([n, , , c, dark], k) => ({ name: n, color: c, values: tod[k], box: true, dark: !!dark }));
-  const bser = [["경부하", "#0891b2"], ["중간부하", "#d4a017", 1], ["최대부하", "#e60012"]].map(([n, c, dark], k) => ({ name: n, color: c, values: tb[k], box: true, dark: !!dark }));
+  const bser = [["경부하", "#0891b2"], ["중간부하", "#d4a017", 1], ["최대부하", "#b42318"]].map(([n, c, dark], k) => ({ name: n, color: c, values: tb[k], box: true, dark: !!dark }));
   legend($("#trendLegend"), tser); stackChart($("#trendChart"), Y.map(String), tser, { height: 250 });
   legend($("#tbLegend"), bser); stackChart($("#tbChart"), Y.map(String), bser, { height: 250 });
   $("#tbTitle").textContent = `요금 시간대별 (경·중간·최대부하, ${S.scheme === "2016" ? "기존" : "2026 개편"} 구분)`;
   const yi = yIdx(S.year), bi = yIdx(S.base), d = (a, k) => a[k][yi] - a[k][bi];
-  const dl = (ser, a) => `<b>${S.base}→${S.year} 변화(%p)</b>: ` + ser.map((x, k) => { const v = d(a, k); return `${x.name.split(" ")[0]} <b style="color:${v > 0.05 ? "#be123c" : v < -0.05 ? "#1d4ed8" : "#6b7686"}">${(v >= 0.05 ? "+" : v <= -0.05 ? "−" : "") + fmt(Math.abs(v), 1)}</b>`; }).join(" · ");
+  const dl = (ser, a) => `<b>${S.base}→${S.year} 변화(%p)</b>: ` + ser.map((x, k) => { const v = d(a, k); return `${x.name.split(" ")[0]} <b style="color:${v > 0.05 ? "#b42318" : v < -0.05 ? "#1d4ed8" : "#6b7686"}">${(v >= 0.05 ? "+" : v <= -0.05 ? "−" : "") + fmt(Math.abs(v), 1)}</b>`; }).join(" · ");
   $("#trendDelta").innerHTML = dl(tser, tod); $("#tbDelta").innerHTML = dl(bser, tb);
   const mx = Math.max(...tod.map((_, k) => Math.abs(d(tod, k))), ...tb.map((_, k) => Math.abs(d(tb, k))));
   $("#chgDesc").innerHTML = `${S.season === "all" ? "연간" : SEASONS[+S.season]} · ${S.dtype === "all" ? "전체 날짜" : DTYPES[+S.dtype]} 평균일 기준, 막대 하나가 그해 하루 사용량 100%입니다(표본 증가 영향 없음). 범례를 누르면 해당 구간을 숨길 수 있고, 요금 시간대 구분은 왼쪽 '시간대 구분'(기존/2026 개편)을 따릅니다.`
@@ -933,7 +933,7 @@ function renderChange(C, idx) {
   let h = `<table class="tbl"><thead><tr><th>항목</th>${Y.slice(1).map(y => `<th>${y}</th>`).join("")}<th>최대 변화 연도</th></tr></thead><tbody>`;
   for (const [n, i] of items) {
     const c = shapeChange(C, i), mx = Math.max(...c.slice(1)), at = Y[c.indexOf(mx)];
-    h += `<tr${n === S.item ? ' style="background:#fff7ed"' : ""}><td>${n.replace("|", " · ")}</td>${c.slice(1).map(v => `<td style="background:rgba(230,0,18,${Math.min(.55, v / 12)})">${fmt(v, 1)}</td>`).join("")}<td>${at}년</td></tr>`;
+    h += `<tr${n === S.item ? ' style="background:#fff7ed"' : ""}><td>${n.replace("|", " · ")}</td>${c.slice(1).map(v => `<td style="background:rgba(180,35,24,${Math.min(.55, v / 12)})">${fmt(v, 1)}</td>`).join("")}<td>${at}년</td></tr>`;
   }
   $("#chgTable").innerHTML = h + "</tbody></table>";
   // 일별
@@ -962,7 +962,7 @@ function renderCoverage() {
   lineChart($("#covChart"), { labels: Y.map(String), series, yTitle: "%", height: 240, tipFmt: v => fmt(v, 1) + "%", yMin: 0, yMax: 100 });
   const Z = D.zone;
   $("#zoneTable").innerHTML = `<table class="tbl"><thead><tr><th>권역</th><th>본부</th>${Z.years.map(y => `<th>${y}</th>`).join("")}</tr></thead><tbody>` +
-    Object.entries(Z.coverage_pct).map(([z, r]) => `<tr><td>${z}</td><td style="text-align:left;white-space:normal;font-size:11.5px;color:#6b7686">${Z.zones[z].hq.join(", ")}</td>${r.map((v, i) => { const d = i ? v - r[i - 1] : 0; return `<td style="background:rgba(0,59,142,${Math.max(0, (v - 30) / 70) * .35})${d < -5 ? ";outline:2px solid #e60012;outline-offset:-2px" : ""}"${d < -5 ? ` title="전년보다 ${fmt(-d, 1)}%p 낮음"` : ""}>${fmt(v, 1)}</td>`; }).join("")}</tr>`).join("") + "</tbody></table>";
+    Object.entries(Z.coverage_pct).map(([z, r]) => `<tr><td>${z}</td><td style="text-align:left;white-space:normal;font-size:11.5px;color:#6b7686">${Z.zones[z].hq.join(", ")}</td>${r.map((v, i) => { const d = i ? v - r[i - 1] : 0; return `<td style="background:rgba(0,59,142,${Math.max(0, (v - 30) / 70) * .35})${d < -5 ? ";outline:2px solid #b42318;outline-offset:-2px" : ""}"${d < -5 ? ` title="전년보다 ${fmt(-d, 1)}%p 낮음"` : ""}>${fmt(v, 1)}</td>`; }).join("")}</tr>`).join("") + "</tbody></table>";
   const drops = Object.entries(Z.coverage_pct).flatMap(([z, r]) => r.map((v, i) => i && v - r[i - 1] < -5 ? `${z} ${Z.years[i]}년(${fmt(r[i - 1], 1)}→${fmt(v, 1)}%)` : null).filter(Boolean));
   $("#zoneNote").innerHTML = `같은 내용을 지역별로 본 표로, 지역 간 크기 비교나 지역별 분석을 할 때 그 지역·연도의 시간별 데이터를 얼마나 믿을 수 있는지 보여줍니다. 색이 진할수록 비중이 높습니다. `
     + `<b>빨간 테두리</b>는 비중이 전년보다 5%p 넘게 떨어진 칸입니다. AMI 보급은 해마다 늘기만 하므로, 비중이 떨어졌다면 그해 일부 고객(주로 대형 고객)의 시간별 데이터가 빠졌거나 관할 본부가 바뀐 것으로 볼 수 있습니다. 그 지역·연도의 사용량 크기는 실제보다 작게 잡혀 있고, 모양은 대체로 쓸 만합니다. `
@@ -1262,7 +1262,7 @@ function renderSim() {
     k(`${P.refYear}년 실제 판매수입`, fmt(actual / 1e12, 2) + " <small>조원</small>", cal ? `보정 기준: ${inforce.replace(/-/g, ".")} 요금표 · 연료비 ${fmt(FUEL_HIST[P.refYear] ?? P.fuel, 2)}원` : `비교 요금표 추정치 ÷ 실적 = ${fmt(totB.rev / actual * 100, 1)}%`);
   // 차트: 대분류 회수율
   const bigs = Object.keys(A);
-  const sSer = { name: "시나리오 회수율", color: "#e60012", values: bigs.map(b => A[b].rev / A[b].cost * 100) };
+  const sSer = { name: "시나리오 회수율", color: "#b42318", values: bigs.map(b => A[b].rev / A[b].cost * 100) };
   const bSer = { name: "비교 요금표 회수율", color: "#2d7e2e", values: bigs.map(b => B[b] ? B[b].rev / B[b].cost * 100 : null) };
   legend($("#simLegend"), [sSer, bSer]);
   barChart($("#simChart"), bigs, [bSer, sSer], { yTitle: "%", ref: 100 });
@@ -1336,11 +1336,11 @@ function renderCost() {
   const C = D.cost, reg = document.querySelector('input[name="smpReg"]:checked').value, sch = document.querySelector('input[name="smpSch"]:checked').value;
   const ys = C.smp_years.map(String);
   const bs = ys.map(y => C.band_smp[reg][sch][y].simple);
-  const series = [0, 1, 2].map(k => ({ name: BAND_NAMES[k], values: bs.map(b => b[k]), color: ["#0891b2", "#a16207", "#e60012"][k] }));
+  const series = [0, 1, 2].map(k => ({ name: BAND_NAMES[k], values: bs.map(b => b[k]), color: ["#0891b2", "#a16207", "#b42318"][k] }));
   legend($("#bandLegend"), series);
   lineChart($("#bandChart"), { labels: ys.map(y => y === "2026" ? "2026*" : y), series, yTitle: "원/kWh", height: 260, tipFmt: v => fmt(v, 1) + "원" });
   const pick = ["2016", "2019", "2022", "2024", "2025", "2026"].filter(y => C.smp_hour_profile[reg][y]);
-  const hs = pick.map((y, j) => ({ name: y + (y === "2026" ? "(~11.14)" : ""), values: normalize(C.smp_hour_profile[reg][y]), color: ["#cbd5e1", "#94a3b8", "#2d7e2e", "#7c3aed", "#e60012", "#c2410c"][j], width: y >= "2024" ? 2.4 : 1.4 }));
+  const hs = pick.map((y, j) => ({ name: y + (y === "2026" ? "(~11.14)" : ""), values: normalize(C.smp_hour_profile[reg][y]), color: ["#cbd5e1", "#94a3b8", "#2d7e2e", "#7c3aed", "#b42318", "#c2410c"][j], width: y >= "2024" ? 2.4 : 1.4 }));
   legend($("#smpHLegend"), hs);
   const repBands = bandRow(sch, 6, 0);
   lineChart($("#smpHChart"), { labels: [...Array(24).keys()].map(h => h + "시"), series: hs, bands: repBands, yTitle: "연평균=1", height: 260, zero: false, tipLabel: i => `${i}~${i + 1}시`, tipFmt: v => fmt(v, 3) });
@@ -1365,7 +1365,7 @@ function renderCost() {
   const tser = [
     { name: `${yA} 시장수요`, color: "#94a3b8", values: hist(C.pv[yA].top100_market_hours) },
     { name: `${yM} 시장수요`, color: "#2d7e2e", values: hist(C.pv[yM].top100_market_hours) },
-    { name: `${yB} 시장수요(~10.6)`, color: "#e60012", values: hist(C.pv[yB].top100_market_hours) },
+    { name: `${yB} 시장수요(~10.6)`, color: "#b42318", values: hist(C.pv[yB].top100_market_hours) },
     { name: `${yM} 총수요`, color: "#2d7e2e", dash: "4 3", values: hist(C.pv[yM].top100_total_hours) }];
   legend($("#topLegend"), tser);
   lineChart($("#topChart"), { labels: [...Array(24).keys()].map(h => h + "시"), series: tser, bands: bandRow("2026", 6, 0), yTitle: "시간 수", height: 250, tipFmt: v => fmt(v, 0) + "시간" });
@@ -1373,7 +1373,7 @@ function renderCost() {
   const yi = D.meta.years.length - 1, sysS = C.system_smp[yi];
   const list = D.meta.tariffs.map(t => [t, C.class_smp[t][yi]]).filter(x => x[1] != null && annualTotal({ kind: "full", data: D.cube_tariff.data }, D.meta.tariffs.indexOf(x[0]), yi) > 5e4).map(([t, v]) => [t, v / sysS]).sort((a, b) => b[1] - a[1]);
   const W = 100;
-  $("#clsSmpChart").innerHTML = `<div style="font-size:12px">${list.map(([t, v]) => { const d = (v - 1) * 100, w = Math.min(50, Math.abs(d) * 8); return `<div style="display:grid;grid-template-columns:130px 1fr 56px;align-items:center;gap:8px;margin:3px 0"><span>${t}</span><div style="position:relative;height:12px;background:#f3f4f6;border-radius:3px"><div style="position:absolute;left:50%;top:0;bottom:0;width:1px;background:#9ca3af"></div><div style="position:absolute;top:1px;height:10px;border-radius:2px;${d >= 0 ? `left:50%;width:${w}%;background:#e60012` : `right:50%;width:${w}%;background:#2d7e2e`}"></div></div><b style="text-align:right">${fmt(v, 3)}</b></div>`; }).join("")}</div><p class="mini-note">${D.meta.years[yi]}년 · 계통가중 SMP ${fmt(sysS, 1)}원/kWh · 가운데 선 = 1.0, 막대 끝 = ±6.25%</p>`;
+  $("#clsSmpChart").innerHTML = `<div style="font-size:12px">${list.map(([t, v]) => { const d = (v - 1) * 100, w = Math.min(50, Math.abs(d) * 8); return `<div style="display:grid;grid-template-columns:130px 1fr 56px;align-items:center;gap:8px;margin:3px 0"><span>${t}</span><div style="position:relative;height:12px;background:#f3f4f6;border-radius:3px"><div style="position:absolute;left:50%;top:0;bottom:0;width:1px;background:#9ca3af"></div><div style="position:absolute;top:1px;height:10px;border-radius:2px;${d >= 0 ? `left:50%;width:${w}%;background:#b42318` : `right:50%;width:${w}%;background:#2d7e2e`}"></div></div><b style="text-align:right">${fmt(v, 3)}</b></div>`; }).join("")}</div><p class="mini-note">${D.meta.years[yi]}년 · 계통가중 SMP ${fmt(sysS, 1)}원/kWh · 가운데 선 = 1.0, 막대 끝 = ±6.25%</p>`;
   // 발견
   const o25 = C.band_smp.inland["2016"]["2025"].simple, o26 = C.band_smp.inland["2016"]["2026"].simple, n26 = C.band_smp.inland["2026"]["2026"].simple, o19 = C.band_smp.inland["2016"]["2019"].simple;
   const v25 = verAt(2025).tou["산업용(을)"]["고압A-II"].energy;
@@ -1421,7 +1421,7 @@ function renderResBins() {
   $("#rbYear").textContent = B.years.length > 1 ? `${B.years[0]}~${B.years.at(-1)}` : yr;
   const { rows, T, tN, tS, wOn, ym } = resBinStats(yr, season);
   const ser = [{ name: "전체 가구 비중(%)", color: "#2d7e2e", values: rows.map(r => r.hh / T.hh * 100) }, { name: "사용량 비중(%)", color: "#94a3b8", values: rows.map(r => r.kwh / T.kwh * 100) }];
-  if (wOn) ser.push({ name: "복지할인 가구 비중(%)", color: "#e60012", values: rows.map(r => r.whh / T.whh * 100) });
+  if (wOn) ser.push({ name: "복지할인 가구 비중(%)", color: "#b42318", values: rows.map(r => r.whh / T.whh * 100) });
   legend($("#rbLegend"), ser);
   barChart($("#rbChart"), rows.map(r => r.name), ser, { yTitle: "%" });
   let h = `<table class="tbl"><thead><tr><th>가구당 월 사용량(kWh)</th><th>가구 비중</th><th>사용량 비중</th><th>평균 사용량</th><th>가구당 월 요금(추정)</th><th>kWh당 요금</th>${wOn ? "<th>복지할인 가구 비율</th>" : ""}</tr></thead><tbody>`;
@@ -1465,7 +1465,7 @@ function renderWelfareBins() {
   });
   const T = rows.reduce((a, r) => { for (const k in r) if (k !== "name") a[k] = (a[k] || 0) + r[k]; return a; }, {});
   $("#wbYear").textContent = W.years.length > 1 ? `${W.years[0]}~${W.years.at(-1)}` : yr;
-  const ser = [{ name: "가구 비중(%)", color: "#2d7e2e", values: rows.map(r => r.hh / T.hh * 100) }, { name: "할인액 비중(%)", color: "#e60012", values: rows.map(r => r.disc / T.disc * 100) }];
+  const ser = [{ name: "가구 비중(%)", color: "#2d7e2e", values: rows.map(r => r.hh / T.hh * 100) }, { name: "할인액 비중(%)", color: "#b42318", values: rows.map(r => r.disc / T.disc * 100) }];
   legend($("#wbLegend"), ser);
   barChart($("#wbChart"), rows.map(r => r.name), ser, { yTitle: "%" });
   let h = `<table class="tbl"><thead><tr><th>가구당 월 사용량(kWh)</th><th>가구 비중</th><th>평균 사용량</th><th>가구당 월 할인(원)</th><th>복지할인</th><th>200kWh 이하 감액</th><th>요금동결(인상 유예)</th><th>할인율(할인 전 요금 대비)</th></tr></thead><tbody>`;
@@ -1698,7 +1698,7 @@ function renderMonthly() {
   const labels = ks.map(k => k.replace("-", "."));
   const map = { res: "주택용", gen: "일반용", ind: "산업용", agr: "농사용", night: "심야", total: "전체" };
   const ser = Object.entries(map).map(([b, n], j) => ({ name: n, color: b === "total" ? "#111827" : PAL[[0, 1, 3, 4, 6][j] ?? j], width: b === "total" ? 2.6 : 1.4, values: ks.map(k => M.rev[b][k] != null ? M.rev[b][k] * 1e3 / M.sales[b][k] : null) }));
-  ser.push({ name: "정산단가(구입)", color: "#e60012", width: 2.6, dash: "6 3", values: ks.map(k => M.price.settle[k]) });
+  ser.push({ name: "정산단가(구입)", color: "#b42318", width: 2.6, dash: "6 3", values: ks.map(k => M.price.settle[k]) });
   ser.push({ name: "SMP", color: "#94a3b8", width: 1.2, values: ks.map(k => M.price.smp[k]) });
   legend($("#monLegend"), ser);
   lineChart($("#monChart"), { labels, series: ser, yTitle: "원/kWh", height: 300, maxTicks: 11, yMax: 300, tipFmt: v => fmt(v, 1) + "원" });
@@ -1712,7 +1712,7 @@ function renderFuel() {
   const from = (document.querySelector('input[name="fuelFrom"]:checked') || {}).value || "2021Q1", inR = q => q.q >= from;
   const labels = F.map(q => q.q.replace("Q", "."));
   const req = F.map(q => q.required_effective), rule = F.map(q => q.rule), app = F.map(q => q.applied);
-  const ser = [{ name: "받아야 했던 단가", values: req, color: "#0f172a", width: 2.4 }, { name: "약관대로라면", values: rule, color: "#2563eb", dash: "5 4", width: 1.8 }, { name: "실제 단가", values: app, color: "#e60012", width: 2.6 }];
+  const ser = [{ name: "받아야 했던 단가", values: req, color: "#0f172a", width: 2.4 }, { name: "약관대로라면", values: rule, color: "#2563eb", dash: "5 4", width: 1.8 }, { name: "실제 단가", values: app, color: "#b42318", width: 2.6 }];
   legend($("#fuelLegend"), ser);
   lineChart($("#fuelChart"), { labels, series: ser, yTitle: "원/kWh", height: 270, zero: false, ref: 0, maxTicks: 8, tipFmt: v => fmt(v, 1) + "원" });
   const salesQ = q => { const y = +q.q.slice(0, 4), n = +q.q.slice(-1); let s = 0, ok = 0; for (let m = 3 * n - 2; m <= 3 * n; m++) { const v = D.mon.sales.total[`${y}-${String(m).padStart(2, "0")}`]; if (v != null) { s += v; ok++; } }
@@ -1777,7 +1777,7 @@ function renderFin() {
   const debt = y => (S_[y].fin_cur + S_[y].fin_non) / 1e4, ratio = y => S_[y].liab / S_[y].equity * 100;
   const s1 = [{ name: "별도 금융부채(조원)", values: ys.map(debt), color: "#2d7e2e", width: 2.6 }, { name: "별도 이익잉여금(조원)", values: ys.map(y => S_[y].re / 1e4), color: "#94a3b8", width: 2 }];
   legend($("#finLegend"), s1); lineChart($("#finChart"), { labels: ys, series: s1, yTitle: "조원", height: 250, zero: true, tipFmt: v => fmt(v, 1) + "조원" });
-  const s2 = [{ name: "부채비율(%) = 부채 ÷ 자본", values: ys.map(ratio), color: "#e60012", width: 2.6 }];
+  const s2 = [{ name: "부채비율(%) = 부채 ÷ 자본", values: ys.map(ratio), color: "#b42318", width: 2.6 }];
   legend($("#finLegend2"), s2); lineChart($("#finChart2"), { labels: ys, series: s2, yTitle: "%", height: 250, zero: true, tipFmt: v => fmt(v, 0) + "%" });
   let h = `<table class="tbl"><thead><tr><th>연도</th><th>자산</th><th>부채</th><th>금융부채</th><th>자본</th><th>이익잉여금</th><th>부채비율</th><th>영업이익</th><th>금융원가</th><th>금융원가 ÷ 평균 금융부채</th><th>당기순이익</th></tr></thead><tbody>`;
   const I_ = F.sep_is || {};
