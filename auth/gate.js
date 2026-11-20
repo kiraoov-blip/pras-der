@@ -20,7 +20,7 @@
   // ▼ Apps Script 웹앱을 배포한 뒤 받은 주소(/exec로 끝남)를 여기에 넣는다
   var API = 'https://script.google.com/macros/s/AKfycbyimpa3X5-KDXxJC8_iqLtXn1uHOhidJ6XqJ2o-0H_UkP6jDKE4XMa8N8PLj09-hsu2DA/exec';
 
-  var NAMES = { pras: 'PRAS-DER', tou: 'PRAS-TOU', care: 'CARE-Jeju', 'iea-price': 'IEA Prices and Taxes',
+  var NAMES = { pras: 'PRAS-DER', tou: 'PRAS-TOU', care: 'CARE-Jeju', 'pras-load': '전력 사용 패턴·요금제 진단', 'iea-price': 'IEA Prices and Taxes',
     'ember-sim': 'EMBER Electricity', 'kepco-stat': 'KEPCO Statistics', 'elec-intensity': '전력원단위',
     bple: '전력수급기본계획', 'renewable-lcoe': '재생에너지 LCOE', lcoe: '태양광 LCOE' };
   var me = document.currentScript;
