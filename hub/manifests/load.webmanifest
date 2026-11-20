@@ -1,11 +1,11 @@
 {
-  "name": "PRAS-LOAD 전력소비패턴·요금 진단 시뮬레이터",
-  "short_name": "PRAS-LOAD",
+  "name": "전력 사용 패턴 및 요금제 진단 시뮬레이터",
+  "short_name": "요금제 진단",
   "start_url": "/pras-load/",
   "scope": "/pras-load/",
   "display": "standalone",
   "lang": "ko-KR",
-  "theme_color": "#2168df",
+  "theme_color": "#3f6212",
   "background_color": "#ffffff",
   "icons": [
     {

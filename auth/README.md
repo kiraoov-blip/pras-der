@@ -122,7 +122,7 @@ var API = 'https://script.google.com/macros/s/…/exec';
 | 특정 사람 막기 | 시트 「사용자」에서 그 사람의 **상태**를 `차단`으로 바꿉니다. 1분 안에 잠기고, 새 코드도 요청할 수 없습니다 |
 | 승인만 취소(다시 요청은 가능) | 시트 「사용자」에서 그 사람의 행을 지웁니다 |
 | 모두 다시 인증받게 하기 | Apps Script에서 `revokeAllTokens` 실행 |
-| 잠글 시뮬레이터 바꾸기 | `deploy-pages.yml`의 `LOCKED: "pras tou care iea-price"`에서 폴더 이름을 넣거나 빼고, `hub/index.html`의 해당 카드에 `data-locked`를 붙이거나 뗍니다 |
+| 잠글 시뮬레이터 바꾸기 | `deploy-pages.yml`의 `LOCKED: "pras tou care pras-load iea-price"`에서 폴더 이름을 넣거나 빼고, `hub/index.html`의 해당 카드에 `data-locked`를 붙이거나 뗍니다 |
 | 이 브라우저에서 로그아웃 | 잠긴 시뮬레이터 주소 끝에 `?sg-logout`을 붙여 엽니다(예: `/care/?sg-logout`) |
 | Code.gs 수정 후 반영 | **배포 → 배포 관리 → ✏️ 편집 → 버전: 새 버전 → 배포**. 주소가 그대로 유지됩니다(「새 배포」를 만들면 주소가 바뀝니다) |
 

@@ -1,5 +1,5 @@
 """
-PRAS-LOAD 데이터 빌드: 계약종·본부·산업종별 시간별 사용량(연도별 parquet) → 시뮬레이터용 집계
+전력 사용 패턴·요금제 진단 시뮬레이터 데이터 빌드: 계약종·본부·산업종별 시간별 사용량(연도별 parquet) → 시뮬레이터용 집계
 
 사용:
     python3 scripts/build_data.py <parquet_dir> build

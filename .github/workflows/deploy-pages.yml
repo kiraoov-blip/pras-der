@@ -6,6 +6,7 @@ name: Deploy PRAS-DER + PRAS-TOU + CARE-Jeju + IEA Hub to GitHub Pages
 #   /pras/**     → 이 저장소의 Next.js 앱 (output: "export", basePath=/pras)
 #   /tou/**      → kiraoov-blip/pras-tou 저장소를 체크아웃해서 그대로 복사(빌드 불필요)
 #   /care/**     → kiraoov-blip/care 저장소를 체크아웃해서 그 자리에서 빌드한 결과
+#   /pras-load/** → 이 저장소의 pras-load/ 폴더(전력 사용 패턴·요금제 진단 시뮬레이터, index.html + data/*.json, 빌드 불필요)
 #   /iea-price/** → 이 저장소의 iea-price/ 폴더(정적 HTML 한 장 + 폰트·데이터 내장, 빌드 불필요)
 #   /bple/**     → 이 저장소의 bple/ 폴더(전력수급기본계획 시뮬레이터, 정적 폴더, 빌드 불필요)
 #   /elec-intensity/** → 이 저장소의 elec-intensity/ 폴더(전력원단위 시뮬레이터, 정적 HTML 한 장, 빌드 불필요)
@@ -121,6 +122,10 @@ jobs:
           # iea-price는 빌드 산출물이 아니라 이 저장소에 그대로 커밋된 정적 폴더다
           # (index.html 한 장 + favicon + vendor 스크립트). 그대로 복사만 하면 된다.
           cp -r iea-price public-root/iea-price
+          # pras-load(전력 사용 패턴·요금제 진단)도 같은 방식의 정적 폴더다. 원자료·빌드 스크립트는 빼고
+          # index.html·favicon과 화면이 읽는 data/*.json만 싣는다.
+          mkdir -p public-root/pras-load
+          cp -r pras-load/index.html pras-load/favicon.svg pras-load/data public-root/pras-load/
           cp -r ember-sim public-root/ember-sim
           # kepco-stat도 같은 방식의 정적 폴더다. 배포에는 index.html·favicon·vendor만 싣는다.
           mkdir -p public-root/kepco-stat
@@ -145,7 +150,7 @@ jobs:
       # 승인 서버(Apps Script) 설정은 auth/README.md 참고.
       - name: Inject access gate
         env:
-          LOCKED: "pras tou care iea-price"
+          LOCKED: "pras tou care pras-load iea-price"
         run: |
           mkdir -p public-root/auth
           cp auth/gate.js public-root/auth/gate.js
