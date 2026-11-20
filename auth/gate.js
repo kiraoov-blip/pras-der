@@ -6,6 +6,7 @@
  * 배포 워크플로(.github/workflows/deploy-pages.yml)가 LOCKED 목록의 폴더에 자동으로 넣어 준다.
  *
  * - 사번·소속·이름 입력 → 관리자 카카오톡으로 6자리 코드 발송 → 관리자가 전달한 코드 입력 → 입장
+ * - 관리자가 시트에 '사전승인'으로 적어 둔 사람은 사번·이름이 맞으면 코드 없이 바로 입장
  * - 관리자는 '관리자 로그인'에서 사번 + 비밀번호로 입장
  * - 한 번 승인되면 통행증이 이 브라우저에 저장되어 잠긴 시뮬레이터 모두에 다시 묻지 않고 들어간다
  * - 주소 끝에 ?sg-logout 을 붙여 열면 이 브라우저의 통행증을 지운다
@@ -253,7 +254,7 @@
     var h = '';
     if (s === 'req') {
       h = head('접근 승인이 필요한 시뮬레이터') +
-        '<p class="sg-lead">사번·소속·이름을 입력하면 관리자에게 접속 요청이 전달됩니다. 관리자에게 받은 <b>6자리 코드</b>를 입력하면 이용할 수 있습니다.</p>' +
+        '<p class="sg-lead">사번·소속·이름을 입력하면 관리자에게 접속 요청이 전달됩니다. 관리자에게 받은 <b>6자리 코드</b>를 입력하면 이용할 수 있습니다. 미리 등록된 분은 코드 없이 바로 입장합니다.</p>' +
         '<form id="sg-f" novalidate>' +
         '<label>사번 (8자리)<input id="sg-emp" inputmode="numeric" autocomplete="off" maxlength="8" placeholder="예: 12345678" value="' + esc(p.empId || '') + '"></label>' +
         '<label>소속<input id="sg-dept" autocomplete="organization" maxlength="40" placeholder="예: 요금전략처 요금분석팀" value="' + esc(p.dept || '') + '"></label>' +
@@ -307,7 +308,7 @@
 
   function requestCode(empId, dept, name) {
     return api({ action: 'request', empId: empId, dept: dept, name: name }).then(function (r) {
-      if (r.ok) sset(K_PEND, { empId: empId, dept: dept, name: name, at: Date.now(), ttl: r.ttlHours || 24, exp: Date.now() + (r.ttlHours || 24) * 3600000 });
+      if (r.ok && !r.token) sset(K_PEND, { empId: empId, dept: dept, name: name, at: Date.now(), ttl: r.ttlHours || 24, exp: Date.now() + (r.ttlHours || 24) * 3600000 });
       return r;
     });
   }
@@ -324,6 +325,7 @@
         if (name.length < 2) { msg('이름을 입력해주세요.'); $('#sg-name').focus(); return; }
         busy(true, '요청 보내는 중…');
         requestCode(empId, dept, name).then(function (r) {
+          if (r.ok && r.token) { sdel(K_PEND); grant(r); return; }   // 사전승인: 코드 없이 바로 입장
           if (r.ok) show('code', { text: '관리자에게 요청을 보냈습니다.', ok: true });
           else { busy(false); msg(r.msg); }
         });
@@ -348,6 +350,7 @@
         var p = sget(K_PEND) || {}, b = this;
         b.disabled = true;
         requestCode(p.empId, p.dept, p.name).then(function (r) {
+          if (r.ok && r.token) { sdel(K_PEND); grant(r); return; }
           if (r.ok) { msg('관리자에게 새 코드를 요청했습니다. 이전 코드는 더 이상 쓸 수 없습니다.', true); startCooldown(Date.now()); }
           else { b.disabled = false; msg(r.msg); }
         });
