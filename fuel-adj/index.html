@@ -557,7 +557,8 @@ footer{background:#2e271f;color:#d8cfbd;padding:21px 0}
               <div>
                 <p class="eyebrow">그때 다르게 했다면</p>
                 <p class="desc">위 20개 분기는 필요조정단가가 이미 확정된 숫자입니다. 그래서 유보를 켜고 끄면 전망이 아니라 <b>산수</b>로 금액이 나옵니다.
-                처음 상태는 실제 기록이고, 분기를 누르면 바뀝니다.</p>
+                처음 상태는 실제 기록이고, 분기를 누르면 바뀝니다.
+                금액은 분기별 (적용단가 − 필요조정단가) × 월별 판매량 실적이며, ’23.2Q 필요단가는 5.16 기준연료비 차감 변경 전후(40.7 / 32.7원)를 일수 가중한 <b>36.7원</b>으로 더합니다.</p>
               </div>
               <div class="chips" id="cfPresets"></div>
             </div>
@@ -582,6 +583,11 @@ footer{background:#2e271f;color:#d8cfbd;padding:21px 0}
               <div class="field">
                 <div class="lab"><span>빠른 선택</span></div>
                 <div class="chips" id="cfRange"></div>
+              </div>
+              <div class="field">
+                <div class="lab"><span>연동제 첫해</span></div>
+                <label class="check"><input type="checkbox" id="cfY21" checked> 2021년 4개 분기 포함</label>
+                <span class="hint">집계 시작이 ’22.1Q일 때 그 앞에 붙임 · 실제 기록 고정(보도값)</span>
               </div>
             </div>
             <div class="kpis" id="cfKpi" style="margin-top:18px"></div>
@@ -863,7 +869,7 @@ var Q = [
   {q:"’23.2Q", period:"2023년 4~6월분", reg:"B", mon:["2022.12","2023.1","2023.2"],
    m:{coal:[270.34,249.42,247.54], lng:[1641.07,1629.89,1411.25], oil:[798.66,594.66,680.20]},
    avg:{coal:255.77, lng:1560.74, oil:691.18}, cv:{coal:255.52, lng:472.05, oil:11.75},
-   actual:739.32, res:33.9, ded:-253.93, bapp:434.71, vfuel:304.61, need:40.7, cap:5.0, qcap:null, fin:5.0, hold:false},
+   actual:739.32, res:33.9, ded:-253.93, bapp:434.71, vfuel:304.61, need:40.7, needEff:36.7, cap:5.0, qcap:null, fin:5.0, hold:false},
   {q:"’23.3Q", period:"2023년 7~9월분", reg:"B", mon:["2023.3","2023.4","2023.5"],
    m:{coal:[252.70,246.84,234.08], lng:[1213.37,964.18,939.67], oil:[709.16,797.11,740.21]},
    avg:{coal:244.54, lng:1039.08, oil:748.83}, cv:{coal:244.30, lng:314.27, oil:12.73},
@@ -1703,29 +1709,46 @@ function qgridSummary(arr, years){
 /* ══ 06 · 그때 다르게 했다면 ════════════════════════════════════════════
    과거 20개 분기는 필요조정단가가 확정된 숫자다. 유보를 켜고 끄면
    가정이 아니라 산수로 금액이 나온다. 몬테카를로가 필요 없는 구간. */
-var CF_SALES = { 2022:547.93, 2023:545.97, 2024:549.82, 2025:549.42, 2026:549.42 };  /* TWh, 한국전력통계 23 */
-/* 분기 판매량은 균등하지 않다. 2025년 월별 실적에서 뽑은 계절 패턴 */
-var CF_SEAS  = [1.027, 0.927, 1.103, 0.943];
+/* 분기 판매량(TWh) = 전력통계월보 월별 판매량 합. ’26.4Q는 실적 전이라 ’25.4Q 값을 씀.
+   (PRAS-LOAD 요금 진단 시뮬레이터와 같은 값 — 두 시뮬레이터의 누적액이 일치하도록 맞춤) */
+var CF_QS = { "2022-1":143.180, "2022-2":128.978, "2022-3":144.012, "2022-4":131.762,
+              "2023-1":143.210, "2023-2":126.736, "2023-3":145.147, "2023-4":130.872,
+              "2024-1":141.696, "2024-2":126.787, "2024-3":149.900, "2024-4":131.438,
+              "2025-1":141.018, "2025-2":127.341, "2025-3":151.506, "2025-4":129.551,
+              "2026-1":139.742, "2026-2":126.929, "2026-3":148.673, "2026-4":129.551 };
+/* 연동제 첫해(2021). 산정내역 원문이 없어 보도값 — 필요단가는 2021.1Q 미공표(0으로 봄).
+   [분기, 필요조정단가, 상하한·조정폭 적용, 최종 적용, 판매량 TWh]. 유보 설정과 무관한 실제 기록으로 더한다. */
+var CF_2021 = [["’21.1Q", null, -3.0, -3.0, 137.018], ["’21.2Q", -0.2, -0.2, -3.0, 124.774],
+               ["’21.3Q", 1.7, 0.0, -3.0, 139.721],  ["’21.4Q", 10.8, 0.0, 0.0, 131.918]];
+function cf2021(){
+  var f = 0, h = 0;
+  CF_2021.forEach(function(r){ if(r[1] == null) return; f += (r[2] - r[1]) * r[4] / 1000; h += (r[3] - r[2]) * r[4] / 1000; });
+  return { fence:f, hold:h, net:f+h };
+}
+/* 한 분기를 하나의 값으로 대표할 때의 필요조정단가. ’23.2Q는 5.16 기준연료비 차감 변경 전후(40.7 / 32.7)를 일수 가중한 36.7 */
+function cfNeed(q){ return q.needEff != null ? q.needEff : q.need; }
 /* 제도 원문대로 매년 재산정했다면의 기준연료비 — 직전 1년(12월~11월) 세후가격 평균 × 환산계수.
    ’21.12~’22.11 창을 다시 계산하면 공시값 688.64와 소수점까지 맞는다(방법 검증). */
 var CF_RESET = { 2022:338.87, 2023:688.64, 2024:564.09, 2025:456.51, 2026:427.41 };
 var CF_CONV  = { 2022:0.1376, 2023:0.1335, 2024:0.1335, 2025:0.1335, 2026:0.1335 };
 function cfYear(q){ return +("20" + q.q.slice(1,3)); }
 function cfQi(q){ return +q.q.charAt(4) - 1; }
-var CF = { on:null, years:[2022,2023,2024,2025,2026], from:0, to:0 };
+var CF = { on:null, years:[2022,2023,2024,2025,2026], from:0, to:0, y21:true };
 
 function cfActual(){ return Q.map(function(q){ return !!q.hold; }); }
-function cfSales(qq){ return (CF_SALES[cfYear(qq)] || 549.42) / 4 * CF_SEAS[cfQi(qq)]; }   /* 분기 TWh */
+function cfSales(qq){ return CF_QS[cfYear(qq) + "-" + (cfQi(qq) + 1)]; }   /* 분기 TWh */
 
 /* 유보를 바꾸면 그 뒤 분기의 '직전 값'이 달라지므로 처음부터 다시 굴린다 */
 function cfRun(on){
   var prev = 0, rows = [], fence = 0, hold = 0;       /* ’21.4Q 적용단가 0원에서 출발 */
   Q.forEach(function(q, i){
-    var capped = q.cap, fin = on[i] ? prev : capped, s = cfSales(q);
-    fence += (capped - q.need) * s / 1000;            /* 원/kWh × TWh/4 → 조원 */
+    /* 약관대로 단가 = 상하한(±5원) 적용값을 다시 분기 조정폭(qcap, 2022.2Q까지 ±3원)으로 직전 적용단가 기준 제한 */
+    var capped = q.qcap != null ? clamp(q.cap, prev - q.qcap, prev + q.qcap) : q.cap, fin = on[i] ? prev : capped, s = cfSales(q);
+    var nd = cfNeed(q);
+    fence += (capped - nd) * s / 1000;                /* 원/kWh × TWh → 조원 */
     hold  += (fin - capped) * s / 1000;
-    rows.push({ q:q.q, need:q.need, cap:capped, fin:fin, held:on[i],
-                fence:(capped - q.need) * s / 1000, hold:(fin - capped) * s / 1000 });
+    rows.push({ q:q.q, need:nd, cap:capped, fin:fin, held:on[i],
+                fence:(capped - nd) * s / 1000, hold:(fin - capped) * s / 1000 });
     prev = fin;
   });
   return { rows:rows, fence:fence, hold:hold, net:fence+hold };
@@ -1767,20 +1790,22 @@ function cfChain(on){
 function cfRender(){
   var RR = cfRun(CF.on), AA = cfRun(cfActual());
   var a = Math.min(CF.from, CF.to), b = Math.max(CF.from, CF.to);
-  var R = cfSum(RR.rows, a, b), A = cfSum(AA.rows, a, b), diff = R.net - A.net;
-  var span = (a === b) ? Q[a].q + " 한 분기"
-           : (a === 0 && b === Q.length-1) ? "전체 " + Q.length + "개 분기"
-           : Q[a].q + "~" + Q[b].q + " " + (b-a+1) + "개 분기";
+  var R = cfSum(RR.rows, a, b), A = cfSum(AA.rows, a, b);
+  var w21 = CF.y21 && a === 0;                       /* 2021년은 집계 시작이 ’22.1Q일 때만 앞에 붙인다 */
+  if(w21){ var p21 = cf2021(); [R, A].forEach(function(o){ o.fence += p21.fence; o.hold += p21.hold; o.net += p21.net; }); }
+  var diff = R.net - A.net;
+  var span = (a === b && !w21) ? Q[a].q + " 한 분기"
+           : (w21 ? "’21.1Q" : Q[a].q) + "~" + Q[b].q + " " + (b-a+1+(w21?4:0)) + "개 분기";
   writeQGrid($("cfGrid"), CF.on, RR.rows.map(function(r){ return sgn(r.fin,1); }));
   Array.prototype.forEach.call($("cfGrid").querySelectorAll(".qcell"), function(c, i){
     c.style.opacity = (i >= a && i <= b) ? "" : "0.4";    /* 집계에 안 들어간 분기는 흐리게 */
   });
   var tr = function(v){ return (v<0?"−":"+") + fmt(Math.abs(v),1); };
   $("cfKpi").innerHTML =
-    '<div class="kpi"><p class="k">상하한 ±5원 때문에</p><div class="v" style="color:var(--red)">'+tr(R.fence)+'<small>조원</small></div>'
-      + '<div class="n">산식이 요구한 값에서 잘려나간 금액</div></div>'
-    + '<div class="kpi"><p class="k">유보 때문에</p><div class="v" style="color:'+(R.hold<0?"var(--red)":"var(--green)")+'">'+tr(R.hold)+'<small>조원</small></div>'
-      + '<div class="n">상하한을 거친 값에서 다시 묶인 금액</div></div>'
+    '<div class="kpi"><p class="k">① 상·하한 때문에 <span class="hint">±5원·분기 조정폭</span></p><div class="v" style="color:var(--red)">'+tr(R.fence)+'<small>조원</small></div>'
+      + '<div class="n">약관 장치가 막은 금액 — 제도가 의도한 차이</div></div>'
+    + '<div class="kpi"><p class="k">② 정부 결정(유보) 때문에</p><div class="v" style="color:'+(R.hold<0?"var(--red)":"var(--green)")+'">'+tr(R.hold)+'<small>조원</small></div>'
+      + '<div class="n">약관대로 단가에서 정부가 다시 묶은 금액</div></div>'
     + '<div class="kpi lead"><p class="k">합계 <span class="pill '+(R.net<0?"sub":"ok")+'">'+(R.net<0?"한전 손실":"초과 회수")+'</span></p>'
       + '<div class="v">'+tr(R.net)+'<small>조원</small></div>'
       + '<div class="n">' + span + ' · ' + (Math.abs(diff) < 0.05 ? "실제 기록 그대로"
@@ -1820,7 +1845,8 @@ function cfRender(){
     + "재산정 기준연료비는 관세청 무역통계로 직접 계산했고, ’21.12~’22.11 창은 공시값 688.64원/kg과 일치합니다.";
 
   $("cfSummary").innerHTML = qgridSummary(CF.on, CF.years) + ' · 20개 분기 중 <b>'
-    + CF.on.filter(Boolean).length + '개</b> 유보<br>집계 구간 <b>' + span + '</b>';
+    + CF.on.filter(Boolean).length + '개</b> 유보<br>집계 구간 <b>' + span + '</b>'
+    + (w21 ? '<br><span class="hint">2021년분 ' + tr(cf2021().net) + '조원(실제 기록) 포함 · 아래 ‘제도대로였다면’ 표는 2022년부터</span>' : '');
 }
 
 var CF_PRE = [["all","전체"],["spike","’22.1Q~’23.3Q 급등기"],["cut","’23.4Q~ 인하 유보기"]];
@@ -1844,6 +1870,7 @@ function cfInit(){
     var k = e.target.getAttribute && e.target.getAttribute("data-r"); if(!k) return;
     cfSetRange(k); cfRender();
   });
+  $("cfY21").addEventListener("change", function(){ CF.y21 = this.checked; cfRender(); });
   ["cfFrom","cfTo"].forEach(function(id){
     $(id).addEventListener("change", function(){
       CF.from = +$("cfFrom").value; CF.to = +$("cfTo").value;
