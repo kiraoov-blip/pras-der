@@ -9,6 +9,7 @@ name: Deploy PRAS-DER + PRAS-TOU + CARE-Jeju + IEA Hub to GitHub Pages
 #   /pras-load/** → 이 저장소의 pras-load/ 폴더(전력 사용 패턴·요금제 진단 시뮬레이터, index.html + data/*.json, 빌드 불필요)
 #   /iea-price/** → 이 저장소의 iea-price/ 폴더(정적 HTML 한 장 + 폰트·데이터 내장, 빌드 불필요)
 #   /bple/**     → 이 저장소의 bple/ 폴더(전력수급기본계획 시뮬레이터, 정적 폴더, 빌드 불필요)
+#   /fuel-adj/** → 이 저장소의 fuel-adj/ 폴더(연료비조정요금 시뮬레이터, 정적 HTML 한 장, 빌드 불필요, 승인 없이 공개)
 #   /elec-intensity/** → 이 저장소의 elec-intensity/ 폴더(전력원단위 시뮬레이터, 정적 HTML 한 장, 빌드 불필요)
 #   /lcoe/**     → 이 저장소의 lcoe/ 폴더(태양광 균등화 발전단가 시뮬레이터, 정적 HTML 한 장, 빌드 불필요)
 #
@@ -130,6 +131,10 @@ jobs:
           # kepco-stat도 같은 방식의 정적 폴더다. 배포에는 index.html·favicon·vendor만 싣는다.
           mkdir -p public-root/kepco-stat
           cp -r kepco-stat/index.html kepco-stat/favicon.svg kepco-stat/vendor public-root/kepco-stat/
+          # fuel-adj(연료비조정요금)도 같은 방식의 정적 폴더다. 폰트·데이터를 모두 내장한 index.html 한 장 +
+          # favicon이라 외부 의존성이 없다. 승인 없이 공개하므로 아래 LOCKED에는 넣지 않는다.
+          mkdir -p public-root/fuel-adj
+          cp fuel-adj/index.html fuel-adj/favicon.svg public-root/fuel-adj/
           # elec-intensity(전력원단위)도 같은 방식의 정적 폴더다. index.html·favicon만 싣고,
           # 그림·엑셀 저장 모듈은 위 kepco-stat/vendor(/kepco-stat/vendor/)를 함께 쓴다.
           mkdir -p public-root/elec-intensity

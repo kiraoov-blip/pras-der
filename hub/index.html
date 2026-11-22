@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>요금분석 시뮬레이터</title>
-<meta name="description" content="에너지 시뮬레이터 모음 — 분산에너지자원 요금·편익 분석(PRAS-DER), 계시별 요금제 수익 분석(PRAS-TOU), TOU 고객 요금·에너지관리(CARE-Jeju), 전력 사용 패턴·요금제 진단, 국가별 전기요금 비교(IEA Prices and Taxes), 국가별 발전·설비·배출 비교(EMBER Electricity), 한국전력통계 분석(KEPCO Statistics), 전력수급기본계획 비교(BPLE 1-11), 재생에너지 균등화 발전단가(Renewable Energy LCOE: 태양광·풍력)">
+<meta name="description" content="에너지 시뮬레이터 모음 — 분산에너지자원 요금·편익 분석(PRAS-DER), 계시별 요금제 수익 분석(PRAS-TOU), TOU 고객 요금·에너지관리(CARE-Jeju), 전력 사용 패턴·요금제 진단, 국가별 전기요금 비교(IEA Prices and Taxes), 국가별 발전·설비·배출 비교(EMBER Electricity), 한국전력통계 분석(KEPCO Statistics), 연료비조정요금 분석(Fuel Adjustment), 전력수급기본계획 비교(BPLE 1-11), 재생에너지 균등화 발전단가(Renewable Energy LCOE: 태양광·풍력)">
 <!-- 이전에는 PRAS-DER의 파란 파비콘(/pras/favicon.svg)을 허브도 그대로 썼는데,
      그러면 브라우저 탭에서 허브와 PRAS-DER가 똑같은 파란 아이콘으로 보여
      구분이 안 됐다. 허브 전용 회색 계열 파비콘을 새로 만들어(hub/favicon.svg,
@@ -64,6 +64,9 @@
     --bple-brand:#0e7a8a; --bple-brand-dark:#0a5a66; --bple-brand-soft:#e7f3f5; --bple-brand-line:#bcdde2;
     /* Renewable Energy LCOE 카드 전용 로컬 토큰 — 하늘색(풍력) + 앰버(태양) 포인트.
        BPLE(틸)·PRAS-DER(파랑)보다 밝은 스카이 계열이라 서로 구분된다. */
+    /* 연료비조정요금 카드 전용 로컬 토큰 — 시뮬레이터 본체와 같은 베이지 바탕 + 캐러멜 브라운.
+       CARE-Jeju(밝은 주황)·전력원단위(회색+노랑 점)보다 짙고 따뜻한 갈색이라 구분된다. */
+    --fuel-brand:#b45309; --fuel-brand-dark:#7c3d06; --fuel-brand-soft:#f8f0e2; --fuel-brand-line:#e8d3b5; --fuel-pt:#7c3d06;
     --lcoe-brand:#0284c7; --lcoe-brand-dark:#0369a1; --lcoe-brand-soft:#e0f2fe; --lcoe-brand-line:#bae6fd; --lcoe-sun:#f59e0b;
   }
   * { box-sizing:border-box; }
@@ -184,6 +187,15 @@
   .landing-card.inten:hover .landing-card-icon { background:#3a3f47; color:#fff; border-color:#3a3f47; }
   .landing-card.inten .landing-card-go { color:#2b2f35; }
 
+  /* 연료비조정요금 카드: 브랜드색만 로컬로 덮어씀(구조·spacing은 동일, 베이지 + 캐러멜 브라운) */
+  .landing-card.fuel .landing-card-tag { background:var(--fuel-brand-soft); color:var(--fuel-brand-dark); }
+  .landing-card.fuel .landing-card-icon { background:var(--fuel-brand-soft); color:var(--fuel-brand); border-color:var(--fuel-brand-line); }
+  .landing-card.fuel .landing-card-icon .pt { fill:var(--fuel-pt); stroke:none; }
+  .landing-card.fuel:hover { border-color:#d9b98c; box-shadow:0 6px 20px rgba(124,61,6,.12); }
+  .landing-card.fuel:hover .landing-card-icon { background:var(--fuel-brand); color:#fff; border-color:var(--fuel-brand); }
+  .landing-card.fuel:hover .landing-card-icon .pt { fill:#fff; }
+  .landing-card.fuel .landing-card-go { color:var(--fuel-brand-dark); }
+
   /* BPLE 카드: 브랜드색만 로컬로 덮어씀(구조·spacing은 동일, 그래파이트 + 틸 포인트) */
   .landing-card.bple .landing-card-tag { background:var(--bple-brand-soft); color:var(--bple-brand-dark); }
   .landing-card.bple .landing-card-icon { background:var(--bple-brand-soft); color:var(--bple-brand-dark); border-color:var(--bple-brand-line); }
@@ -276,7 +288,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
 <div class="page-shell workspace">
   <div class="landing-intro">
     <p>시뮬레이터 선택</p>
-    <span>국내 시뮬레이터 세 종은 시간대별(TOU) 요금체계를 기준으로 분산자원 · 전력판매 매출 · 가정 고객을 분석하고, 전력 사용 패턴·요금제 진단 시뮬레이터는 용도·지역·업종별 시간별 사용 패턴으로 현행 요금제와 개편안을 진단하며, IEA 시뮬레이터는 국가별 전기요금 수준을, EMBER 시뮬레이터는 국가별 발전량·설비용량·배출량을 비교합니다. KEPCO Statistics 시뮬레이터는 한국전력통계로 국내 판매·요금·발전·설비의 장기 추이를, 전력원단위 시뮬레이터는 업종·요금종·용도별 전력원단위와 해외 비교를 분석합니다. BPLE 시뮬레이터는 1~11차 전력수급기본계획의 수요전망과 전원구성을 비교합니다. Renewable Energy LCOE 시뮬레이터는 태양광·풍력(육상·해상)의 분석 조건에 따른 균등화 발전단가와 경제성을 산정합니다.</span>
+    <span>국내 시뮬레이터 세 종은 시간대별(TOU) 요금체계를 기준으로 분산자원 · 전력판매 매출 · 가정 고객을 분석하고, 전력 사용 패턴·요금제 진단 시뮬레이터는 용도·지역·업종별 시간별 사용 패턴으로 현행 요금제와 개편안을 진단하며, IEA 시뮬레이터는 국가별 전기요금 수준을, EMBER 시뮬레이터는 국가별 발전량·설비용량·배출량을 비교합니다. KEPCO Statistics 시뮬레이터는 한국전력통계로 국내 판매·요금·발전·설비의 장기 추이를, 연료비조정요금 시뮬레이터는 조정단가 산정과 상하한·유보의 효과·장기 전망을, 전력원단위 시뮬레이터는 업종·요금종·용도별 전력원단위와 해외 비교를 분석합니다. BPLE 시뮬레이터는 1~11차 전력수급기본계획의 수요전망과 전원구성을 비교합니다. Renewable Energy LCOE 시뮬레이터는 태양광·풍력(육상·해상)의 분석 조건에 따른 균등화 발전단가와 경제성을 산정합니다.</span>
   </div>
 
   <div class="landing-grid">
@@ -428,6 +440,25 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
       <p class="desc">한국전력통계 기반 판매·요금·발전·설비 분석 시뮬레이터 — 1962–2025년 판매·단가·발전·연료·설비·손익 추이, 판매수입 시나리오, 전원믹스 전환 시나리오, 시도 비교를 확인합니다.</p>
       <span class="landing-card-go" aria-hidden="true">시뮬레이터 열기 →</span>
     </a>
+    <a href="/fuel-adj/" class="landing-card fuel">
+      <span class="landing-card-tag">Fuel Cost Adjustment</span>
+      <span class="landing-card-head">
+        <span class="landing-card-icon" aria-hidden="true">
+          <!-- 출렁이는 연료가격선이 위아래 한도선(±5원) 사이에서 잘리는 모습 — 상하한에 묶이는 조정단가를 상징한다. -->
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 7.5h18M3 16.5h18" opacity=".5" stroke-dasharray="2 2.4" />
+            <path d="M3 13c2-1 3-5.5 5-5.5h3c2 0 2.5 9 4.5 9H21" />
+            <circle class="pt" cx="17.6" cy="16.5" r="2" />
+          </svg>
+        </span>
+        <span>
+          <strong>연료비조정요금</strong>
+          <p class="landing-card-sub">Fuel Adjustment Simulator</p>
+        </span>
+      </span>
+      <p class="desc">연료비조정요금 분석 시뮬레이터 — 한전 산정내역('22.1Q~'26.4Q)과 관세청 무역통계로 조정단가를 재현하고, 상하한·정부 유보·기준연료비 동결이 만든 과부족과 2050년까지의 장기 전망·역산을 확인합니다.</p>
+      <span class="landing-card-go" aria-hidden="true">시뮬레이터 열기 →</span>
+    </a>
     <a href="/elec-intensity/" class="landing-card inten">
       <span class="landing-card-tag">Electricity Intensity</span>
       <span class="landing-card-head">
@@ -493,7 +524,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
 <footer>
   <div class="page-shell footer-inner">
     <span>전기 사용 및 요금 분석 시뮬레이터</span>
-    <p>분산에너지자원(PRAS-DER) · 계시별 요금제 수익 분석(PRAS-TOU) · 가정용 TOU 요금·에너지관리(CARE-Jeju) · 전력 사용 패턴·요금제 진단 · 국가별 전기요금 비교(IEA Prices and Taxes) · 국가별 발전·설비 비교(EMBER Electricity) · 한국전력통계 분석(KEPCO Statistics) · 전력원단위 분석(Electricity Intensity) · 전력수급기본계획 비교(BPLE 1-11) · 재생에너지 균등화 발전단가(Renewable Energy LCOE)</p>
+    <p>분산에너지자원(PRAS-DER) · 계시별 요금제 수익 분석(PRAS-TOU) · 가정용 TOU 요금·에너지관리(CARE-Jeju) · 전력 사용 패턴·요금제 진단 · 국가별 전기요금 비교(IEA Prices and Taxes) · 국가별 발전·설비 비교(EMBER Electricity) · 한국전력통계 분석(KEPCO Statistics) · 연료비조정요금 분석(Fuel Adjustment) · 전력원단위 분석(Electricity Intensity) · 전력수급기본계획 비교(BPLE 1-11) · 재생에너지 균등화 발전단가(Renewable Energy LCOE)</p>
   </div>
 </footer>
 
