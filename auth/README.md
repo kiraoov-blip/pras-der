@@ -138,3 +138,7 @@ var API = 'https://script.google.com/macros/s/…/exec';
 | 통행증 | 일반 사용자·관리자 모두 30일 |
 | 코드 요청 한도 | 사번당 1시간 3번, 전체 1시간 30번 |
 | 관리자 비밀번호 | 5번 틀리면 30분 잠금(잠기면 카카오로 알림) |
+
+## 회사망에서 로그인이 안 될 때
+
+`script.google.com`이 막힌 네트워크를 위해 우리 도메인 아래 중계 주소(`auth.simulator-kepco.co.kr`)를 둔다. 설정 방법은 [relay/README.md](relay/README.md).
