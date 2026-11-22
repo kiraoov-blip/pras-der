@@ -20,6 +20,9 @@
   'use strict';
   // ▼ Apps Script 웹앱을 배포한 뒤 받은 주소(/exec로 끝남)를 여기에 넣는다
   var API = 'https://script.google.com/macros/s/AKfycbyimpa3X5-KDXxJC8_iqLtXn1uHOhidJ6XqJ2o-0H_UkP6jDKE4XMa8N8PLj09-hsu2DA/exec';
+  // ▼ 우리 도메인의 중계 주소(auth/relay/worker.js). 회사망처럼 구글 주소가 막힌 곳에서도 로그인되게 먼저 시도하고,
+  //   중계에 연결되지 않으면 위 Apps Script 주소로 바로 보낸다. 비워 두면 Apps Script로만 보낸다.
+  var RELAY = 'https://auth.simulator-kepco.co.kr';
 
   var NAMES = { pras: 'PRAS-DER', tou: 'PRAS-TOU', care: 'CARE-Jeju', 'pras-load': '전력 사용 패턴·요금제 진단', 'iea-price': 'IEA Prices and Taxes',
     'ember-sim': 'EMBER Electricity', 'kepco-stat': 'KEPCO Statistics', 'elec-intensity': '전력원단위',
@@ -215,9 +218,15 @@
     var ctl = typeof AbortController === 'function' ? new AbortController() : null;
     var timer = setTimeout(function () { if (ctl) ctl.abort(); }, 25000);
     // Content-Type을 지정하지 않으면 text/plain으로 보내져 사전 요청(CORS preflight) 없이 Apps Script에 닿는다
-    return fetch(API, { method: 'POST', body: JSON.stringify(body), redirect: 'follow', signal: ctl ? ctl.signal : undefined })
-      .then(function (r) { return r.json(); })
-      .catch(function () { return { ok: false, net: true, msg: '서버에 연결하지 못했습니다. 인터넷 연결을 확인하고 다시 시도해주세요.' }; })
+    var payload = JSON.stringify(body);
+    function send(url) { return fetch(url, { method: 'POST', body: payload, redirect: 'follow', signal: ctl ? ctl.signal : undefined }).then(function (r) { return r.json(); }); }
+    // 중계 → (연결 자체가 안 될 때만) Apps Script 직접. 시간 초과면 다시 보내지 않는다(같은 요청이 두 번 처리되지 않게)
+    var first = RELAY ? send(RELAY).catch(function (e) { if (e && e.name === 'AbortError') throw e; return send(API); }) : send(API);
+    return first
+      .catch(function (e) {
+        if (e && e.name === 'AbortError') return { ok: false, net: true, msg: '승인 서버의 응답이 늦습니다. 잠시 후 다시 시도해주세요.' };
+        return { ok: false, net: true, msg: '승인 서버에 연결하지 못했습니다. 회사망 등에서 막혔을 수 있으니 다른 네트워크(LTE 등)로 다시 시도해주세요.' };
+      })
       .then(function (r) { clearTimeout(timer); return r || { ok: false, msg: '응답이 없습니다.' }; });
   }
 
