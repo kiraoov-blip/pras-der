@@ -602,7 +602,7 @@ details.adv[open]>summary{margin-bottom:6px}
             <div class="chart" id="trYearChart"></div>
             <div class="two-col" style="margin-top:14px">
               <div><h3 class="sub-h">계약종별 구성비 (%)</h3><div class="lg" id="trMixLegend"></div><div class="chart" id="trMixChart"></div></div>
-              <div><h3 class="sub-h">증가 기여도 — 기간 중 늘어난 판매량 (TWh)</h3><div class="chart" id="trContribChart"></div><p class="mini-note">막대 = 끝 연도 − 시작 연도 판매량. 0보다 작으면 줄어든 계약종.</p></div>
+              <div><h3 class="sub-h">증가 기여도 — 기간 중 늘어난 판매량 (TWh)</h3><div class="chart" id="trContribChart"></div><p class="mini-note">막대 = 끝 연도 − 시작 연도 판매량. 빨강 = 증가, 파랑 = 감소(0 아래).</p></div>
             </div>
             <div class="tbl-scroll" id="trYearTable" style="margin-top:12px"></div>
             <h3 class="sub-h" style="margin-top:14px">전년 대비 증감률 (%)</h3><div class="tbl-scroll" id="trYoyTable"></div>
@@ -671,7 +671,7 @@ details.adv[open]>summary{margin-bottom:6px}
             <p class="mini-note">수입 증감 = 단가 효과(단가 변화 × 전년 판매량) + 물량 효과(판매량 변화 × 전년 단가) + 교차항. 단가에는 연료비조정·기후환경요금이 포함된 실적 단가(한국전력통계)입니다.</p>
 
             <h3 class="sub-h" style="margin-top:22px">④ 2026년 시간대 개편 진단</h3>
-            <h3 class="sub-h">같은 부하에 새 시간대를 적용하면 — 계약종별 단가 변화 (%)</h3><div class="chart" id="rfReformChart"></div><p class="mini-note">2025년 시간별 부하에 2026.4 개편 전·후 요금표를 적용한 전력량요금 평균단가 차이(행동 변화 없음 가정). 빨강 = 오름, 파랑 = 내림(막대 길이는 절댓값).</p>
+            <h3 class="sub-h">같은 부하에 새 시간대를 적용하면 — 계약종별 단가 변화 (%)</h3><div class="chart" id="rfReformChart"></div><p class="mini-note">2025년 시간별 부하에 2026.4 개편 전·후 요금표를 적용한 전력량요금 평균단가 차이(행동 변화 없음 가정). 빨강 = 오름, 파랑 = 내림.</p>
             <h3 class="sub-h" style="margin-top:14px">개편 전후 실적 — 2026년 1~<span id="rfYtdM"></span>월 vs 전년 같은 기간</h3><div class="tbl-scroll" id="rfYtdTable"></div>
             <h3 class="sub-h" style="margin-top:16px">평일 낮(11~14시) 사용 비중 추이 — 태양광 시간대로 수요가 옮겨가는가 (%)</h3>
             <div class="lg" id="rfMidLegend"></div>
@@ -1690,14 +1690,23 @@ function barChart(el, labels, series0, o) {
   const gw = (W - L - R) / labels.length, lw = Math.max(...labels.map(l => textW(l, 11)));
   const rot = lw > gw * .92, B = rot ? Math.min(96, 18 + lw * .72) : 30, H = 230 + B;
   const vals = series.flatMap(s => s.values.filter(v => v != null && isFinite(v)));
-  const hi = niceMax(Math.max(...vals, o.ref || 0, 0) * 1.08), ys = v => T + (H - T - B) * (1 - v / hi);
+  const vMax = Math.max(...vals, o.ref || 0, 0), vMin = Math.min(...vals, 0);
+  // 음수가 있으면 0 아래로도 그린다(눈금 간격을 같게 맞춰 0선이 눈금에 오도록)
+  let lo = 0, hi, step;
+  if (vMin < 0) { step = niceMax((vMax - vMin) * 1.08 / 4); lo = Math.floor(vMin * 1.04 / step) * step; hi = Math.ceil(vMax * 1.04 / step) * step; if (hi <= 0) hi = step; }
+  else { hi = niceMax(vMax * 1.08); step = hi / 4; }
+  const ys = v => T + (H - T - B) * (1 - (v - lo) / (hi - lo || 1));
   const bw = gw * .7 / Math.max(1, series.length), showV = bw >= 16, vfs = bw >= 24 ? 10 : 9;
+  const vd = o.vDec != null ? o.vDec : (Math.max(...vals.map(Math.abs), 0) < 20 ? 1 : 0), td = step < 1 ? 1 : 0;
   let s = `<svg viewBox="0 0 ${W} ${H}"><g class="grid">`;
-  for (let k = 0; k <= 4; k++) { const v = hi * k / 4, y = ys(v); s += `<line x1="${L}" x2="${W - R}" y1="${y}" y2="${y}"/><text class="ax" x="${L - 6}" y="${y + 4}" text-anchor="end">${fmt(v, hi < 4 ? 1 : 0)}</text>`; }
+  for (let v = lo; v <= hi + step * 1e-6; v += step) { const y = ys(v); s += `<line x1="${L}" x2="${W - R}" y1="${y}" y2="${y}"/><text class="ax" x="${L - 6}" y="${y + 4}" text-anchor="end">${fmt(Math.abs(v) < step * 1e-6 ? 0 : v, td)}</text>`; }
   s += `</g>`;
+  if (lo < 0) s += `<line x1="${L}" x2="${W - R}" y1="${ys(0)}" y2="${ys(0)}" stroke="#475569" stroke-width="1.2"/>`;
   if (o.ref) s += `<line x1="${L}" x2="${W - R}" y1="${ys(o.ref)}" y2="${ys(o.ref)}" stroke="#111827" stroke-dasharray="4 3"/>`;
   labels.forEach((lab, i) => {
-    series.forEach((se, j) => { const v = se.values[i]; if (v == null) return; const x = L + i * gw + gw * .15 + j * bw; s += `<rect x="${x}" y="${ys(v)}" width="${Math.max(1, bw - 2)}" height="${ys(0) - ys(v)}" fill="${se.color}" rx="2"><title>${lab} ${se.name}: ${fmt(v, 1)}</title></rect>${showV ? `<text class="ax" x="${x + bw / 2}" y="${ys(v) - 3}" text-anchor="middle" style="font-size:${vfs}px">${fmt(v, 0)}</text>` : ""}`; });
+    series.forEach((se, j) => { const v = se.values[i]; if (v == null) return; const x = L + i * gw + gw * .15 + j * bw, neg = v < 0, y0 = ys(Math.max(v, 0)), y1 = ys(Math.min(v, 0));
+      const col = neg && se.colorNeg ? se.colorNeg : se.color;
+      s += `<rect x="${x}" y="${y0}" width="${Math.max(1, bw - 2)}" height="${Math.max(0, y1 - y0)}" fill="${col}" rx="2"><title>${lab} ${se.name}: ${fmt(v, Math.max(1, vd))}</title></rect>${showV && Math.abs(v) >= .5 * Math.pow(10, -vd) ? `<text class="ax" x="${x + bw / 2}" y="${neg ? y1 + vfs + 2 : y0 - 3}" text-anchor="middle" style="font-size:${vfs}px">${fmt(v, vd)}</text>` : ""}`; });
     const cx = L + i * gw + gw / 2, ly = H - B + 14;
     s += rot ? `<text class="ax" x="${cx}" y="${ly}" text-anchor="end" transform="rotate(-38 ${cx} ${ly})">${lab}</text>` : `<text class="ax" x="${cx}" y="${H - 10}" text-anchor="middle">${lab}</text>`;
   });
@@ -2237,8 +2246,7 @@ function renderTrend() {
   const mixSer = CLS_KEYS.map(k => ({ name: CLS_NAME[k], color: CLS_COL[k], values: mixYs.map(y => { const i = YS.indexOf(y); return cls[k][i] / tot[i] * 100; }) }));
   legend($("#trMixLegend"), mixSer); stackChart($("#trMixChart"), mixYs.map(String), mixSer, { height: 240 });
   const dAbs = CLS_KEYS.map(k => cls[k].at(-1) - cls[k][0]);
-  const pos = CLS_KEYS.map((k, i) => dAbs[i] >= 0 ? dAbs[i] : null), neg = CLS_KEYS.map((k, i) => dAbs[i] < 0 ? -dAbs[i] : null);
-  barChart($("#trContribChart"), CLS_KEYS.map(k => CLS_NAME[k]), [{ name: "증가", values: pos, color: "#b42318" }, { name: "감소(절댓값)", values: neg, color: "#1d4ed8" }], { yTitle: "TWh" });
+  barChart($("#trContribChart"), CLS_KEYS.map(k => CLS_NAME[k]), [{ name: "증감", values: dAbs, color: "#b42318", colorNeg: "#1d4ed8" }], { yTitle: "TWh" });
   const dT = tot.at(-1) - tot[0];
   let h = `<table class="tbl"><thead><tr><th>계약종</th><th>${y0} (TWh)</th><th>${y1} (TWh)</th><th>증감</th><th>연평균</th><th>증가 기여도</th><th>비중 ${y0}→${y1}</th><th>호수 ${y0}→${y1} (만호)</th><th>호당 월사용량 (kWh)</th></tr></thead><tbody>`;
   const rowsCsv = [["계약종", ...YS]];
@@ -2262,8 +2270,8 @@ function renderTrend() {
   const yy = ytdY || full, mm = ytdY ? ytdM : 12;
   $("#trYtdLabel").textContent = `${yy}년 1~${mm}월`;
   const ytd = [...CLS_KEYS, "total"].map(k => { const a = monSum(M.sales[k], yy, 1, mm), b = monSum(M.sales[k], yy - 1, 1, mm); return a && b ? (a / b - 1) * 100 : null; });
-  barChart($("#trYtdChart"), [...CLS_KEYS, "total"].map(k => CLS_NAME[k]), [{ name: "증가", values: ytd.map(v => v != null && v >= 0 ? v : null), color: "#b42318" }, { name: "감소(절댓값)", values: ytd.map(v => v != null && v < 0 ? -v : null), color: "#1d4ed8" }], { yTitle: "%" });
-  $("#trYtdNote").innerHTML = `${[...CLS_KEYS, "total"].map((k, i) => `${CLS_NAME[k]} ${pct(ytd[i])}`).join(" · ")}. 빨강 = 증가, 파랑 = 감소(막대 길이는 절댓값).`;
+  barChart($("#trYtdChart"), [...CLS_KEYS, "total"].map(k => CLS_NAME[k]), [{ name: "증감률", values: ytd, color: "#b42318", colorNeg: "#1d4ed8" }], { yTitle: "%" });
+  $("#trYtdNote").innerHTML = `${[...CLS_KEYS, "total"].map((k, i) => `${CLS_NAME[k]} ${pct(ytd[i])}`).join(" · ")}. 빨강 = 증가, 파랑 = 감소.`;
   // 월별 지도
   const mk = big; $("#trMonLabel").textContent = CLS_NAME[mk];
   const allY = []; for (let y = monYears().first; y <= (ytdY || full); y++) allY.push(y);
@@ -2282,8 +2290,8 @@ function renderTrend() {
     .filter(x => x.a > 0 && x.b > 0).map(x => ({ ...x, g: cagr(x.a, x.b, n), d: x.b - x.a }));
   const totA = sum(rv.map(x => x.a)), totB = sum(rv.map(x => x.b)), dR = totB - totA;
   const byG = [...rv].sort((p, q) => q.g - p.g), byD = [...rv].sort((p, q) => q.d - p.d);
-  barChart($("#trRegChart"), byG.map(x => x.r), [{ name: "증가", values: byG.map(x => x.g >= 0 ? x.g : null), color: "#b42318" }, { name: "감소(절댓값)", values: byG.map(x => x.g < 0 ? -x.g : null), color: "#1d4ed8" }], { yTitle: "%/년" });
-  barChart($("#trRegAbsChart"), byD.map(x => x.r), [{ name: "증가", values: byD.map(x => x.d >= 0 ? x.d : null), color: "#b42318" }, { name: "감소(절댓값)", values: byD.map(x => x.d < 0 ? -x.d : null), color: "#1d4ed8" }], { yTitle: "TWh" });
+  barChart($("#trRegChart"), byG.map(x => x.r), [{ name: "연평균 증가율", values: byG.map(x => x.g), color: "#b42318", colorNeg: "#1d4ed8" }], { yTitle: "%/년" });
+  barChart($("#trRegAbsChart"), byD.map(x => x.r), [{ name: "증감", values: byD.map(x => x.d), color: "#b42318", colorNeg: "#1d4ed8" }], { yTitle: "TWh" });
   const byInd = [...rv].sort((p, q) => q.ind - p.ind);
   const rmix = CLS_KEYS.map((k, j) => ({ name: CLS_NAME[k], color: CLS_COL[k], values: byInd.map(x => x.mix[j]) }));
   legend($("#trRegMixLegend"), rmix); stackChart($("#trRegMixChart"), byInd.map(x => x.r), rmix, { height: 260 });
@@ -2300,8 +2308,8 @@ function renderTrend() {
   if (ni > 0) iv = [...MANU, ...SECT].map(k => ({ k, a: monSum(IS[k], ix0) / 1e6, b: monSum(IS[k], ix1) / 1e6, manu: MANU.includes(k) })).filter(x => x.a > .3 && x.b > 0).map(x => ({ ...x, g: (x.b / x.a - 1) * 100, c: cagr(x.a, x.b, ni), d: x.b - x.a }));
   const ivG = [...iv].sort((p, q) => q.g - p.g), ivD = [...iv].sort((p, q) => q.d - p.d), dI = sum(iv.map(x => x.d)), sumB = sum(iv.map(x => x.b));
   if (iv.length) {
-    barChart($("#trIndChart"), ivG.map(x => x.k), [{ name: "증가", values: ivG.map(x => x.g >= 0 ? x.g : null), color: "#b42318" }, { name: "감소(절댓값)", values: ivG.map(x => x.g < 0 ? -x.g : null), color: "#1d4ed8" }], { yTitle: "%" });
-    barChart($("#trIndAbsChart"), ivD.map(x => x.k), [{ name: "증가", values: ivD.map(x => x.d >= 0 ? x.d : null), color: "#b42318" }, { name: "감소(절댓값)", values: ivD.map(x => x.d < 0 ? -x.d : null), color: "#1d4ed8" }], { yTitle: "TWh" });
+    barChart($("#trIndChart"), ivG.map(x => x.k), [{ name: "증감률", values: ivG.map(x => x.g), color: "#b42318", colorNeg: "#1d4ed8" }], { yTitle: "%" });
+    barChart($("#trIndAbsChart"), ivD.map(x => x.k), [{ name: "증감", values: ivD.map(x => x.d), color: "#b42318", colorNeg: "#1d4ed8" }], { yTitle: "TWh" });
     h = `<table class="tbl"><thead><tr><th>업종</th><th>구분</th><th>${ix0} (TWh)</th><th>${ix1} (TWh)</th><th>증감</th><th>연평균</th><th>증가 기여도</th><th>비중 (${ix1})</th></tr></thead><tbody>`;
     ivD.forEach(x => h += `<tr><td>${x.k}</td><td>${x.manu ? "제조업" : "비제조"}</td><td>${fmt(x.a, 2)}</td><td>${fmt(x.b, 2)}</td><td>${pct(x.g)}</td><td>${pct(x.c)}</td><td>${fmt(x.d / dI * 100, 0)}%</td><td>${fmt(x.b / sumB * 100, 1)}%</td></tr>`);
     $("#trIndTable").innerHTML = h + "</tbody></table>";
@@ -2385,7 +2393,7 @@ function renderReform() {
   const resp = CLS_KEYS.map(k => { const p0 = R.price[k][i21], p1 = R.price[k][iL], q0 = R.sales[k][i21], q1 = R.sales[k][iL], c0 = R.cust[k][i21], c1 = R.cust[k][iL];
     const dp = (p1 / p0 - 1) * 100, dq = (q1 / q0 - 1) * 100, du = ((q1 / c1) / (q0 / c0) - 1) * 100;
     return { k, dp, dq, du, el: Math.log(q1 / q0) / Math.log(p1 / p0), elu: Math.log((q1 / c1) / (q0 / c0)) / Math.log(p1 / p0) }; });
-  const rs = [{ name: "단가 상승률", color: "#b42318", values: resp.map(r => r.dp) }, { name: "판매량 증감률(+만)", color: "#2d7e2e", values: resp.map(r => r.dq > 0 ? r.dq : null) }, { name: "호당 사용량 증감률(+만)", color: "#a16207", values: resp.map(r => r.du > 0 ? r.du : null) }];
+  const rs = [{ name: "단가 상승률", color: "#b42318", values: resp.map(r => r.dp) }, { name: "판매량 증감률", color: "#2d7e2e", values: resp.map(r => r.dq) }, { name: "호당 사용량 증감률", color: "#a16207", values: resp.map(r => r.du) }];
   legend($("#rfRespLegend"), rs); barChart($("#rfRespChart"), CLS_KEYS.map(k => CLS_NAME[k]), rs, { yTitle: "%" });
   h = `<table class="tbl"><thead><tr><th>용도</th><th>단가</th><th>판매량</th><th>호당 사용량</th><th>겉보기 탄력성</th><th>호당 기준</th></tr></thead><tbody>`;
   resp.forEach(r => h += `<tr><td>${CLS_NAME[r.k]}</td><td>${pct(r.dp, 0)}</td><td>${pct(r.dq, 1)}</td><td>${pct(r.du, 1)}</td><td>${fmt(r.el, 2)}</td><td>${fmt(r.elu, 2)}</td></tr>`);
@@ -2394,7 +2402,7 @@ function renderReform() {
   const dk = $("#rfDecBig").value || "total";
   const dec = []; for (let i = 1; i < RY.length; i++) { const p0 = R.price[dk][i - 1], p1 = R.price[dk][i], q0 = R.sales[dk][i - 1], q1 = R.sales[dk][i];
     dec.push({ y: RY[i], pe: (p1 - p0) * q0 / 1e9, qe: (q1 - q0) * p0 / 1e9, x: (p1 - p0) * (q1 - q0) / 1e9, dr: (R.rev[dk][i] - R.rev[dk][i - 1]) / 1e9 }); }
-  const ds = [{ name: "단가 효과 +", color: "#b42318", values: dec.map(d => d.pe > 0 ? d.pe : null) }, { name: "단가 효과 −(절댓값)", color: "#fca5a5", values: dec.map(d => d.pe < 0 ? -d.pe : null) }, { name: "물량 효과 +", color: "#2d7e2e", values: dec.map(d => d.qe > 0 ? d.qe : null) }, { name: "물량 효과 −(절댓값)", color: "#a9d39a", values: dec.map(d => d.qe < 0 ? -d.qe : null) }];
+  const ds = [{ name: "단가 효과", color: "#b42318", values: dec.map(d => d.pe) }, { name: "물량 효과", color: "#2d7e2e", values: dec.map(d => d.qe) }];
   legend($("#rfDecLegend"), ds); barChart($("#rfDecChart"), dec.map(d => String(d.y)), ds, { yTitle: "조원" });
   h = `<table class="tbl"><thead><tr><th>연도</th><th>판매수입 증감</th><th>단가 효과</th><th>물량 효과</th><th>교차항</th><th>단가 효과 비중</th></tr></thead><tbody>`;
   const decCsv = [["연도", "수입증감조", "단가효과조", "물량효과조", "교차항조"]];
@@ -2404,7 +2412,7 @@ function renderReform() {
   CSV.reform = [...verCsv, [], ["용도", ...lab], ...ps.map(s => [s.name, ...s.values.map(v => v == null ? "" : v.toFixed(2))]), [], [`요인분해(${CLS_NAME[dk]})`], ...decCsv];
   // ④ 2026 개편
   const imp = Object.entries(D.ana.reform_2026_impact_pct).filter(([, v]) => v != null).sort((a, b) => a[1] - b[1]);
-  barChart($("#rfReformChart"), imp.map(x => x[0].replace("전력", "")), [{ name: "인상", values: imp.map(x => x[1] > 0 ? x[1] : null), color: "#b42318" }, { name: "인하(절댓값)", values: imp.map(x => x[1] < 0 ? -x[1] : null), color: "#1d4ed8" }], { yTitle: "%" });
+  barChart($("#rfReformChart"), imp.map(x => x[0].replace("전력", "")), [{ name: "단가 변화", values: imp.map(x => x[1]), color: "#b42318", colorNeg: "#1d4ed8" }], { yTitle: "%", vDec: 2 });
   const yy = ytdY || full, mm = ytdY ? ytdM : 12; $("#rfYtdM").textContent = mm;
   h = `<table class="tbl"><thead><tr><th>용도</th><th>판매량 증감</th><th>판매단가 ${yy - 1}</th><th>판매단가 ${yy}</th><th>단가 변화</th><th>수입 증감</th></tr></thead><tbody>`;
   const ytdRows = [...CLS_KEYS, "total"].map(k => { const s0 = monSum(M.sales[k], yy - 1, 1, mm), s1 = monSum(M.sales[k], yy, 1, mm), r0 = monSum(M.rev[k], yy - 1, 1, mm), r1 = monSum(M.rev[k], yy, 1, mm);
