@@ -16,7 +16,7 @@ import json, re, sys
 from pathlib import Path
 import pandas as pd
 sys.path.insert(0, str(Path(__file__).parent))
-from region_zones import zone_of, ADJ, WIDE, GRADE, MOIS_DIFF
+from region_zones import zone_of, ADJ, WIDE, GRADE, MOIS_DIFF, SELF, TRANS
 
 sido_f, sgg_f, kstat, out = Path(sys.argv[1]), Path(sys.argv[2]), Path(sys.argv[3]), Path(sys.argv[4])
 SHORT = {"서울특별시": "서울", "부산광역시": "부산", "대구광역시": "대구", "인천광역시": "인천", "광주광역시": "광주", "대전광역시": "대전",
@@ -121,8 +121,8 @@ doc = {
     "sgg": sgg, "gen": gen, "gen_years": sorted(gen),
     "regions": ["수도권남부", "수도권북부", "중부권", "남부권", "제주"],
     "zones": {"adj": [[w, g, v] for (w, g), v in ADJ.items()], "wide": WIDE, "grade": {str(k): v for k, v in GRADE.items()},
-              "mois_diff": [[s_, g_, v] for (s_, g_), v in MOIS_DIFF.items()],
-              "source": "한전 산업용 지역 전기요금제 지역구분 내역·권역별 조정단가(2026.11), 행안부 지방우대지수 고시 제정안 별표"},
+              "mois_diff": [[s_, g_, v] for (s_, g_), v in MOIS_DIFF.items()], "self": SELF, "trans": TRANS,
+              "source": "한전 산업용 지역 전기요금제 지역구분 내역·권역별 조정단가(2026.11.23 수정 자료, 행안부 지방우대지수 별표와 같은 권역 구분)"},
     "note": "판매량 kWh(시도 원자료 MWh 환산), 고객호수·요금적용전력은 12개월 합계(÷12 = 월평균). 판매수입 = 기본 + 개편전 전력량 + 환경비용차감 + 기후환경 + 연료비조정. "
             "권역은 한전 설계안의 11개 지역 구분(4개 광역 × 균형성장 권역, 제주 제외). "
             f"월보와 대분류 연합계 일치(최대 오차 {worst:.5%}). 발전량은 발전단(양수 발전 포함), 전력자급률 = 발전량 ÷ 판매량.",
