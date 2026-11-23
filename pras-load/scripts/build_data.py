@@ -248,6 +248,15 @@ def dump(name, obj):
     print(f"  {name}: {p.stat().st_size / 1e6:.2f} MB")
 
 
+# 원자료에서 띄어쓰기만 다른 같은 산업종(2026.11 확인)은 집계 뒤 하나로 합친다
+NAME_FIX = {"임대업;부동산 제외": "임대업; 부동산 제외"}
+for bad, good in NAME_FIX.items():
+    if bad in iid and good in iid:
+        bi, gi = iid[bad], iid[good]
+        cube_i[gi] += cube_i[bi]; cross_mi[:, gi] += cross_mi[:, bi]
+        cube_i = np.delete(cube_i, bi, 0); cross_mi = np.delete(cross_mi, bi, 1)
+        cats["산업종"].remove(bad); iid = {t: i for i, t in enumerate(cats["산업종"])}
+
 meta = {
     "unit": "MWh (집계 값), 원자료 kWh",
     "hour": "0 = 00~01시 (원자료 H01)",

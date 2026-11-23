@@ -166,7 +166,7 @@ details.adv[open]>summary{margin-bottom:6px}
             <div class="field"><span class="lab">분석 차원</span>
               <select id="dim">
                 <option value="tariff">계약종 (34)</option>
-                <option value="industry">산업종 (79)</option>
+                <option value="industry">산업종 (78)</option>
                 <option value="region">본부 (15)</option>
                 <option value="mid_industry">계약종 중분류 × 산업종</option>
                 <option value="mid_region">계약종 중분류 × 본부</option>
@@ -825,6 +825,8 @@ async function fillItems() {
   }
   if (!C.names.includes(S.item)) S.item = S.dim === "tariff" ? DEF.item : (S.dim.startsWith("mid_") ? C.names.find(n => n.startsWith("산업용(을)고압")) || C.names[0] : tot.sort((a, b) => b[2] - a[2])[0][0]);
   sel_.value = S.item;
+  const isEtc = S.dim === "industry" ? S.item === "기타" : S.dim === "mid_industry" && /\|기타$/.test(S.item);
+  $("#itemHint").textContent = isEtc ? "기타 = 산업분류 코드가 없는 고객. 대부분 주택용(2025년 기타의 91%)이고 심야전력·가로등이 나머지라, 업종이 아니라 사실상 '가정·생활용'으로 읽어야 합니다." : "";
 }
 
 async function renderAll() {
@@ -1896,7 +1898,7 @@ function renderData() {
   for (const x of D.tar.versions) v += `<tr><td>${x.effective}</td><td>${x.method === "extracted" ? '<span class="flag ok">직접 추출</span>' : '<span class="flag">앵커 대조</span>'}</td><td>${fmt(x.climate, 1)}</td><td>${x.tou_scheme === "2026" ? "개편" : "기존"}</td><td>${fmt(x.residential.low.other.energy[0], 1)}</td><td>${fmt(x.tou["산업용(을)"]["고압A-II"].energy.peak[0], 1)}</td></tr>`;
   $("#vTable").innerHTML = v + "</tbody></table>";
   $("#methodText").innerHTML = [
-    `<b>원자료</b> 계약종(34)×본부(15)×산업종(79)×날짜, 시간별 사용량(kWh, H01=00~01시). 2025년 파일은 영문 열 이름(CNTR_CLAS_NM 등)을 한글로 대응, 판매사업단(입력 시 지역코드 누락분, 2024년 1행·2025년 167행, 약 2,400kWh)은 담당 부서 확인에 따라 제외. 2016~2025년 ${fmt(A.years.reduce((a, y) => a + y.rows, 0), 0)}행.`,
+    `<b>원자료</b> 계약종(34)×본부(15)×산업종(79 → 띄어쓰기만 다른 '임대업; 부동산 제외'·'임대업;부동산 제외'를 합쳐 78)×날짜, 시간별 사용량(kWh, H01=00~01시). 2025년 파일은 영문 열 이름(CNTR_CLAS_NM 등)을 한글로 대응, 판매사업단(입력 시 지역코드 누락분, 2024년 1행·2025년 167행, 약 2,400kWh)은 담당 부서 확인에 따라 제외. 2016~2025년 ${fmt(A.years.reduce((a, y) => a + y.rows, 0), 0)}행.`,
     `<b>수집장애 보정</b> ${A.rule}. ${A.imputation}. 그 달 유효일이 50% 미만인 조합은 들어온 행만 반영.`,
     `<b>요금표</b> ${D.tar.methods.anchored}`,
     `<b>2021.1 이전</b> ${D.tar.pre2021_rule}`,
