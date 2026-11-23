@@ -361,6 +361,10 @@ footer{background:#123214;color:#cfdfc6}
 .solve-box{margin-top:14px;border:1px solid #dde2e8;border-top:4px solid #2d7e2e;background:#f4f6f9;border-radius:12px;padding:12px 14px}
 #rcBox{background:#f6f7f9;border:1px solid #dde2e8}
 #rcBox .kpi:not(.lead){background:#fff}
+.rc-items{display:flex;flex-wrap:wrap;gap:6px 8px;max-height:156px;overflow:auto;padding:8px;border:1px solid #dde2e8;border-radius:10px;background:#fff}
+.rc-items label{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;padding:4px 10px;border:1px solid #e2e8f0;border-radius:99px;cursor:pointer;white-space:nowrap;color:#334155}
+.rc-items label.on{background:#eef6e6;border-color:#89c17e;color:#1e5d20;font-weight:700}
+.rc-items input{margin:0;accent-color:#2d7e2e}
 .solve-box .kpi{background:#fff}.solve-box .kpi.lead{background:#e3f0d8;border-color:#a9d39a}.solve-box .finding{background:#fff}.solve-box select,.solve-box input[type=number]{background:#fff}
 .fuel-key{display:flex;align-items:stretch;gap:8px;margin:6px 0 8px;font-size:13px;line-height:1.5;color:#253247}
 .fuel-key>div{border:1px solid #e3e9f2;border-radius:10px;padding:8px 12px;background:#fff;flex:1}
@@ -662,11 +666,12 @@ details.adv[open]>summary{margin-bottom:6px}
                 <div class="field"><label for="rcTo">이후 요금표</label><select id="rcTo"></select></div>
                 <div class="field"><label for="rcLoad">사용 패턴 연도</label><select id="rcLoad"></select></div>
                 <div class="field"><label for="rcDim">분석 대상</label><select id="rcDim"><option value="tariff">계약종</option><option value="region">지역(본부)</option><option value="industry_group">업종 대분류</option><option value="industry">업종 세부</option></select></div>
-                <div class="field"><label for="rcItem">항목</label><select id="rcItem"></select></div>
-                <div class="field"><label for="rcBig">용도 필터 (지역·업종)</label><select id="rcBig"><option value="">요금 계산 가능한 전체</option><option>산업용</option><option>일반용</option><option>교육용</option><option>농사용</option><option>심야</option></select></div>
+                                <div class="field"><label for="rcBig">용도 필터 (지역·업종)</label><select id="rcBig"><option value="">요금 계산 가능한 전체</option><option>산업용</option><option>일반용</option><option>교육용</option><option>농사용</option><option>심야</option></select></div>
+                <div class="field" style="grid-column:1/-1"><span class="lab">항목 — 여러 개를 고르면 나란히 비교하고 합계도 보여 줍니다 <button type="button" class="text-button" id="rcTop5" style="margin-left:8px">사용량 상위 5개</button><button type="button" class="text-button" id="rcAllOff" style="margin-left:8px">첫 항목만</button></span><div id="rcItems" class="rc-items"></div></div>
               </div>
               <div class="kpis" id="rcKpis"></div>
               <div id="rcStory" style="margin-top:10px"></div>
+              <div id="rcCmpWrap" hidden><h3 class="sub-h" style="margin-top:14px">선택 항목 비교 — 같은 사용 패턴에서 단가 변화 (%)</h3><div class="chart" id="rcCmpChart"></div><div class="tbl-scroll" id="rcCmp" style="margin-top:8px"></div></div>
               <div class="two-col" style="margin-top:14px">
                 <div><h3 class="sub-h">하루 중 단가 — 이전 vs 이후 (원/kWh)</h3>
                   <div class="seg" role="radiogroup" aria-label="계절" style="margin-bottom:6px"><label><input type="radio" name="rcSeason" value="1" checked><span>봄·가을</span></label><label><input type="radio" name="rcSeason" value="0"><span>여름</span></label><label><input type="radio" name="rcSeason" value="2"><span>겨울</span></label></div>
@@ -2418,7 +2423,9 @@ async function renderIndShape(ya, yb) {
 const RC_BLOCKS = [["심야 22~8시", [22, 23, 0, 1, 2, 3, 4, 5, 6, 7]], ["오전 8~11시", [8, 9, 10]], ["낮 11~15시", [11, 12, 13, 14]], ["오후 15~18시", [15, 16, 17]], ["저녁 18~22시", [18, 19, 20, 21]]];
 const HQ_SIDO = { 서울본부: ["서울"], 남서울본부: ["서울"], 경기본부: ["경기"], 경기북부본부: ["경기"], 인천본부: ["인천"], 강원본부: ["강원"], 충북본부: ["충북"], 대전세종충남본부: ["대전", "세종", "충남"], 전북본부: ["전북"], 광주전남본부: ["광주", "전남", "전남광주"], 대구본부: ["대구"], 경북본부: ["경북"], 부산울산본부: ["부산", "울산"], 경남본부: ["경남"], 제주본부: ["제주"] };
 const BIG_KEY = { 주택용: "res", 일반용: "gen", 교육용: "edu", 산업용: "ind", 농사용: "agr", 가로등: "str", 심야: "night" };
-const RCC = {};
+const RCC = {}, RC = {};
+let RC_OPTS = [];
+const rcSel = () => [...document.querySelectorAll("#rcItems input:checked")].map(e => e.value);
 const z3 = () => [0, 1, 2].map(() => [0, 1, 2].map(() => new Array(24).fill(0)));
 function rcTariffSeason(ver, t, yi) {
   const key = ver.effective + "|" + t + "|" + yi; if (key in RCC) return RCC[key];
@@ -2460,7 +2467,8 @@ function rcItems() {
   else if (dim === "region") opts = D.meta.regions.slice();
   else { const X = D.cross[dim === "industry_group" ? "mid_industry_group" : "mid_industry"], tot = {}; for (const k of Object.keys(X)) { const [mid, it] = k.split("|"); if (!rcMidBig(mid) || mid === "주택용전력") continue; tot[it] = (tot[it] || 0) + sum(X[k].at(-1).flat()); } opts = Object.keys(tot).filter(k => k !== "기타" && k !== "가정·기타(코드 없음)").sort((a, b) => tot[b] - tot[a]); }
   const def = dim === "tariff" ? "산업용(을)고압A" : dim === "region" ? "대전세종충남본부" : opts[0];
-  $("#rcItem").innerHTML = opts.map(o => `<option${o === def ? " selected" : ""}>${o}</option>`).join("");
+  RC_OPTS = opts;
+  $("#rcItems").innerHTML = opts.map(o => `<label${o === def ? ' class="on"' : ""}><input type="checkbox" value="${o.replace(/"/g, "&quot;")}"${o === def ? " checked" : ""}>${o}</label>`).join("");
 }
 async function rcInit() {
   await cube("mid_industry_group");
@@ -2471,7 +2479,12 @@ async function rcInit() {
   $("#rcTo").innerHTML = vs.map(e => `<option value="${e}"${e === vs.at(-1) ? " selected" : ""}>${lab(e)}</option>`).join("");
   $("#rcLoad").innerHTML = D.meta.years.map(y => `<option${y === D.meta.years.at(-1) ? " selected" : ""}>${y}</option>`).join("");
   rcItems();
-  ["#rcFrom", "#rcTo", "#rcLoad", "#rcBig", "#rcItem"].forEach(s => $(s).addEventListener("change", () => renderRC()));
+  ["#rcFrom", "#rcTo", "#rcLoad", "#rcBig"].forEach(s => $(s).addEventListener("change", () => renderRC()));
+  $("#rcItems").addEventListener("change", e => { const l = e.target.closest("label"); if (l) l.classList.toggle("on", e.target.checked); renderRC(); });
+  const setSel = vals => { document.querySelectorAll("#rcItems input").forEach(i => { i.checked = vals.includes(i.value); i.closest("label").classList.toggle("on", i.checked); }); renderRC(); };
+  $("#rcTop5").addEventListener("click", () => { const A = verOf($("#rcFrom").value), B = verOf($("#rcTo").value), yi = D.meta.years.indexOf(+$("#rcLoad").value), dim = $("#rcDim").value, big = dim === "tariff" ? "" : $("#rcBig").value;
+    setSel(RC_OPTS.map(o => [o, rcAgg(rcUnits(dim, o, A, B, yi, big)).E]).sort((a, b) => b[1] - a[1]).slice(0, 5).map(x => x[0])); });
+  $("#rcAllOff").addEventListener("click", () => { const s0 = rcSel(); setSel([s0[0] || RC_OPTS[0]]); });
   $("#rcDim").addEventListener("change", () => { rcItems(); renderRC(); });
   document.querySelectorAll('input[name="rcSeason"]').forEach(e => e.addEventListener("change", () => renderRC()));
   $("#rcShift").addEventListener("input", () => renderRC());
@@ -2479,11 +2492,12 @@ async function rcInit() {
 async function renderRC() {
   await rcInit();
   const A = verOf($("#rcFrom").value), B = verOf($("#rcTo").value), yr = +$("#rcLoad").value, yi = D.meta.years.indexOf(yr);
-  const dim = $("#rcDim").value, item = $("#rcItem").value, bigF = dim === "tariff" ? "" : $("#rcBig").value, sea = +document.querySelector('input[name="rcSeason"]:checked').value;
+  const dim = $("#rcDim").value, sel = rcSel(), item = sel[0], multi = sel.length > 1, bigF = dim === "tariff" ? "" : $("#rcBig").value, sea = +document.querySelector('input[name="rcSeason"]:checked').value;
   const SEA = ["여름", "봄·가을", "겨울"], dimName = { tariff: "계약종", region: "지역", industry: "업종", industry_group: "업종 대분류" }[dim];
-  const R = rcAgg(rcUnits(dim, item, A, B, yi, bigF));
-  const label = item + (bigF ? ` · ${bigF}` : "");
-  if (!R.E) { $("#rcKpis").innerHTML = ""; $("#rcStory").innerHTML = finding(`<b>${label}</b> — 요금을 계산할 수 있는 사용량이 없습니다(주택용·가로등(갑)·임시(갑)만 있거나 용도 필터에 해당 계약이 없음). 다른 항목이나 용도를 고르세요.`); ["#rcHourChart", "#rcShapeChart", "#rcBlock", "#rcRankChart", "#rcRankTable", "#rcShiftOut", "#rcActual"].forEach(s => $(s).innerHTML = ""); return; }
+  if (!sel.length) { $("#rcKpis").innerHTML = ""; $("#rcCmpWrap").hidden = true; $("#rcStory").innerHTML = finding("항목을 하나 이상 고르세요."); return; }
+  const R = rcAgg(sel.flatMap(it => rcUnits(dim, it, A, B, yi, bigF)));
+  const label = (multi ? `선택 ${sel.length}개 합계` : item) + (bigF ? ` · ${bigF}` : "");
+  if (!R.E) { $("#rcKpis").innerHTML = ""; $("#rcStory").innerHTML = finding(`<b>${label}</b> — 요금을 계산할 수 있는 사용량이 없습니다(주택용·가로등(갑)·임시(갑)만 있거나 용도 필터에 해당 계약이 없음). 다른 항목이나 용도를 고르세요.`); $("#rcCmpWrap").hidden = true; ["#rcHourChart", "#rcShapeChart", "#rcBlock", "#rcRankChart", "#rcRankTable", "#rcShiftOut", "#rcActual"].forEach(s => $(s).innerHTML = ""); return; }
   const dP = R.b - R.a, dPct = dP / R.a * 100, dBill = (R.Cb - R.Ca) * 1e3 / 1e8;   // MWh × 원/kWh × 1000 = 원 → 억원
   // 계절 × 시간대 기여
   const blk = [0, 1, 2].map(s => RC_BLOCKS.map(([, hs]) => { let c = 0; for (let d = 0; d < 3; d++) for (const h of hs) { const l = R.L[s][d][h]; if (l) c += l * (R.pb[s][d][h] - R.pa[s][d][h]); } return c / R.E; }));
@@ -2501,21 +2515,34 @@ async function renderRC() {
   legend($("#rcHourLegend"), hs);
   lineChart($("#rcHourChart"), { labels: hrs.map(x => x + "시"), series: hs, yTitle: `원/kWh (${SEA[sea]} 평일)`, height: 240, zero: false, tipFmt: v => fmt(v, 1) + "원" });
   // 비교 기준: 같은 차원 전체(계약종이면 같은 대분류)
-  const refUnits = dim === "tariff" ? D.meta.tariffs.filter(t => D.meta.tariff_class[t].big === D.meta.tariff_class[item].big).flatMap(t => rcUnits("tariff", t, A, B, yi, "")) : $("#rcItem").querySelectorAll("option").length ? [...$("#rcItem").options].flatMap(o => rcUnits(dim, o.value, A, B, yi, bigF)) : [];
-  const RF = rcAgg(refUnits), refName = dim === "tariff" ? `${D.meta.tariff_class[item].big} 전체` : `${dimName} 전체${bigF ? " · " + bigF : ""}`;
+  const bigs = [...new Set(dim === "tariff" ? sel.map(t => D.meta.tariff_class[t].big) : [])];
+  const refUnits = dim === "tariff" ? D.meta.tariffs.filter(t => bigs.includes(D.meta.tariff_class[t].big)).flatMap(t => rcUnits("tariff", t, A, B, yi, "")) : RC_OPTS.flatMap(o => rcUnits(dim, o, A, B, yi, bigF));
+  const RF = rcAgg(refUnits), refName = dim === "tariff" ? `${bigs.join("·")} 전체` : `${dimName} 전체${bigF ? " · " + bigF : ""}`;
   const shp = L => normalize(hrs.map(x => L[sea][0][x]));
-  const ss = [{ name: label, color: "#2d7e2e", values: shp(R.L), width: 2.6 }, { name: refName, color: "#94a3b8", values: shp(RF.L), width: 2 }];
+  const per = sel.map(it => ({ it, r: rcAgg(rcUnits(dim, it, A, B, yi, bigF)) })).filter(x => x.r.E);
+  const ss = multi ? [...per.slice(0, 8).map((x, k) => ({ name: x.it, color: PAL[(k + 2) % PAL.length], values: shp(x.r.L), width: 2 })), { name: refName, color: "#94a3b8", values: shp(RF.L), width: 2, dash: "4 3" }]
+    : [{ name: label, color: "#2d7e2e", values: shp(R.L), width: 2.6 }, { name: refName, color: "#94a3b8", values: shp(RF.L), width: 2 }];
   legend($("#rcShapeLegend"), ss);
   lineChart($("#rcShapeChart"), { labels: hrs.map(x => x + "시"), series: ss, yTitle: `${SEA[sea]} 평일`, height: 240, zero: false, ref: 1, tipFmt: v => fmt(v, 2) });
   const share = (L, hset) => { let a = 0, t = 0; for (let s = 0; s < 3; s++) for (let d = 0; d < 3; d++) for (let x = 0; x < 24; x++) { t += L[s][d][x]; if (hset.includes(x)) a += L[s][d][x]; } return t ? a / t * 100 : null; };
   const midS = share(R.L, [11, 12, 13, 14]), midR = share(RF.L, [11, 12, 13, 14]), eveS = share(R.L, [18, 19, 20, 21]), eveR = share(RF.L, [18, 19, 20, 21]);
   // 순위: 같은 차원의 모든 항목
-  const all = [...$("#rcItem").options].map(o => { const r = rcAgg(rcUnits(dim, o.value, A, B, yi, bigF)); return r.E ? { n: o.value, p: (r.b - r.a) / r.a * 100, bill: (r.Cb - r.Ca) * 1e3 / 1e8, E: r.E } : null; }).filter(Boolean).sort((p, q) => p.p - q.p);
+  const all = RC_OPTS.map(o => { const r = rcAgg(rcUnits(dim, o, A, B, yi, bigF)); return r.E ? { n: o, p: (r.b - r.a) / r.a * 100, bill: (r.Cb - r.Ca) * 1e3 / 1e8, E: r.E } : null; }).filter(Boolean).sort((p, q) => p.p - q.p);
   const showR = all.length > 24 ? [...all.slice(0, 12), ...all.slice(-12)] : all;
   barChart($("#rcRankChart"), showR.map(x => x.n.replace("본부", "").replace("전력", "")), [{ name: "단가 변화", values: showR.map(x => x.p), color: "#b42318", colorNeg: "#1d4ed8" }], { yTitle: "%", vDec: 1 });
   const byBill = [...all].sort((p, q) => Math.abs(q.bill) - Math.abs(p.bill)).slice(0, 12);
-  $("#rcRankTable").innerHTML = `<table class="tbl" style="min-width:0"><thead><tr><th>${dimName}</th><th>단가 변화</th><th>연간 부담 변화</th><th>사용량 (GWh)</th></tr></thead><tbody>${byBill.map(x => `<tr${x.n === item ? ' style="background:#fff7ed"' : ""}><td style="text-align:left;white-space:normal">${x.n}</td>${signCell(x.p, 2, 5)}<td>${(x.bill >= 0 ? "+" : "") + fmt(x.bill, 0)}억</td><td>${fmt(x.E / 1e3, 0)}</td></tr>`).join("")}</tbody></table>`;
+  $("#rcRankTable").innerHTML = `<table class="tbl" style="min-width:0"><thead><tr><th>${dimName}</th><th>단가 변화</th><th>연간 부담 변화</th><th>사용량 (GWh)</th></tr></thead><tbody>${byBill.map(x => `<tr${sel.includes(x.n) ? ' style="background:#fff7ed"' : ""}><td style="text-align:left;white-space:normal">${x.n}</td>${signCell(x.p, 2, 5)}<td>${(x.bill >= 0 ? "+" : "") + fmt(x.bill, 0)}억</td><td>${fmt(x.E / 1e3, 0)}</td></tr>`).join("")}</tbody></table>`;
   const rank = all.findIndex(x => x.n === item) + 1;
+  // 여러 항목 비교
+  $("#rcCmpWrap").hidden = !multi;
+  if (multi) {
+    const rows = per.map(x => { const r = x.r, bl = [0, 1, 2].flatMap(s => RC_BLOCKS.map(([nm, hs], b) => { let c = 0; for (let d = 0; d < 3; d++) for (const hh of hs) { const l = r.L[s][d][hh]; if (l) c += l * (r.pb[s][d][hh] - r.pa[s][d][hh]); } return { s, b, v: c / r.E }; })).sort((p, q) => p.v - q.v);
+      return { n: x.it, a: r.a, b: r.b, p: (r.b - r.a) / r.a * 100, bill: (r.Cb - r.Ca) * 1e3 / 1e8, E: r.E, mid: share(r.L, [11, 12, 13, 14]), eve: share(r.L, [18, 19, 20, 21]), mn: bl[0], mx: bl.at(-1), rk: all.findIndex(y => y.n === x.it) + 1 }; }).sort((p, q) => p.p - q.p);
+    barChart($("#rcCmpChart"), rows.map(r => r.n.replace("본부", "").replace("전력", "")), [{ name: "단가 변화", values: rows.map(r => r.p), color: "#b42318", colorNeg: "#1d4ed8" }], { yTitle: "%", vDec: 2 });
+    const cellNm = c => c && Math.abs(c.v) > .005 ? `${SEA[c.s]} ${RC_BLOCKS[c.b][0].split(" ")[0]} ${(c.v >= 0 ? "+" : "") + fmt(c.v, 2)}` : "–";
+    $("#rcCmp").innerHTML = `<table class="tbl" style="min-width:0"><thead><tr><th>${dimName}</th><th>단가 이전→이후 (원/kWh)</th><th>변화</th><th>연간 부담</th><th>사용량 (GWh)</th><th>낮 비중</th><th>저녁 비중</th><th>가장 줄어든 곳</th><th>가장 늘어난 곳</th><th>${dimName} 안 순위</th></tr></thead><tbody>${rows.map(r => `<tr><td style="text-align:left;white-space:normal">${r.n}</td><td>${fmt(r.a, 1)} → ${fmt(r.b, 1)}</td>${signCell(r.p, 2, 5)}<td>${(r.bill >= 0 ? "+" : "") + fmt(r.bill, 0)}억</td><td>${fmt(r.E / 1e3, 0)}</td><td>${fmt(r.mid, 1)}%</td><td>${fmt(r.eve, 1)}%</td><td>${cellNm(r.mn.v < 0 ? r.mn : null)}</td><td>${cellNm(r.mx.v > 0 ? r.mx : null)}</td><td>${r.rk} / ${all.length}</td></tr>`).join("")}<tr class="tot"><td>합계</td><td>${fmt(R.a, 1)} → ${fmt(R.b, 1)}</td><td><b>${pct((R.b - R.a) / R.a * 100, 2)}</b></td><td><b>${((R.Cb - R.Ca) >= 0 ? "+" : "") + fmt((R.Cb - R.Ca) * 1e3 / 1e8, 0)}억</b></td><td>${fmt(R.E / 1e3, 0)}</td><td>${fmt(share(R.L, [11, 12, 13, 14]), 1)}%</td><td>${fmt(share(R.L, [18, 19, 20, 21]), 1)}%</td><td></td><td></td><td></td></tr></tbody></table>`;
+    RC.cmp = rows;
+  }
   // 행동 변화 시나리오
   const sh = +$("#rcShift").value / 100; $("#rcShiftV").textContent = Math.round(sh * 100) + "%";
   let save = 0, moved = 0;
@@ -2536,15 +2563,15 @@ async function renderRC() {
       return { nm, dq: s1 && s0 ? (s1 / s0 - 1) * 100 : null, p0: r0 && s0 ? r0 * 1e3 / s0 : null, p1: r1 && s1 ? r1 * 1e3 / s1 : null }; };
     const rows = [];
     if (dim === "region") {
-      const sido = HQ_SIDO[item] || [], keyB = bigF ? BIG_KEY[bigF] : "total";
+      const sido = [...new Set(sel.flatMap(it => HQ_SIDO[it] || []))], keyB = bigF ? BIG_KEY[bigF] : "total";
       const merge = k => { const o = {}; for (const sd of sido) { const r = M.region_sales[sd]; if (!r || !r[k]) continue; for (const [mm, v] of Object.entries(r[k])) o[mm] = (o[mm] || 0) + v; } return o; };
-      rows.push(rowFor(`${item} (${sido.filter(x => x !== "전남광주").join("·")}) ${bigF || "전체"}`, merge(keyB), null));
+      rows.push(rowFor(`${multi ? `선택 ${sel.length}개 본부` : item} (${sido.filter(x => x !== "전남광주").join("·")}) ${bigF || "전체"}`, merge(keyB), null));
       const nat = {}; for (const [sd, r] of Object.entries(M.region_sales)) { if (sd === "합계" || !r[keyB]) continue; for (const [mm, v] of Object.entries(r[keyB])) nat[mm] = (nat[mm] || 0) + v; }
       rows.push(rowFor(`전국 ${bigF || "전체"}`, nat, null));
       actTxt = "지역별 실적은 시도 판매량만 공표되어 단가는 비교하지 않습니다. 본부 관할과 시도 경계가 일부 다릅니다.";
     }
-    const bigSel = dim === "tariff" ? D.meta.tariff_class[item].big : bigF;
-    for (const k of CLS_KEYS) { const r = rowFor(CLS_NAME[k], M.sales[k], M.rev[k]); r.hl = CLS_NAME[k] === bigSel; rows.push(r); }
+    const bigSel = dim === "tariff" ? bigs : [bigF];
+    for (const k of CLS_KEYS) { const r = rowFor(CLS_NAME[k], M.sales[k], M.rev[k]); r.hl = bigSel.includes(CLS_NAME[k]); rows.push(r); }
     rows.push(rowFor("전체", M.sales.total, M.rev.total));
     act = `<table class="tbl"><thead><tr><th>구분</th><th>판매량 증감</th><th>판매단가 (1년 전)</th><th>판매단가 (개편 후)</th><th>단가 변화</th></tr></thead><tbody>${rows.map(r => `<tr${r.hl ? ' style="background:#fff7ed"' : ""}><td style="text-align:left">${r.nm}</td>${signCell(r.dq, 1, 8)}<td>${fmt(r.p0, 1)}</td><td>${fmt(r.p1, 1)}</td>${r.p0 && r.p1 ? signCell((r.p1 / r.p0 - 1) * 100, 1, 8) : "<td>–</td>"}</tr>`).join("")}</tbody></table>`;
     if (dim === "industry" || dim === "industry_group") actTxt = "업종별 월보 분류와 AMI 산업종 분류가 달라 업종 실적은 용도(대분류) 단위로 봅니다.";
@@ -2552,21 +2579,22 @@ async function renderRC() {
   }
   $("#rcActual").innerHTML = act; $("#rcActNote").textContent = actTxt;
   const actBig = (() => { if (!win.length) return null;
-    if (dim === "region") { const k = bigF ? BIG_KEY[bigF] : "total", o = {}; for (const sd of HQ_SIDO[item] || []) { const r = M.region_sales[sd]; if (!r || !r[k]) continue; for (const [mm, v] of Object.entries(r[k])) o[mm] = (o[mm] || 0) + v; } const s1 = sumK(o, win), s0 = sumK(o, prevW); return s1 && s0 ? { nm: `${item.replace("본부", "")} 지역 ${bigF || "전체"}`, dq: (s1 / s0 - 1) * 100 } : null; }
-    const k = BIG_KEY[dim === "tariff" ? D.meta.tariff_class[item].big : (bigF || "산업용")]; const s1 = sumK(M.sales[k], win), s0 = sumK(M.sales[k], prevW); return s1 && s0 ? { nm: `전국 ${CLS_NAME[k]}`, dq: (s1 / s0 - 1) * 100 } : null; })();
+    if (dim === "region") { const k = bigF ? BIG_KEY[bigF] : "total", o = {}; for (const sd of [...new Set(sel.flatMap(it => HQ_SIDO[it] || []))]) { const r = M.region_sales[sd]; if (!r || !r[k]) continue; for (const [mm, v] of Object.entries(r[k])) o[mm] = (o[mm] || 0) + v; } const s1 = sumK(o, win), s0 = sumK(o, prevW); return s1 && s0 ? { nm: `${multi ? `선택 ${sel.length}개 본부` : item.replace("본부", "")} 지역 ${bigF || "전체"}`, dq: (s1 / s0 - 1) * 100 } : null; }
+    const k = BIG_KEY[dim === "tariff" ? bigs[0] : (bigF || "산업용")]; const s1 = sumK(M.sales[k], win), s0 = sumK(M.sales[k], prevW); return s1 && s0 ? { nm: `전국 ${CLS_NAME[k]}`, dq: (s1 / s0 - 1) * 100 } : null; })();
   // KPI
   $("#rcKpis").innerHTML =
     kpiBox("전력량요금 단가", `${fmt(R.a, 1)} → ${fmt(R.b, 1)} <small>원/kWh</small>`, `${pct(dPct, 2)} · ${label}`, true) +
     kpiBox("연간 부담 변화", `${dBill >= 0 ? "+" : ""}${fmt(dBill, 0)} <small>억원</small>`, `${yr}년 AMI 사용량 ${fmt(R.E / 1e3, 0)}GWh 기준`) +
     kpiBox("가장 크게 줄어든 곳", mn.v < 0 ? `${SEA[mn.s]} ${RC_BLOCKS[mn.b][0].split(" ")[0]}` : "없음", mn.v < 0 ? `${fmt(mn.v, 2)}원/kWh 기여` : "") +
     kpiBox("가장 크게 늘어난 곳", mx.v > 0 ? `${SEA[mx.s]} ${RC_BLOCKS[mx.b][0].split(" ")[0]}` : "없음", mx.v > 0 ? `+${fmt(mx.v, 2)}원/kWh 기여` : "") +
-    kpiBox(`${dimName} 안 순위`, rank ? `${rank}<small> / ${all.length}</small>` : "–", "단가가 가장 많이 내린 곳 = 1");
+    (multi ? kpiBox("선택 항목", `${per.length}<small>개</small>`, per.length ? `가장 많이 내린 곳 ${RC.cmp[0].n.replace("본부", "")}` : "") : kpiBox(`${dimName} 안 순위`, rank ? `${rank}<small> / ${all.length}</small>` : "–", "단가가 가장 많이 내린 곳 = 1"));
   // 해석
   const st = [];
   const up = dP > 0.005, down = dP < -0.005;
   st.push(`<b>한 줄 요약</b> — <b>${label}</b> 고객이 ${yr}년처럼 전기를 쓴다면, ${A.effective.replace(/-/g, ".")} → ${B.effective.replace(/-/g, ".")} 요금표 변경으로 전력량요금이 kWh당 ${fmt(R.a, 1)}원에서 ${fmt(R.b, 1)}원으로 ${up ? `<b>${fmt(dP, 2)}원(${pct(dPct, 2)}) 오르고</b>, 연간 약 ${fmt(dBill, 0)}억원을 더 냅니다` : down ? `<b>${fmt(-dP, 2)}원(${pct(dPct, 2)}) 내리고</b>, 연간 약 ${fmt(-dBill, 0)}억원을 덜 냅니다` : "거의 변하지 않습니다"}.`);
   if (up || down) st.push(`<b>어디서 바뀌었나</b> — ${mn.v < -0.005 ? `부담을 가장 많이 줄인 곳은 ${SEA[mn.s]} ${RC_BLOCKS[mn.b][0]}(${fmt(mn.v, 2)}원/kWh)` : "줄어든 시간대는 거의 없고"}${mx.v > 0.005 ? `, 가장 많이 늘린 곳은 ${SEA[mx.s]} ${RC_BLOCKS[mx.b][0]}(+${fmt(mx.v, 2)}원/kWh)` : ""}입니다. 시간대별로 합치면 ${RC_BLOCKS.map((b, k) => `${b[0].split(" ")[0]} ${(colS[k] >= 0 ? "+" : "") + fmt(colS[k], 2)}`).join(", ")}원입니다.`);
-  if (midS != null && midR != null && R !== RF) st.push(`<b>왜 이 정도인가</b> — 이 대상의 낮(11~15시) 사용 비중은 ${fmt(midS, 1)}%로 ${refName}(${fmt(midR, 1)}%)보다 ${midS > midR ? "높고" : "낮고"}, 저녁(18~22시)은 ${fmt(eveS, 1)}%로 ${eveS > eveR ? "높습니다" : "낮습니다"}. ${B.tou_scheme === "2026" && A.tou_scheme !== "2026" ? (midS > midR && eveS <= eveR ? "낮에 많이 쓰고 저녁에 덜 써서 2026 시간대 개편(봄·가을 낮 경부하, 저녁 최대부하)의 혜택을 평균보다 많이 받습니다." : midS <= midR && eveS > eveR ? "저녁에 많이 써서 2026 시간대 개편에서는 평균보다 불리한 편입니다." : "낮·저녁 비중이 엇갈려 개편 영향이 평균과 비슷합니다.") : ""} 같은 ${dimName}에서는 ${all.length ? `${all[0].n} ${pct(all[0].p, 2)}가 가장 많이 내리고 ${all.at(-1).n} ${pct(all.at(-1).p, 2)}가 가장 ${all.at(-1).p > 0.005 ? "많이 올랐습니다" : "적게 내렸습니다"}(이 대상은 ${all.length}곳 중 ${rank}번째).` : ""}`);
+  if (midS != null && midR != null && R !== RF) st.push(`<b>왜 이 정도인가</b> — ${multi ? "선택한 묶음" : "이 대상"}의 낮(11~15시) 사용 비중은 ${fmt(midS, 1)}%로 ${refName}(${fmt(midR, 1)}%)보다 ${midS > midR ? "높고" : "낮고"}, 저녁(18~22시)은 ${fmt(eveS, 1)}%로 ${eveS > eveR ? "높습니다" : "낮습니다"}. ${B.tou_scheme === "2026" && A.tou_scheme !== "2026" ? (midS > midR && eveS <= eveR ? "낮에 많이 쓰고 저녁에 덜 써서 2026 시간대 개편(봄·가을 낮 경부하, 저녁 최대부하)의 혜택을 평균보다 많이 받습니다." : midS <= midR && eveS > eveR ? "저녁에 많이 써서 2026 시간대 개편에서는 평균보다 불리한 편입니다." : "낮·저녁 비중이 엇갈려 개편 영향이 평균과 비슷합니다.") : ""} 같은 ${dimName}에서는 ${all.length ? `${all[0].n} ${pct(all[0].p, 2)}가 가장 많이 내리고 ${all.at(-1).n} ${pct(all.at(-1).p, 2)}가 가장 ${all.at(-1).p > 0.005 ? "많이 올랐습니다" : "적게 내렸습니다"}${multi ? "." : `(이 대상은 ${all.length}곳 중 ${rank}번째).`}` : ""}`);
+  if (multi && RC.cmp && RC.cmp.length > 1) { const c = RC.cmp; st.splice(1, 0, `<b>선택 항목 비교</b> — ${c.length}개 중 단가가 가장 많이 ${c[0].p < 0 ? "내린" : "적게 오른"} 곳은 ${c[0].n}(${pct(c[0].p, 2)}, 연 ${(c[0].bill >= 0 ? "+" : "") + fmt(c[0].bill, 0)}억), 가장 ${c.at(-1).p > 0 ? "많이 오른" : "적게 내린"} 곳은 ${c.at(-1).n}(${pct(c.at(-1).p, 2)})입니다. 차이는 ${fmt(Math.abs(c.at(-1).p - c[0].p), 2)}%p이며, 낮 비중이 가장 높은 곳은 ${[...c].sort((a, b) => b.mid - a.mid)[0].n}(${fmt([...c].sort((a, b) => b.mid - a.mid)[0].mid, 1)}%)입니다.`); }
   if (actBig && win.length) st.push(`<b>실제로는</b> — 개편 후 ${win.length}개월(${win[0].replace("-", ".")}~${win.at(-1).replace("-", ".")}) ${actBig.nm} 판매량은 1년 전보다 ${pct(actBig.dq)} 변했습니다. 요금표 효과 외에 경기·기온이 함께 반영된 값입니다.`);
   st.push(`<b>할 수 있는 일</b> — 아래 '사용을 옮기면'에서 평일 비싼 시간 사용을 낮으로 옮기는 비율을 바꿔 보면 추가 절감액을 바로 볼 수 있습니다.`);
   $("#rcStory").innerHTML = st.map(finding).join("");
