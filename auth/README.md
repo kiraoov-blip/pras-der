@@ -95,11 +95,14 @@ CSV 파일 자체에는 표시를 넣지 않고 기록만 남깁니다.
 
 ### 5. 잠금 화면에 서버 주소 넣기
 
-`auth/gate.js` 위쪽의 아래 줄에 3번의 웹 앱 URL을 넣습니다.
+`auth/gate.js` 위쪽의 `API_FALLBACK`에 3번의 웹 앱 URL을 넣습니다. `API`는 회사망용 중계 서버 주소입니다(8번).
 
 ```js
-var API = 'https://script.google.com/macros/s/…/exec';
+var API = 'https://api.simulator-kepco.co.kr/';
+var API_FALLBACK = 'https://script.google.com/macros/s/…/exec';
 ```
+
+잠금 화면은 `API`부터 시도하고, 연결이 안 되면 `API_FALLBACK`(구글에 직접)으로 넘어갑니다. 그래서 중계 서버가 아직 없어도 휴대폰·집에서는 그대로 동작합니다.
 
 ### 6. 저장소에 올리기
 
@@ -114,6 +117,18 @@ var API = 'https://script.google.com/macros/s/…/exec';
 - 이미 끊겼을 때: 코드 요청이 오면 카카오톡 대신 **이 스크립트 소유자의 구글 메일**로 코드가 갑니다. 코드가 사라지지는 않습니다.
 
 ---
+
+### 8. 회사 PC용 중계 서버 (Cloudflare Worker)
+
+회사망은 `script.google.com`·`script.googleusercontent.com`을 막기 때문에, 브라우저는 우리 도메인의 `api.simulator-kepco.co.kr`에만 요청하고 Cloudflare가 서버 쪽에서 Apps Script로 전달합니다. 코드는 `auth/cloudflare/worker.js`입니다.
+
+1. Cloudflare에 도메인을 추가하고(Free), 가비아에서 네임서버를 Cloudflare가 알려준 두 개로 바꿉니다. GitHub Pages용 기록(`@` A 185.199.108~111.153, `www` CNAME `kiraoov-blip.github.io`)은 **DNS 전용(회색 구름)**으로 둡니다.
+2. Workers & Pages → 만들기 → Worker → 이름 `sim-gate` → 배포 → 코드 편집에 `worker.js`를 붙여넣고 배포합니다.
+3. Worker 설정 → 변수 및 비밀 → **비밀** `GAS_URL` = 3번의 웹 앱 URL.
+4. Worker 설정 → 도메인 및 경로 → 추가 → 사용자 지정 도메인 → `api.simulator-kepco.co.kr`.
+5. 브라우저로 `https://api.simulator-kepco.co.kr`을 열어 「구글 Apps Script 연결: 정상」이 보이면 끝입니다. 회사 PC에서도 같은 화면이 보여야 합니다.
+
+Apps Script를 **새 배포**로 만들어 주소가 바뀌면 `GAS_URL`과 `API_FALLBACK`을 함께 고칩니다(「배포 관리 → 편집 → 새 버전」은 주소가 그대로라 고칠 것 없음).
 
 ## 평소 관리
 

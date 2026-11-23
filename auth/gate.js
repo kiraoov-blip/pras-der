@@ -19,13 +19,15 @@
 (function () {
   'use strict';
   // ▼ Apps Script 웹앱을 배포한 뒤 받은 주소(/exec로 끝남)를 여기에 넣는다
-  var API = 'https://script.google.com/macros/s/AKfycbyimpa3X5-KDXxJC8_iqLtXn1uHOhidJ6XqJ2o-0H_UkP6jDKE4XMa8N8PLj09-hsu2DA/exec';
+  // 1순위: 우리 도메인의 중계 서버(회사망에서도 열림) → 안 되면 2순위: 구글 Apps Script에 직접
+  var API = 'https://api.simulator-kepco.co.kr/';
+  var API_FALLBACK = 'https://script.google.com/macros/s/AKfycbyimpa3X5-KDXxJC8_iqLtXn1uHOhidJ6XqJ2o-0H_UkP6jDKE4XMa8N8PLj09-hsu2DA/exec';
 
   var NAMES = { pras: 'PRAS-DER', tou: 'PRAS-TOU', care: 'CARE-Jeju', 'pras-load': '전력 사용 패턴·요금제 진단', 'iea-price': 'IEA Prices and Taxes',
     'ember-sim': 'EMBER Electricity', 'kepco-stat': 'KEPCO Statistics', 'elec-intensity': '전력원단위',
     bple: '전력수급기본계획', 'renewable-lcoe': '재생에너지 LCOE', lcoe: '태양광 LCOE' };
   var me = document.currentScript;
-  if (me && me.getAttribute('data-api')) API = me.getAttribute('data-api');
+  if (me && me.getAttribute('data-api')) { API = me.getAttribute('data-api'); API_FALLBACK = me.getAttribute('data-api-fallback') || ''; }
   var SIM = (me && me.getAttribute('data-sim')) || location.pathname.split('/')[1] || '';
   var SIMNAME = NAMES[SIM] || SIM;
   var K_TOKEN = 'simgate.v1', K_PEND = 'simgate.pending.v1';
@@ -209,16 +211,30 @@
   window.addEventListener('beforeprint', function () { report('print', document.title || SIMNAME); });
 
   /* ---------- 서버 호출 ---------- */
-  function api(body) {
-    if (!API) return Promise.resolve({ ok: false, msg: '접근 승인 서버 주소가 아직 설정되지 않았습니다. 관리자에게 문의해주세요.' });
-    body.sim = SIM;
+  var K_API = 'simgate.api.v1';   // 이 브라우저에서 마지막으로 연결된 주소(다음엔 그쪽부터)
+  function post(url, body) {
     var ctl = typeof AbortController === 'function' ? new AbortController() : null;
     var timer = setTimeout(function () { if (ctl) ctl.abort(); }, 25000);
-    // Content-Type을 지정하지 않으면 text/plain으로 보내져 사전 요청(CORS preflight) 없이 Apps Script에 닿는다
-    return fetch(API, { method: 'POST', body: JSON.stringify(body), redirect: 'follow', signal: ctl ? ctl.signal : undefined })
+    // Content-Type을 지정하지 않으면 text/plain으로 보내져 사전 요청(CORS preflight) 없이 닿는다
+    return fetch(url, { method: 'POST', body: JSON.stringify(body), redirect: 'follow', signal: ctl ? ctl.signal : undefined })
       .then(function (r) { return r.json(); })
       .catch(function () { return { ok: false, net: true, msg: '서버에 연결하지 못했습니다. 인터넷 연결을 확인하고 다시 시도해주세요.' }; })
       .then(function (r) { clearTimeout(timer); return r || { ok: false, msg: '응답이 없습니다.' }; });
+  }
+  function api(body) {
+    if (!API && !API_FALLBACK) return Promise.resolve({ ok: false, msg: '접근 승인 서버 주소가 아직 설정되지 않았습니다. 관리자에게 문의해주세요.' });
+    body.sim = SIM;
+    var list = [API, API_FALLBACK].filter(Boolean), last = null;
+    try { last = sessionStorage.getItem(K_API); } catch (e) {}
+    if (last && list.indexOf(last) > 0) list = [last].concat(list.filter(function (u) { return u !== last; }));
+    function next(i) {
+      return post(list[i], body).then(function (r) {
+        if (r && r.net && i + 1 < list.length) return next(i + 1);   // 연결 실패만 다음 주소로(코드 틀림 등은 그대로)
+        if (r && !r.net) { try { sessionStorage.setItem(K_API, list[i]); } catch (e) {} }
+        return r;
+      });
+    }
+    return next(0);
   }
 
   /* ---------- 잠금 화면 ---------- */
