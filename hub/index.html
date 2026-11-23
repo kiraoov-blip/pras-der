@@ -156,6 +156,7 @@
   .landing-card.load .landing-card-go { color:var(--load-brand-dark); }
   /* 제목이 길어 4열에서 두 줄로 꺾이지 않도록 살짝 줄인다 */
   .landing-card.load .landing-card-head strong { font-size:17px; }
+  .landing-card-head strong.long { font-size:17px; word-break:keep-all; line-height:1.3; }
 
   /* IEA 카드: 브랜드색만 로컬로 덮어씀(구조·spacing은 동일, 보라 계열) */
   .landing-card.iea .landing-card-tag { background:var(--iea-brand-soft); color:var(--iea-brand-dark); }
@@ -305,11 +306,11 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
           </svg>
         </span>
         <span>
-          <strong>PRAS-DER</strong>
+          <strong class="long">제주 분산에너지자원 요금·편익 분석</strong>
           <p class="landing-card-sub">Pricing and Revenue Analysis Simulator</p>
         </span>
       </span>
-      <p class="desc">제주 분산에너지자원 요금·편익 분석 시뮬레이터 — 히트펌프·전기차·태양광/ESS 등 분산자원이 고객·한전·계통에 미치는 요금·편익 영향을 분석합니다.</p>
+      <p class="desc">분산에너지자원 요금분석 시뮬레이터 — 탐라는 전기예보·히트펌프·전기차·태양광/ESS 등 분산자원이 고객·한전·계통에 미치는 요금·편익 영향을 분석합니다.</p>
       <span class="landing-card-go" aria-hidden="true">시뮬레이터 열기 →</span>
     </a>
 
@@ -328,7 +329,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
           </svg>
         </span>
         <span>
-          <strong>PRAS-TOU</strong>
+          <strong class="long">계시별요금제 수익 분석</strong>
           <p class="landing-card-sub">Pricing and Revenue Analysis Simulator</p>
         </span>
       </span>
@@ -349,11 +350,11 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
           </svg>
         </span>
         <span>
-          <strong>CARE-Jeju</strong>
+          <strong class="long">제주 주택용 TOU 고객 요금 진단·관리</strong>
           <p class="landing-card-sub">Customer Analytics, Rate Recommendation &amp; Energy Management</p>
         </span>
       </span>
-      <p class="desc">제주 TOU 고객 맞춤형 요금·에너지관리 시뮬레이터 — 고객별 요금 모니터링·진단, 목표관리·수요반응 시뮬레이션을 제공합니다.</p>
+      <p class="desc">제주 주택용 고객 맞춤형 요금·에너지관리 시뮬레이터 — 고객별 요금 모니터링·진단, 목표관리·수요반응 시뮬레이션을 제공합니다.</p>
       <span class="landing-card-go" aria-hidden="true">시뮬레이터 열기 →</span>
     </a>
 
@@ -433,8 +434,8 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
           </svg>
         </span>
         <span>
-          <strong>KEPCO Statistics</strong>
-          <p class="landing-card-sub">한국전력통계 Simulator</p>
+          <strong>한국전력 통계</strong>
+          <p class="landing-card-sub">KEPCO Statistics Simulator</p>
         </span>
       </span>
       <p class="desc">한국전력통계 기반 판매·요금·발전·설비 분석 시뮬레이터 — 1962–2025년 판매·단가·발전·연료·설비·손익 추이, 판매수입 시나리오, 전원믹스 전환 시나리오, 시도 비교를 확인합니다.</p>
