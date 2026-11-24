@@ -361,6 +361,16 @@ footer{background:#123214;color:#cfdfc6}
 .solve-box{margin-top:14px;border:1px solid #dde2e8;border-top:4px solid #2d7e2e;background:#f4f6f9;border-radius:12px;padding:12px 14px}
 #rcBox{background:#f6f7f9;border:1px solid #dde2e8}
 #rcBox .kpi:not(.lead){background:#fff}
+.rs-grid4{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media(max-width:1200px){.rs-grid4{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:400px){.rs-grid4{grid-template-columns:minmax(0,1fr)}}
+.rs-bar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px 12px;margin:8px 0 10px}
+.rs-reset{font:inherit;font-size:12.5px;font-weight:700;color:#1e5d20;background:#fff;border:1px solid #cfe6c0;border-radius:99px;padding:6px 14px;cursor:pointer}
+.rs-reset:hover{background:#eef6e6;border-color:#89c17e}
+#rsTable,#rsTop{max-height:none;overflow:visible}
+#rsTable .tbl,#rsTop .tbl{min-width:0}
+#rsTable .tbl th,#rsTop .tbl th{white-space:normal;word-break:keep-all}
+#rsTable .tbl td,#rsTable .tbl th,#rsTop .tbl td,#rsTop .tbl th{padding:6px 6px}
 .rs-flow{display:flex;flex-wrap:wrap;align-items:stretch;gap:6px;margin:8px 0 12px}
 .rs-flow .chip{font:inherit;text-align:left;background:#fff;border:1px solid #dde2e8;border-radius:10px;padding:7px 11px;cursor:pointer;min-width:118px}
 .rs-flow .chip:hover{border-color:#89c17e;background:#f4faef}
@@ -958,21 +968,22 @@ details.adv[open]>summary{margin-bottom:6px}
             <div id="regFindings"></div>
             <h3 class="sub-h">산업용 지역별 요금제 — 11개 지역 조정단가 (원/kWh, 음수 = 인하)</h3>
             <p class="mini-note" style="margin-top:-4px">지역별 조정단가 = <b>광역 몫</b>(전력자급률 + 송전원가) + <b>권역 몫</b>(지방우대지수). 아래 칸에는 두 몫을 따로 넣고, 둘을 더한 11개 지역의 최종 조정단가는 바로 아래 표에 나옵니다. 예: 남부권 ②권역 = −12.8 + (−1.0) = <b>−13.8</b>.</p>
-            <div class="grid-in wide" style="margin:6px 0 4px">
+            <div class="rs-bar"><span class="hint">권역 구분은 한전 확정본(2026.11.24 확인) · 칸을 바꾸면 아래 모든 계산이 바로 다시 됩니다</span><button type="button" class="rs-reset" id="rsReset">↺ 설계안 값으로 되돌리기</button></div>
+            <div class="grid-in rs-grid4" style="margin:0 0 18px">
               <div class="field"><label for="rsS">광역 몫 · 수도권 남부</label><input id="rsS" type="number" step="0.1" max="0" value="0"><span class="hint">설계안 0 = 자급률 0 + 송전 0</span></div>
               <div class="field"><label for="rsN">광역 몫 · 수도권 북부</label><input id="rsN" type="number" step="0.1" max="0" value="-6.5"><span class="hint">설계안 −6.5 = 자급률 −2.0 + 송전 −4.5</span></div>
               <div class="field"><label for="rsC">광역 몫 · 중부권</label><input id="rsC" type="number" step="0.1" max="0" value="-9.2"><span class="hint">설계안 −9.2 = 자급률 −4.0 + 송전 −5.2</span></div>
               <div class="field"><label for="rsP">광역 몫 · 남부권</label><input id="rsP" type="number" step="0.1" max="0" value="-12.8"><span class="hint">설계안 −12.8 = 자급률 −8.0 + 송전 −4.8 · 제주 제외</span></div>
             </div>
-            <div class="grid-in wide" style="margin:0 0 10px">
+            <div class="grid-in rs-grid4" style="margin:0 0 18px">
               <div class="field"><label for="rsG1">권역 몫 · ①권역</label><input id="rsG1" type="number" step="0.1" max="0" value="0"><span class="hint">설계안 0 · 지방우대 없음</span></div>
               <div class="field"><label for="rsG2">권역 몫 · ②권역</label><input id="rsG2" type="number" step="0.1" max="0" value="-1"><span class="hint">설계안 −1.0</span></div>
               <div class="field"><label for="rsG3">권역 몫 · ③권역</label><input id="rsG3" type="number" step="0.1" max="0" value="-4"><span class="hint">설계안 −4.0</span></div>
               <div class="field"><label for="rsG4">권역 몫 · ④권역</label><input id="rsG4" type="number" step="0.1" max="0" value="-6"><span class="hint">설계안 −6.0</span></div>
+            </div>
+            <div class="grid-in rs-grid4" style="margin:0 0 12px">
               <div class="field"><label for="rsYear">판매량 기준 연도</label><select id="rsYear"></select><span class="hint">이 연도 산업용 판매량에 조정단가를 곱합니다</span></div>
               <div class="field"><label for="rsX">산업위기선제대응지역 추가 할인</label><input id="rsX" type="number" step="0.1" max="0" value="-1"><span class="hint">설계안 −1.0 · 서산·당진·울산 남구·여수·광양·포항</span></div>
-              <div class="field"><span class="lab">&nbsp;</span><button type="button" class="text-button" id="rsReset" style="align-self:flex-start;margin-top:8px">설계안 값으로</button>
-                <span class="hint">권역 구분은 한전 확정본(2026.11.24 확인)</span></div>
             </div>
             <div class="tbl-scroll" id="rsMatrix" style="margin:0 0 12px"></div>
             <div class="kpis" id="rsKpis"></div>
