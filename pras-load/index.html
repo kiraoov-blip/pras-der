@@ -942,6 +942,7 @@ details.adv[open]>summary{margin-bottom:6px}
               <div class="field"><label for="rsG2">권역 몫 · ②권역</label><input id="rsG2" type="number" step="0.1" max="0" value="-1"><span class="hint">설계안 −1.0</span></div>
               <div class="field"><label for="rsG3">권역 몫 · ③권역</label><input id="rsG3" type="number" step="0.1" max="0" value="-4"><span class="hint">설계안 −4.0</span></div>
               <div class="field"><label for="rsG4">권역 몫 · ④권역</label><input id="rsG4" type="number" step="0.1" max="0" value="-6"><span class="hint">설계안 −6.0</span></div>
+              <div class="field"><label for="rsYear">판매량 기준 연도</label><select id="rsYear"></select><span class="hint">이 연도 산업용 판매량에 조정단가를 곱합니다</span></div>
               <div class="field"><label for="rsX">산업위기선제대응지역 추가 할인</label><input id="rsX" type="number" step="0.1" max="0" value="-1"><span class="hint">설계안 −1.0 · 서산·당진·울산 남구·여수·광양·포항</span></div>
               <div class="field"><span class="lab">&nbsp;</span><button type="button" class="text-button" id="rsReset" style="align-self:flex-start;margin-top:8px">설계안 값으로</button>
                 <span class="hint">권역 구분은 한전 확정본(2026.11.24 확인)</span></div>
@@ -2045,7 +2046,8 @@ function zoneLossDefault() { const G = D.region, d = zoneDefault(); return zoneC
 function zoneDefault() { const z = D.region.zones; return { W: { ...z.wide }, Gr: Object.fromEntries(Object.entries(z.grade).map(([k, v]) => [+k, v])), X: z.crisis_adj || 0 }; }
 function renderRegionScn() {
   const G = D.region; if (!G || !G.zones) return;
-  const yr = $("#rgYear").value || G.years.at(-1), y = G.years.indexOf(yr);
+  const ysel = $("#rsYear"); if (!ysel.options.length) { ysel.innerHTML = G.years.map(v => `<option>${v}</option>`).join(""); ysel.value = G.years.at(-1); }
+  const yr = ysel.value || G.years.at(-1), y = G.years.indexOf(yr);
   const W = { 수도권남부: +$("#rsS").value || 0, 수도권북부: +$("#rsN").value || 0, 중부권: +$("#rsC").value || 0, 남부권: +$("#rsP").value || 0 };
   const Gr = { 1: +$("#rsG1").value || 0, 2: +$("#rsG2").value || 0, 3: +$("#rsG3").value || 0, 4: +$("#rsG4").value || 0 };
   const X = +$("#rsX").value || 0, C = zoneCalc(y, W, Gr, X), T = C;
@@ -2916,6 +2918,7 @@ async function boot() {
     renderSim(); });
   on("#eqLo", "input", () => renderEquity()); on("#eqHi", "input", () => renderEquity());
   on("#rgYear", "change", () => renderRegion());
+  on("#rsYear", "change", () => renderRegionScn());
   on("#rgBig", "change", () => renderRegion());
   for (const id of ["#rsS", "#rsN", "#rsC", "#rsP", "#rsG1", "#rsG2", "#rsG3", "#rsG4", "#rsX"]) on(id, "input", () => renderRegionScn());
   on("#rsReset", "click", () => { const d = zoneDefault(); $("#rsS").value = d.W["수도권남부"]; $("#rsN").value = d.W["수도권북부"]; $("#rsC").value = d.W["중부권"]; $("#rsP").value = d.W["남부권"]; for (const g of [1, 2, 3, 4]) $("#rsG" + g).value = d.Gr[g]; $("#rsX").value = d.X; renderRegionScn(); });
