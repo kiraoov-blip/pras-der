@@ -682,8 +682,9 @@ details.adv[open]>summary{margin-bottom:6px}
               <div class="field"><label for="rsG2">권역 몫 · ②권역</label><input id="rsG2" type="number" step="0.1" max="0" value="-1"><span class="hint">설계안 −1.0</span></div>
               <div class="field"><label for="rsG3">권역 몫 · ③권역</label><input id="rsG3" type="number" step="0.1" max="0" value="-4"><span class="hint">설계안 −4.0</span></div>
               <div class="field"><label for="rsG4">권역 몫 · ④권역</label><input id="rsG4" type="number" step="0.1" max="0" value="-6"><span class="hint">설계안 −6.0</span></div>
+              <div class="field"><label for="rsX">산업위기선제대응지역 추가 할인</label><input id="rsX" type="number" step="0.1" max="0" value="-1"><span class="hint">설계안 −1.0 · 서산·당진·울산 남구·여수·광양·포항</span></div>
               <div class="field"><span class="lab">&nbsp;</span><button type="button" class="text-button" id="rsReset" style="align-self:flex-start;margin-top:8px">설계안 값으로</button>
-                <span class="hint">권역 구분은 행안부 지방우대지수 별표와 같음(2026.11.23 자료)</span></div>
+                <span class="hint">권역 구분은 한전 확정본(2026.11.24 확인)</span></div>
             </div>
             <div class="tbl-scroll" id="rsMatrix" style="margin:0 0 12px"></div>
             <div class="kpis" id="rsKpis"></div>
@@ -1767,26 +1768,27 @@ function renderRegion() {
   return [`<b>전력자급률은 ${fmt(sf(sr.at(-1)), 0)}%~${fmt(sf(sr[0]), 0)}%로 갈리지만 산업용 단가는 거의 같다</b> — ${yl}년 ${sr.slice(0, 3).map(s => `${s} ${fmt(sf(s), 0)}%`).join(", ")}는 쓰는 전력의 두 배 이상을 만들고, ${sr.slice(-3).reverse().map(s => `${s} ${fmt(sf(s), 0)}%`).join(", ")}는 대부분을 다른 지역에서 받아 씁니다. 그런데 산업용 판매단가는 제주를 빼면 ${fmt(Math.min(...ups), 1)}~${fmt(Math.max(...ups), 1)}원/kWh로 차이가 거의 없습니다(차이는 계약종·부하율 구성 탓). 송전 비용과 입지 신호가 요금에 전혀 반영되지 않는 전국 단일요금의 모습으로, 지역별 조정요금이 처음으로 이 차이를 만들게 됩니다.`];
 }
 // 11개 지역 조정단가로 산업용 수입 감소 계산. W = 광역 몫, Gr = 권역 몫
-function zoneCalc(y, W, Gr) {
-  const G = D.region;
-  const Z = {}, items = []; let kwh = 0, rev = 0, loss = 0, cust = 0;
+function zoneCalc(y, W, Gr, X) {
+  const G = D.region, CR = new Set((G.zones.crisis || []).map(c => c[0] + " " + c[1])); X = X == null ? (G.zones.crisis_adj || 0) : X;
+  const Z = {}, items = []; let kwh = 0, rev = 0, loss = 0, cust = 0, crK = 0, crL = 0;
   for (const g of G.sgg) { const d = g["산업용"]; if (!d || !d.kwh[y]) continue;
     const gr = g.region === "제주" || !g.grade ? null : g.grade;
-    const adj = gr ? W[g.region] + Gr[gr] : 0, key = gr ? `${g.region}|${gr}` : "제주|-";
-    const z = Z[key] = Z[key] || { w: g.region, gr, adj, kwh: 0, rev: 0, cust: 0, n: 0, loss: 0 };
+    const cr = gr && CR.has(g.s + " " + g.g), adj = gr ? W[g.region] + Gr[gr] + (cr ? X : 0) : 0, key = gr ? `${g.region}|${gr}` : "제주|-";
+    const z = Z[key] = Z[key] || { w: g.region, gr, adj: gr ? W[g.region] + Gr[gr] : 0, kwh: 0, rev: 0, cust: 0, n: 0, loss: 0 };
     const l = -adj * d.kwh[y]; z.kwh += d.kwh[y]; z.rev += d.rev[y]; z.cust += d.cust[y] / 12; z.n++; z.loss += l;
     kwh += d.kwh[y]; rev += d.rev[y]; cust += d.cust[y] / 12; loss += l;
-    items.push({ s: g.s, g: g.g, w: g.region, gr, adj, kwh: d.kwh[y], loss: l }); }
-  return { Z, items, kwh, rev, loss, cust };
+    if (cr) { crK += d.kwh[y]; crL += -X * d.kwh[y]; }
+    items.push({ s: g.s, g: g.g, w: g.region, gr, adj, kwh: d.kwh[y], loss: l, cr }); }
+  return { Z, items, kwh, rev, loss, cust, crK, crL };
 }
-function zoneLossDefault() { const G = D.region, d = zoneDefault(); return zoneCalc(G.years.length - 1, d.W, d.Gr).loss; }
-function zoneDefault() { const z = D.region.zones; return { W: { ...z.wide }, Gr: Object.fromEntries(Object.entries(z.grade).map(([k, v]) => [+k, v])) }; }
+function zoneLossDefault() { const G = D.region, d = zoneDefault(); return zoneCalc(G.years.length - 1, d.W, d.Gr, d.X).loss; }
+function zoneDefault() { const z = D.region.zones; return { W: { ...z.wide }, Gr: Object.fromEntries(Object.entries(z.grade).map(([k, v]) => [+k, v])), X: z.crisis_adj || 0 }; }
 function renderRegionScn() {
   const G = D.region; if (!G || !G.zones) return;
   const yr = $("#rgYear").value || G.years.at(-1), y = G.years.indexOf(yr);
   const W = { 수도권남부: +$("#rsS").value || 0, 수도권북부: +$("#rsN").value || 0, 중부권: +$("#rsC").value || 0, 남부권: +$("#rsP").value || 0 };
   const Gr = { 1: +$("#rsG1").value || 0, 2: +$("#rsG2").value || 0, 3: +$("#rsG3").value || 0, 4: +$("#rsG4").value || 0 };
-  const C = zoneCalc(y, W, Gr), T = C;
+  const X = +$("#rsX").value || 0, C = zoneCalc(y, W, Gr, X), T = C;
   // 광역 몫 + 권역 몫 = 11개 지역 최종 조정단가(자료에 없는 칸은 비움)
   const WN = { 수도권남부: "수도권 남부", 수도권북부: "수도권 북부", 중부권: "중부권", 남부권: "남부권" }, has = new Set(Object.values(C.Z).filter(z => z.gr).map(z => z.w + "|" + z.gr));
   const sg = v => v === 0 ? "0.0" : (v > 0 ? "+" : "−") + fmt(Math.abs(v), 1);
@@ -1812,9 +1814,9 @@ function renderRegionScn() {
   const zl = it => it.gr ? `${it.w} ${"①②③④"[it.gr - 1]}` : "제주(제외)";
   const top = [...C.items].sort((a, b) => b.loss - a.loss).slice(0, 12);
   $("#rsTop").innerHTML = `<table class="tbl"><thead><tr><th>수입 감소 상위 시군구</th><th>권역</th><th>산업용 판매량(TWh)</th><th>조정단가(원/kWh)</th><th>수입 감소(억원)</th></tr></thead><tbody>${top.map(g => `<tr><td>${g.s} ${g.g}</td><td>${zl(g)}</td><td>${fmt(g.kwh / 1e9, 1)}</td><td>${fmt(g.adj, 1)}</td><td>${fmt(g.loss / 1e8, 0)}</td></tr>`).join("")}</tbody></table>`;
-  const D0 = zoneDefault(), dflt = zoneCalc(y, D0.W, D0.Gr);
+  const D0 = zoneDefault(), dflt = zoneCalc(y, D0.W, D0.Gr, D0.X);
   $("#rsNote").innerHTML = `지역 구분은 한전 설계안의 11개 지역(4개 광역 × 균형성장 ①~④권역, 제주 제외)이고 조정단가는 설계안 권역별 표입니다. 설계안 값으로 ${yr}년 판매량에 적용하면 ${fmt(dflt.loss / 1e12, 2)}조원(정부 추산 2.8조원 내외)이며, 최대 인하율은 남부권 ④권역 약 10%로 공청회의 '최대 10% 인하'와 같습니다. `
-    + `권역 구분은 2026.11.23 수정 자료로, 행안부 지방우대지수 별표와 같습니다(이전 설계안과 달라진 7곳: 동두천 북②→③, 동해 중②→③, 부여 중④→③, 부산 금정 남②→③, 완주 남②→③, 영주 남④→③, 통영 남③→④). 인천은 새 구 이름(제물포·영종·서해·검단구 등)으로 적혀 있으나 판매실적의 옛 구가 모두 북부 ①권역이라 결과는 같습니다. 자료의 주석 '산업위기선제대응지역 해당(울산은 남구에 한함)'은 서산·당진(중부권 ②)과 울산 남구(남부권 ②), 여수·광양·포항(남부권 ③)을 가리키며, 권역 구분에 이미 반영된 것으로 보고 별도 인하는 더하지 않았습니다(6곳 산업용 판매량 49.4TWh, 수입 감소 약 7,000억원). 대구 군위군은 판매실적에 경북으로 남은 해도 대구 ④권역으로 보았습니다.`;
+    + `권역 구분은 한전 확정본(2026.11.24 담당자 확인)입니다. 2026.11.23 자료 1쪽 목록과는 7곳이 다르며(확정본 기준 동두천 북②, 동해 중②, 부여 중④, 부산 금정 남②, 완주 남②, 영주 남④, 통영 남③), 이 7곳은 행안부 지방우대지수 별표와도 다릅니다. 산업위기선제대응지역 6곳(서산·당진·울산 남구·여수·광양·포항, ${fmt(C.crK / 1e9, 1)}TWh)에는 권역 조정단가에 ${fmt(X, 1)}원/kWh를 더해 ${fmt(C.crL / 1e8, 0)}억원이 늘어납니다. 담당자 계산(2024년 2.88조원)은 송전원가 몫을 3.6원 × 전체 판매량으로 잡고 위기지역 할인을 빼서, 광역별 송전 단가를 쓰는 이 계산보다 약 736억원(+위기지역 528억원) 작습니다. 인천은 판매실적의 옛 구 이름(8곳)으로 계산하며 모두 북부 ①권역입니다. 대구 군위군은 판매실적에 경북으로 남은 해도 대구 ④권역으로 보았습니다.`;
 }
 
 // ── 목표 수입 역산 ───────────────────────────────────────────────────────────
@@ -2655,8 +2657,8 @@ async function boot() {
   on("#eqLo", "input", () => renderEquity()); on("#eqHi", "input", () => renderEquity());
   on("#rgYear", "change", () => renderRegion());
   on("#rgBig", "change", () => renderRegion());
-  for (const id of ["#rsS", "#rsN", "#rsC", "#rsP", "#rsG1", "#rsG2", "#rsG3", "#rsG4"]) on(id, "input", () => renderRegionScn());
-  on("#rsReset", "click", () => { const d = zoneDefault(); $("#rsS").value = d.W["수도권남부"]; $("#rsN").value = d.W["수도권북부"]; $("#rsC").value = d.W["중부권"]; $("#rsP").value = d.W["남부권"]; for (const g of [1, 2, 3, 4]) $("#rsG" + g).value = d.Gr[g]; renderRegionScn(); });
+  for (const id of ["#rsS", "#rsN", "#rsC", "#rsP", "#rsG1", "#rsG2", "#rsG3", "#rsG4", "#rsX"]) on(id, "input", () => renderRegionScn());
+  on("#rsReset", "click", () => { const d = zoneDefault(); $("#rsS").value = d.W["수도권남부"]; $("#rsN").value = d.W["수도권북부"]; $("#rsC").value = d.W["중부권"]; $("#rsP").value = d.W["남부권"]; for (const g of [1, 2, 3, 4]) $("#rsG" + g).value = d.Gr[g]; $("#rsX").value = d.X; renderRegionScn(); });
   on("#ctTariff", "change", () => renderContract());
   for (const k of ["year", "base", "season", "dtype"]) on("#" + k, "change", e => { S[k] = e.target.value; renderAll(); });
   on('input[name="scheme"]', "change", e => { S.scheme = e.target.value; renderAll(); });
