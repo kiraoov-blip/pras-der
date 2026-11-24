@@ -368,7 +368,16 @@ footer{background:#123214;color:#cfdfc6}
 .rs-flow .chip span{display:block;font-size:15px;font-weight:800;color:#123214;margin-top:2px}
 .rs-flow .chip.tot{background:#123214;border-color:#123214}.rs-flow .chip.tot b{color:#c6e07b}.rs-flow .chip.tot span{color:#fff}
 .rs-flow .op{align-self:center;font-weight:800;color:#8a94a3;font-size:15px}
-.rs-step{border:1px solid #dde2e8;border-left:4px solid #2d7e2e;border-radius:10px;background:#fff;margin:0 0 8px}
+.rs-step{border:1px solid #dde2e8;border-radius:10px;background:#fff;margin:0 0 8px}
+.rs-step .finding{border-left:0;padding-left:12px}
+.rs-bars{display:grid;grid-template-columns:auto 1fr;gap:7px 12px;align-items:center;margin:10px 0 6px;padding:12px 14px;background:#f6f7f9;border-radius:10px}
+.rs-bars .lab{font-size:12.5px;font-weight:700;color:#334155;white-space:nowrap}
+.rs-bars .bar{display:flex;align-items:center;gap:8px;font-size:12.5px;color:#334155}
+.rs-bars .seg{height:18px;border-radius:3px}
+.rs-bars .c{background:#a8d47a}.rs-bars .x{background:#2d7e2e}
+.rs-bars .back{background:repeating-linear-gradient(45deg,#f3d2cf 0 4px,#fff 4px 8px);border:1px dashed #b42318}
+.rs-bars .lg{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:4px 14px;font-size:11.5px;color:#5b6676;margin-top:2px}
+.rs-bars .lg i{display:inline-block;width:12px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
 .rs-step>summary{list-style:none;cursor:pointer;display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;padding:10px 14px;font-weight:700;color:#123214}
 .rs-step>summary::-webkit-details-marker{display:none}
 .rs-step>summary::before{content:"▸";color:#2d7e2e;transition:transform .15s}
@@ -378,7 +387,7 @@ footer{background:#123214;color:#cfdfc6}
 .rs-step>summary .q{flex-basis:100%;font-size:12.5px;font-weight:500;color:#5b6676;padding-left:18px}
 .rs-step .body{padding:0 14px 12px}
 .rs-step .tbl td.f{color:#5b6676;font-size:12px;text-align:left;white-space:nowrap}
-.rs-step.cmp{border-left-color:#b42318}.rs-step.cmp>summary .no{background:#b42318}
+.rs-step.cmp>summary .no{background:#b42318}
 .rc-items{display:flex;flex-wrap:wrap;gap:6px 8px;max-height:156px;overflow:auto;padding:8px;border:1px solid #dde2e8;border-radius:10px;background:#fff}
 .rc-items label{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;padding:4px 10px;border:1px solid #e2e8f0;border-radius:99px;cursor:pointer;white-space:nowrap;color:#334155}
 .rc-items label.on{background:#eef6e6;border-color:#89c17e;color:#1e5d20;font-weight:700}
@@ -2096,31 +2105,38 @@ function renderRegionSteps(G, C, W, Gr, X, yr, P) {
     `<td>합계</td><td>${tw(Kz)}</td><td></td><td></td><td>${J(pGr)}</td>`)
     + `<p class="mini-note">균형성장 권역(①~④)은 광역과 별개로 시군구마다 정해집니다. 그래서 같은 광역 안에서도 권역에 따라 단가가 다릅니다.</p>`;
   // STEP 4 송전원가
-  const s4 = tbl(["광역", "판매량(TWh)", "(a) 원래 송전 차등", `(b) 일괄 할인`, "(c) 최종 = (a)+(b)", `㉠ 일괄분 (${fmt(TB, 1)}원)`, "원래 차등분", "수입 감소 합계"],
-    WO.map(w => `<tr><td><b>${WN[w]}</b></td><td>${tw(kw(w))}</td><td>${u(trO(w))}원${trO(w) > 0 ? " <small>(할증)</small>" : ""}</td><td>−${fmt(TB, 1)}원</td><td><b>${u(trF(w))}원</b></td><td>${J(TB * kw(w))}</td><td>${J(-trO(w) * kw(w))}</td><td><b>${J(-trF(w) * kw(w))}</b></td></tr>`),
-    `<td>합계</td><td>${tw(Kz)}</td><td></td><td></td><td>평균 −${fmt(pTr / Kz, 2)}원</td><td>${J(flat)}</td><td>${J(gB - gS)}</td><td>${J(pTr)}</td>`)
-    + finding(`<b>(a) 원래 송전원가 차등</b>은 수도권 남부 +${fmt(trO("수도권남부"), 1)}원(할증), 수도권 북부 ${u(trO("수도권북부"))}원, 중부권 ${u(trO("중부권"))}원, 남부권 ${u(trO("남부권"))}원이었습니다. 설계안은 수도권 남부를 0원으로 맞추려고 <b>(b) 모든 광역에서 ${fmt(TB, 1)}원씩 더 깎아</b> 격차를 그대로 둔 채 <b>(c)</b>를 만들었습니다.`)
-    + finding(`<b>송전 할인 = ㉠ + ㉡ + ㉢</b><br>㉠ 일괄 ${fmt(TB, 1)}원 × 전체 ${tw(Kz)}TWh = <b>${J(flat)}</b><br>㉡ 북부·중부·남부의 원래 격차 할인 = <b>+${J(gB)}</b><br>㉢ 수도권 남부의 원래 할증(+${fmt(trO("수도권남부"), 1)}원)을 상쇄 = <b>−${J(gS)}</b><br>합계 = <b>${J(pTr)}</b>`);
+  const disc = w => -trF(w) || 0, adj = w => -trO(w) || 0, sx = v => v === 0 ? "0" : (v > 0 ? "+" : "−") + fmt(Math.abs(v), 1);
+  const k = 46, bars = WO.map(w => { const d = adj(w);
+    const segs = d >= 0 ? `<span style="display:flex"><span class="seg c" style="width:${TB * k}px"></span><span class="seg x" style="width:${d * k}px"></span></span>` : `<span class="seg back" style="width:${TB * k}px"></span>`;
+    const txt = d >= 0 ? `공통 ${fmt(TB, 1)} + 추가 ${fmt(d, 1)} = <b>${fmt(disc(w), 1)}원 할인</b>` : `공통 ${fmt(TB, 1)} − 되돌림 ${fmt(-d, 1)} = <b>할인 없음</b>`;
+    return `<span class="lab">${WN[w]}</span><span class="bar">${segs}<span>${txt}</span></span>`; }).join("")
+    + `<span class="lg"><span><i class="c" style="background:#a8d47a"></i>㉠ 모든 지역 공통 ${fmt(TB, 1)}원</span><span><i style="background:#2d7e2e"></i>㉡ 공통분을 넘는 송전 비용 차이만큼 추가 할인</span><span><i style="background:repeating-linear-gradient(45deg,#f3d2cf 0 3px,#fff 3px 6px);border:1px dashed #b42318"></i>㉢ 수도권 남부는 공통 할인을 되돌림</span></span>`;
+  const s4 = finding(`<b>송전 할인은 "수도권 남부보다 송전 비용이 얼마나 덜 드느냐"만큼 깎아 주는 것입니다.</b> 발전소에서 먼 수도권 남부가 송전 비용이 가장 많이 들어 기준(0원)이 되고, 북부는 ${fmt(disc("수도권북부"), 1)}원, 중부는 ${fmt(disc("중부권"), 1)}원, 남부는 ${fmt(disc("남부권"), 1)}원 덜 들어 그만큼 깎아 줍니다. 이 할인을 두 조각으로 나눠 보면 아래와 같습니다.`)
+    + `<div class="rs-bars">${bars}</div>`
+    + tbl(["광역", "판매량(TWh)", "㉠ 공통 할인", "㉡·㉢ 지역별 가감", "최종 할인", "㉠ 공통분 금액", "㉡·㉢ 가감분 금액", "수입 감소 합계"],
+    WO.map(w => `<tr><td><b>${WN[w]}</b></td><td>${tw(kw(w))}</td><td>${fmt(TB, 1)}원</td><td>${sx(adj(w))}원${adj(w) < 0 ? " <small>(되돌림)</small>" : ""}</td><td><b>${fmt(disc(w), 1)}원</b></td><td>${J(TB * kw(w))}</td><td>${J(adj(w) * kw(w))}</td><td><b>${J(disc(w) * kw(w))}</b></td></tr>`),
+    `<td>합계</td><td>${tw(Kz)}</td><td></td><td></td><td>평균 ${fmt(pTr / Kz, 2)}원</td><td>${J(flat)}</td><td>${J(gB - gS)}</td><td>${J(pTr)}</td>`)
+    + finding(`<b>쉽게 말하면 세 단계입니다.</b><br>㉠ 먼저 모든 지역에 ${fmt(TB, 1)}원씩 똑같이 깎아 줍니다. 전체 ${tw(Kz)}TWh × ${fmt(TB, 1)}원 = <b>${J(flat)}</b><br>㉡ 북부·중부·남부는 실제 송전 비용 차이(${fmt(disc("수도권북부"), 1)}·${fmt(disc("중부권"), 1)}·${fmt(disc("남부권"), 1)}원)가 ${fmt(TB, 1)}원보다 크므로, 그 나머지(${fmt(adj("수도권북부"), 1)}·${fmt(adj("중부권"), 1)}·${fmt(adj("남부권"), 1)}원)를 더 깎아 줍니다 = <b>+${J(gB)}</b><br>㉢ 수도권 남부는 기준 지역이라 할인 대상이 아니므로, ㉠에서 깎아 준 ${fmt(TB, 1)}원을 되돌립니다 = <b>−${J(gS)}</b><br>합계 = <b>${J(pTr)}</b>. 공식 발표 계산은 ㉠에서 멈춰서 ㉡과 ㉢이 빠졌고, 둘을 합친 <b>${J(gB - gS)}</b>이 차이로 남습니다.`);
   // STEP 5 위기지역
   const cr = C.items.filter(i => i.cr).sort((a, b) => b.kwh - a.kwh);
   const s5 = tbl(["시군구", "광역 · 권역", "판매량(TWh)", "추가 할인", "수입 감소"],
     cr.map(i => `<tr><td><b>${i.s} ${i.g}</b></td><td>${WN[i.w]} ${"①②③④"[i.gr - 1]}</td><td>${tw(i.kwh)}</td><td>${u(X)}원</td><td>${J(-X * i.kwh)}</td></tr>`),
     `<td>합계 ${cr.length}곳</td><td></td><td>${tw(C.crK)}</td><td></td><td>${J(pCr)}</td>`)
     + `<p class="mini-note">산업위기선제대응지역(울산은 남구만)은 ①~③ 할인에 더해 추가로 깎아 줍니다.</p>`;
-  // STEP 6 합계와 담당자 비교
+  // STEP 6 공식 발표와의 비교
   const dT = pSelf + pGr + flat, row = (a, b, c, d) => `<tr><td style="text-align:left"><b>${a}</b></td><td>${J(b)}</td><td>${c == null ? "<span style='color:#8a94a3'>미반영</span>" : J(c)}</td><td>${d ? `<b style="color:#b42318">${J(d)}</b>` : "0"}</td></tr>`;
-  const s6 = tbl(["할인 항목", "시뮬레이터 (광역별 단가)", `담당자 방식 (${fmt(TB, 1)}원 × 전체)`, "차이"],
+  const s6 = tbl(["할인 항목", "시뮬레이터 (광역별 단가)", `공식 발표 (송전 ${fmt(TB, 1)}원 × 전체)`, "차이"],
     [row("① 전력자급률", pSelf, pSelf, 0), row("② 지방우대", pGr, pGr, 0), row("③ 송전원가", pTr, flat, pTr - flat), row("④ 산업위기지역", pCr, null, pCr)],
     `<td style="text-align:left">합계</td><td>${J(T)}</td><td>${J(dT)}</td><td>${J(T - dT)}</td>`)
-    + finding(`<b>담당자 방식 ${J(dT)}</b> → ㉡ 원래 격차 할인 +${J(gB)} → ㉢ 수도권 남부 할증 상쇄 −${J(gS)} → <b>${J(dT + gB - gS)}</b> → ④ 위기지역 +${J(pCr)} → <b>${J(T)}</b>`)
-    + `<p class="mini-note">①·②는 두 방식이 같습니다. ③에서는 담당자 방식이 ㉠ 일괄분만 셈해 ㉡과 ㉢이 빠지고, 그 순액 ${J(gB - gS)}가 차이로 남습니다. 담당자 계산에는 ④도 들어 있지 않습니다. 담당자분이 확인한 ${yr === "2024" ? "2024년 2조 8,815억원" : "2024년 금액"}과 맞춰 보려면 기준 연도를 2024년으로 두십시오.</p>`;
+    + finding(`<b>공식 발표 ${J(dT)}</b> → ㉡ 추가 할인 +${J(gB)} → ㉢ 수도권 남부 되돌림 −${J(gS)} → <b>${J(dT + gB - gS)}</b> → ④ 위기지역 +${J(pCr)} → <b>${J(T)}</b>`)
+    + `<p class="mini-note">①·②는 두 방식이 같습니다. ③에서는 공식 발표 계산이 ㉠ 공통분만 셈해 ㉡과 ㉢이 빠지고, 그 순액 ${J(gB - gS)}가 차이로 남습니다. 공식 발표 금액에는 ④도 들어 있지 않습니다. 공식 발표(2024년 판매량 기준 2조 8,815억원)와 맞춰 보려면 기준 연도를 2024년으로 두십시오.</p>`;
   const steps = [
     ["rsSt1", "STEP 1", "판매량 집계", "11개 지역(4개 광역 × ①~④권역)에 산업용 판매량을 나눠 담기", tw(Kz) + "TWh", s1],
     ["rsSt2", "STEP 2", "① 전력자급률 할인", "광역별 판매량 × 자급률 단가", J(pSelf), s2],
     ["rsSt3", "STEP 3", "② 지방우대 할인", "권역별 판매량 × 지방우대 단가", J(pGr), s3],
-    ["rsSt4", "STEP 4", "③ 송전원가 할인", `광역별 판매량 × (원래 송전 차등 − ${fmt(TB, 1)}원)`, J(pTr), s4],
+    ["rsSt4", "STEP 4", "③ 송전원가 할인", `광역별 판매량 × 송전 할인 (공통 ${fmt(TB, 1)}원 ± 지역별 가감)`, J(pTr), s4],
     ["rsSt5", "STEP 5", "④ 산업위기선제대응지역 추가 할인", `${cr.length}개 시군구 판매량 × ${fmt(-X, 1)}원`, J(pCr), s5],
-    ["rsSt6", "STEP 6", "합계와 담당자 계산 비교", "①+②+③+④, 그리고 담당자 방식과 다른 곳", J(T), s6, "cmp"]];
+    ["rsSt6", "STEP 6", "공식 발표와의 비교", "①+②+③+④, 그리고 공식 발표 계산과 다른 곳", J(T), s6, "cmp"]];
   const openIds = new Set([...document.querySelectorAll("#rsSteps details[open]")].map(d => d.id));
   $("#rsSteps").innerHTML = steps.map(st => step(...st)).join("");
   openIds.forEach(id => { const d = document.getElementById(id); if (d) d.open = true; });
