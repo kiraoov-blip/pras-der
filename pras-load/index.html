@@ -1702,20 +1702,10 @@ function extraDiscOf(year) {
   if (W && W.years.includes(String(year))) { const ix = W.months.map((m, i) => m.startsWith(String(year)) ? i : -1).filter(i => i >= 0); const t = v => -sum(ix.map(i => sum(W.all[v][i]))) / 1e8; out.동결 = t("frz"); out.감액 = t("le200"); out.src = "실측"; }
   return out;
 }
-function renderSim() {
-  { const meas = D.rbin && $("#simResDist").value === "measured"; $("#simResHigh").disabled = meas; $("#simResSig").disabled = meas; if (!D.rbin) { $("#simResDist").value = "lognormal"; $("#simResDist").disabled = true; $("#simResDistHint").textContent = "구간 분포 자료 없음"; } }
-  const P = {
-    loadYear: $("#simLoad").value, refYear: $("#simRef").value, fuel: +$("#simFuel").value || 0, cost: +$("#simCost").value || 0,
-    high: (+$("#simResHigh").value || 0) / 100, sigma: Math.max(0.05, +$("#simResSig").value || 0.6), resDist: D.rbin ? $("#simResDist").value : "lognormal",
-    smpYear: $("#cSmpYear").value, cp: (+$("#cCP").value || 0) / 100, N: $("#cN").value,
-    basis: $("#cBasis").value, txPeak: Math.min(1, Math.max(0, (+$("#cTxPeak").value || 0) / 100)), retail: $("#cRetail").value,
-    disc: Math.max(0, +$("#simDisc").value) / 100, discGen: Math.min(1, Math.max(0, (+$("#simDiscGen").value || 0) / 100))
-  };
-  const override = document.querySelector('input[name="simScheme"]:checked').value;
-  let scn = simulate($("#simVer").value, override, readAdj(), P);
-  let base = simulate($("#simBase").value, "auto", {}, P);
+// 실적 보정 계수와 할인 차감 함수를 기준 연도(P.refYear)에 맞춰 만든다
+function simCalib(P, cal) {
+  const C = {};
   // 실적 보정: 기준 연도 말 시행 요금표 + 그해 연료비조정 실적으로 추정한 대분류 수입을 한전통계 판매수입에 맞춤
-  const cal = document.querySelector('input[name="simCal"]:checked').value === "on";
   const inforce = [...D.tar.versions].filter(v => v.effective <= `${P.refYear}-12-31`).map(v => v.effective).pop() || D.tar.versions[0].effective;
   const factors = {}, factorsT = {};
   if (cal) {
@@ -1733,18 +1723,49 @@ function renderSim() {
       for (const r of hist) if (r.fixed) delete factorsT[r.t];
     }
     const apply = rs => { const o = rs.map(r => { const f = factorsT[r.t] ?? factors[r.big]; if (!f || r.total == null) return r; return Object.assign({}, r, { energyRev: r.energyRev * f, basicRev: (r.basicRev || 0) * f, cfRev: r.cfRev * f, total: r.total * f, price: r.price * f }); }); o.meta = rs.meta; return o; };
-    scn = apply(scn); base = apply(base);
+    C.apply = apply;
   }
   // 복지할인 차감: 대분류 할인액 × 규모(%)를 계약종 수입 비례로 배분
   const disc = discountOf(P.refYear, P.discGen), xd = extraDiscOf(P.refYear), xRes = (xd.동결 + xd.감액) * 1e8;   // 유예·감액은 규모(%) 조정 대상 아님
   const takeDisc = (rs, k) => { const sums = {}; for (const r of rs) if (r.total != null) sums[r.big] = (sums[r.big] || 0) + r.total;
     const o = rs.map(r => { const Db = (disc[r.big] || 0) * k + (r.big === "주택용" ? xRes : 0); if (!Db || r.total == null) return Object.assign({}, r, { discount: 0 }); const d = Db * r.total / sums[r.big]; return Object.assign({}, r, { discount: d, total: r.total - d, price: (r.total - d) / r.salesKWh }); });
     o.meta = rs.meta; return o; };
+  return Object.assign(C, { cal, inforce, factors, factorsT, disc, xd, xRes, takeDisc });
+}
+const simAgg = rs => { const o = {}; for (const r of rs) { if (r.total == null) continue; const g = o[r.big] = o[r.big] || { sales: 0, rev: 0, cost: 0, pk: 0, es: 0, disc: 0, cp: 0, ct: 0, cd: 0, cr: 0 }; g.disc += r.discount || 0; g.cp += r.costPur || 0; g.ct += r.costTx || 0; g.cd += r.costDx || 0; g.cr += r.costRt || 0; g.sales += r.salesKWh; g.rev += r.total; g.cost += r.cost; g.pk += r.peakShare; g.es += r.energyShare; } return o; };
+// 지역별 요금제 등에서 쓰는 다른 연도의 비교 요금표 결과(실적 보정·할인 차감 후 대분류 합계)
+function simBaseFor(yr) {
+  const L = S.lastSim; if (!L) return null; if (String(L.year) === String(yr)) return L.B;
+  const key = yr + "|" + JSON.stringify(L.P) + "|" + L.cal + "|" + $("#simBase").value; if (simBaseFor.k === key) return simBaseFor.v;
+  const P = Object.assign({}, L.P, { refYear: String(yr), smpYear: String(yr) }), ri = D.ref.years.indexOf(+yr);
+  // 개선안 시뮬레이터에서 기준 연도를 바꿀 때 함께 바뀌는 값(원가 단가·CP 비중·연료비조정)도 그 연도로 맞춘다
+  if (ri >= 0) P.cost = +(opexWon(ri) / (D.ref.sold[ri] * 1e3)).toFixed(1);
+  { let cp = 0, st = 0; for (let m = 1; m <= 12; m++) { const k = `${yr}-${String(m).padStart(2, "0")}`, a = D.mon.price.cp[k], b = D.mon.price.settle[k]; if (a != null && b != null) { cp += a; st += b; } } if (st > 0) P.cp = +(cp / st * 100).toFixed(1) / 100; }
+  { const m = $("#simFuelMode").value; if (m !== "manual") { const v = fuelAvg(String(yr), m === "required" ? "required_effective" : m); P.fuel = v == null ? 0 : +v.toFixed(2); } }
+  const C = simCalib(P, L.cal);
+  let base = simulate($("#simBase").value, "auto", {}, P); if (C.apply) base = C.apply(base); base = C.takeDisc(base, 1);
+  simBaseFor.k = key; simBaseFor.v = simAgg(base); return simBaseFor.v;
+}
+function renderSim() {
+  { const meas = D.rbin && $("#simResDist").value === "measured"; $("#simResHigh").disabled = meas; $("#simResSig").disabled = meas; if (!D.rbin) { $("#simResDist").value = "lognormal"; $("#simResDist").disabled = true; $("#simResDistHint").textContent = "구간 분포 자료 없음"; } }
+  const P = {
+    loadYear: $("#simLoad").value, refYear: $("#simRef").value, fuel: +$("#simFuel").value || 0, cost: +$("#simCost").value || 0,
+    high: (+$("#simResHigh").value || 0) / 100, sigma: Math.max(0.05, +$("#simResSig").value || 0.6), resDist: D.rbin ? $("#simResDist").value : "lognormal",
+    smpYear: $("#cSmpYear").value, cp: (+$("#cCP").value || 0) / 100, N: $("#cN").value,
+    basis: $("#cBasis").value, txPeak: Math.min(1, Math.max(0, (+$("#cTxPeak").value || 0) / 100)), retail: $("#cRetail").value,
+    disc: Math.max(0, +$("#simDisc").value) / 100, discGen: Math.min(1, Math.max(0, (+$("#simDiscGen").value || 0) / 100))
+  };
+  const override = document.querySelector('input[name="simScheme"]:checked').value;
+  let scn = simulate($("#simVer").value, override, readAdj(), P);
+  let base = simulate($("#simBase").value, "auto", {}, P);
+  const cal = document.querySelector('input[name="simCal"]:checked').value === "on";
+  const C = simCalib(P, cal), { inforce, factors, factorsT, disc, xd, xRes, takeDisc } = C;
+  if (C.apply) { scn = C.apply(scn); base = C.apply(base); }
   scn = takeDisc(scn, P.disc); base = takeDisc(base, 1);
   const bmap = Object.fromEntries(base.map(r => [r.t, r]));
   const agg = rs => { const o = {}; for (const r of rs) { if (r.total == null) continue; const g = o[r.big] = o[r.big] || { sales: 0, rev: 0, cost: 0, pk: 0, es: 0, disc: 0, cp: 0, ct: 0, cd: 0, cr: 0 }; g.disc += r.discount || 0; g.cp += r.costPur || 0; g.ct += r.costTx || 0; g.cd += r.costDx || 0; g.cr += r.costRt || 0; g.sales += r.salesKWh; g.rev += r.total; g.cost += r.cost; g.pk += r.peakShare; g.es += r.energyShare; } return o; };
   const A = agg(scn), B = agg(base);
-  S.lastSim = { year: P.refYear, B, A, scn, P }; if (D.region) renderRegionScn(); renderEquity();
+  S.lastSim = { year: P.refYear, B, A, scn, P, cal }; if (D.region) renderRegionScn(); renderEquity();
   const totS = Object.values(A).reduce((a, g) => ({ rev: a.rev + g.rev, cost: a.cost + g.cost, sales: a.sales + g.sales }), { rev: 0, cost: 0, sales: 0 });
   const totB = Object.values(B).reduce((a, g) => ({ rev: a.rev + g.rev, cost: a.cost + g.cost, sales: a.sales + g.sales }), { rev: 0, cost: 0, sales: 0 });
   const R = D.ref, ri = R.years.indexOf(+P.refYear), actual = R.rev.total[ri] * 1e3;
@@ -2159,11 +2180,11 @@ function renderRegionScn() {
     + Object.keys(WN).map(w => `<tr><td><b>${WN[w]}</b></td><td>${sg(W[w])}</td>${[1, 2, 3, 4].map(g => has.has(w + "|" + g) ? `<td><b>${sg(W[w] + Gr[g])}</b></td>` : `<td style="color:#c3cad4">—</td>`).join("")}</tr>`).join("") + "</tbody></table>";
   const allRev = sum(G.sido.map(s => sum(G.bigs.map(b => G.sido_data[s][b].rev[y]))));
   const k = (lab, v, sub, lead) => `<div class="kpi${lead ? " lead" : ""}"><div class="k">${lab}</div><div class="v">${v}</div><div class="n">${sub}</div></div>`;
-  const L = S.lastSim && String(S.lastSim.year) === yr && S.lastSim.B["산업용"] ? S.lastSim : null;
+  const LB = simBaseFor(yr), L = LB && LB["산업용"] ? { B: LB } : null;
   const Bi = L && L.B["산업용"], TB = L ? Object.values(L.B).reduce((o, b) => ({ rev: o.rev + (b.rev || 0), cost: o.cost + (b.cost || 0) }), { rev: 0, cost: 0 }) : null;
   $("#rsKpis").innerHTML = k("한전 판매수입 감소", joEok(T.loss).replace(/(조|억원)/g, "<small>$1</small>"), `${yr}년 산업용 판매량 기준 · 정부 추산 약 2.8조원`, true) +
     k("산업용 평균 인하", fmt(T.loss / T.kwh, 1) + " <small>원/kWh</small>", `산업용 수입의 ${fmt(T.loss / T.rev * 100, 1)}% · 전체 판매수입의 ${fmt(T.loss / allRev * 100, 1)}%`) +
-    k("산업용 원가 회수율", Bi ? `${fmt(Bi.rev / Bi.cost * 100, 1)} → ${fmt((Bi.rev - T.loss) / Bi.cost * 100, 1)}<small>%</small>` : "-", Bi ? `보전 없을 때 · 시뮬레이터 비교 요금표 기준` : `시뮬레이터 기준 연도를 ${yr}년으로 두면 표시`) +
+    k("산업용 원가 회수율", Bi ? `${fmt(Bi.rev / Bi.cost * 100, 1)} → ${fmt((Bi.rev - T.loss) / Bi.cost * 100, 1)}<small>%</small>` : "-", Bi ? `${yr}년 · 보전 없을 때 · 개선안 시뮬레이터 비교 요금표 기준` : `원가 자료를 불러오는 중`) +
     k("한전 전체 회수율", TB && TB.cost ? `${fmt(TB.rev / TB.cost * 100, 1)} → ${fmt((TB.rev - T.loss) / TB.cost * 100, 1)}<small>%</small>` : "-", "100%를 넘는 몫 = 재무 회복분");
   // 할인 항목별 분해: 광역 몫 = 자급률 + 송전원가(설계 송전 단가), 권역 몫 = 지방우대, + 위기지역
   const TR = G.zones.trans || {}, zs0 = Object.values(C.Z).filter(z => z.gr);
