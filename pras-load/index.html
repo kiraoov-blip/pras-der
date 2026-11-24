@@ -367,10 +367,13 @@ footer{background:#123214;color:#cfdfc6}
 .rs-bar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px 12px;margin:8px 0 10px}
 .rs-reset{font:inherit;font-size:12.5px;font-weight:700;color:#1e5d20;background:#fff;border:1px solid #cfe6c0;border-radius:99px;padding:6px 14px;cursor:pointer}
 .rs-reset:hover{background:#eef6e6;border-color:#89c17e}
-#rsTable,#rsTop{max-height:none;overflow:visible}
+#rsTable,#rsTop{max-height:none;overflow-x:auto;overflow-y:hidden}
 #rsTable .tbl,#rsTop .tbl{min-width:0}
 #rsTable .tbl th,#rsTop .tbl th{white-space:normal;word-break:keep-all}
 #rsTable .tbl td,#rsTable .tbl th,#rsTop .tbl td,#rsTop .tbl th{padding:6px 6px}
+@media(max-width:700px){#rsTable .tbl{font-size:11px}#rsTable .tbl td,#rsTable .tbl th{padding:6px 3px}
+#rsTable .tbl tr>:nth-child(3),#rsTable .tbl tr>:nth-child(5),#rsTable .tbl tr>:nth-child(6){display:none}
+#rsTop .tbl{font-size:12px}}
 .rs-flow{display:flex;flex-wrap:wrap;align-items:stretch;gap:6px;margin:8px 0 12px}
 .rs-flow .chip{font:inherit;text-align:left;background:#fff;border:1px solid #dde2e8;border-radius:10px;padding:7px 11px;cursor:pointer;min-width:118px}
 .rs-flow .chip:hover{border-color:#89c17e;background:#f4faef}
@@ -2203,7 +2206,7 @@ function renderRegionScn() {
   const pTr = sum(zs0.map(z => -(TR[z.w] || 0) * z.kwh)), pSelf = sum(zs0.map(z => -(W[z.w] - (TR[z.w] || 0)) * z.kwh)), pGr = sum(zs0.map(z => -Gr[z.gr] * z.kwh)), pCr = C.crL;
   renderRegionSteps(G, C, W, Gr, X, yr, { TR, zs0, Kz, kw, pTr, pSelf, pGr, pCr });
   const WO = ["수도권남부", "수도권북부", "중부권", "남부권"], cell = z => `<td>${fmt(z.n, 0)}</td><td>${fmt(z.kwh / 1e9, 1)}</td><td>${fmt(z.cust, 0)}</td><td>${fmt(z.rev / z.kwh, 1)}</td><td><b>${z.gr ? (z.adj === 0 ? "0.0" : (z.adj > 0 ? "+" : "−") + fmt(Math.abs(z.adj), 1)) : "적용 제외"}</b></td><td>${fmt((z.rev + (z.gr ? z.adj * z.kwh : 0)) / z.kwh, 1)}</td><td>${fmt(z.loss / z.rev * 100, 1)}%</td><td>${fmt(z.loss / 1e8, 0)}</td>`;
-  let h = `<table class="tbl"><thead><tr><th>광역</th><th>권역</th><th>시군구</th><th>산업용 판매량(TWh)</th><th>고객 수</th><th>현재 단가</th><th>조정단가</th><th>조정 후 단가</th><th>인하율</th><th>수입 감소(억원)</th></tr></thead><tbody>`;
+  let h = `<table class="tbl"><thead><tr><th>광역</th><th>권역</th><th>시군구</th><th>판매량<br><small>TWh</small></th><th>고객 수</th><th>현재 단가<br><small>원/kWh</small></th><th>조정단가<br><small>원/kWh</small></th><th>조정 후<br><small>원/kWh</small></th><th>인하율</th><th>수입 감소<br><small>억원</small></th></tr></thead><tbody>`;
   for (const w of WO) { const zs = Object.values(C.Z).filter(z => z.w === w).sort((a, b) => a.gr - b.gr); if (!zs.length) continue;
     zs.forEach((z, i) => { h += `<tr>${i ? "<td></td>" : `<td><b>${w}</b></td>`}<td>${"①②③④"[z.gr - 1]}권역</td>${cell(z)}</tr>`; });
     if (zs.length > 1) { const a = zs.reduce((o, z) => ({ n: o.n + z.n, kwh: o.kwh + z.kwh, rev: o.rev + z.rev, cust: o.cust + z.cust, loss: o.loss + z.loss }), { n: 0, kwh: 0, rev: 0, cust: 0, loss: 0 });
@@ -2213,7 +2216,7 @@ function renderRegionScn() {
   $("#rsTable").innerHTML = h + "</tbody></table>";
   const zl = it => it.gr ? `${it.w} ${"①②③④"[it.gr - 1]}` : "제주(제외)";
   const top = [...C.items].sort((a, b) => b.loss - a.loss).slice(0, 12);
-  $("#rsTop").innerHTML = `<table class="tbl"><thead><tr><th>수입 감소 상위 시군구</th><th>권역</th><th>산업용 판매량(TWh)</th><th>조정단가(원/kWh)</th><th>수입 감소(억원)</th></tr></thead><tbody>${top.map(g => `<tr><td>${g.s} ${g.g}</td><td>${zl(g)}</td><td>${fmt(g.kwh / 1e9, 1)}</td><td>${fmt(g.adj, 1)}</td><td>${fmt(g.loss / 1e8, 0)}</td></tr>`).join("")}</tbody></table>`;
+  $("#rsTop").innerHTML = `<table class="tbl"><thead><tr><th>수입 감소 상위 시군구</th><th>권역</th><th>판매량<br><small>TWh</small></th><th>조정단가<br><small>원/kWh</small></th><th>수입 감소<br><small>억원</small></th></tr></thead><tbody>${top.map(g => `<tr><td>${g.s} ${g.g}</td><td>${zl(g)}</td><td>${fmt(g.kwh / 1e9, 1)}</td><td>${fmt(g.adj, 1)}</td><td>${fmt(g.loss / 1e8, 0)}</td></tr>`).join("")}</tbody></table>`;
   const D0 = zoneDefault(), dflt = zoneCalc(y, D0.W, D0.Gr, D0.X);
   $("#rsNote").innerHTML = `지역 구분은 한전 설계안의 11개 지역(4개 광역 × 균형성장 ①~④권역, 제주 제외)이고 조정단가는 설계안 권역별 표입니다. 설계안 값으로 ${yr}년 판매량에 적용하면 ${joEok(dflt.loss)}(정부 추산 2.8조원 내외)이며, 최대 인하율은 남부권 ④권역 약 10%로 공청회의 '최대 10% 인하'와 같습니다. `
     + `권역 구분은 한전 확정본(2026.11.24 담당자 확인)입니다. 2026.11.23 자료 1쪽 목록과는 7곳이 다르며(확정본 기준 동두천 북②, 동해 중②, 부여 중④, 부산 금정 남②, 완주 남②, 영주 남④, 통영 남③), 이 7곳은 행안부 지방우대지수 별표와도 다릅니다. 산업위기선제대응지역 6곳(서산·당진·울산 남구·여수·광양·포항, ${fmt(C.crK / 1e9, 1)}TWh)에는 권역 조정단가에 ${fmt(X, 1)}원/kWh를 더해 ${fmt(C.crL / 1e8, 0)}억원이 늘어납니다. 담당자 계산(2024년 2.88조원)은 송전원가 몫을 3.6원 × 전체 판매량으로 잡고 위기지역 할인을 빼서, 광역별 송전 단가를 쓰는 이 계산보다 약 736억원(+위기지역 528억원) 작습니다. 인천은 판매실적의 옛 구 이름(8곳)으로 계산하며 모두 북부 ①권역입니다. 대구 군위군은 판매실적에 경북으로 남은 해도 대구 ④권역으로 보았습니다.`;
