@@ -28,8 +28,12 @@ for n in DATA:
     txt = json.dumps(obj, ensure_ascii=False, separators=(",", ":"))
     (out / f"{n}.json").write_text(txt, encoding="utf-8")
     h.update(txt.encode())
+src_html = (ROOT / "src" / "app.html").read_text(encoding="utf-8").replace("/*__BASECSS__*/", css)
+h.update(src_html.encode())   # 화면 코드가 바뀌어도 버전이 바뀌게
 ver = h.hexdigest()[:10]
-html = (ROOT / "src" / "app.html").read_text(encoding="utf-8").replace("/*__BASECSS__*/", css).replace("__VER__", ver)
+html = src_html.replace("__VER__", ver)
+# 페이지가 캐시된 옛 버전이면 이 파일을 보고 스스로 새로 고친다
+(out / "version.json").write_text(json.dumps({"v": ver}), encoding="utf-8")
 (ROOT / "index.html").write_text(html, encoding="utf-8")
 total = sum((out / f"{n}.json").stat().st_size for n in DATA)
 print(f"index.html {len(html.encode()):,} bytes · data/ {total / 1e6:.1f} MB · v={ver}")
